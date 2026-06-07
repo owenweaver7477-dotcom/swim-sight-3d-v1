@@ -1,0 +1,105 @@
+# Supabase Setup
+
+This project uses Supabase for V1 auth, database, storage, and RLS. Do not put real secrets in this file.
+
+## 1. Create Project
+
+1. Create a new Supabase project.
+2. Record the project URL and anon key for frontend environment variables.
+3. Record the service role key for server-side Vercel API routes only.
+
+## 2. Environment Variables
+
+Frontend-safe:
+
+```bash
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_APP_BASE_URL=
+VITE_AI_SERVER_URL=https://swim-sight-ai-server.onrender.com
+```
+
+Server-only:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=
+AI_SERVER_URL=https://swim-sight-ai-server.onrender.com
+AI_WEBHOOK_SECRET=
+PUBLIC_APP_URL=
+```
+
+Local testing:
+
+```bash
+VITE_APP_BASE_URL=http://localhost:5173
+```
+
+If testing the Render callback locally, `PUBLIC_APP_URL` must be a public tunnel URL because Render cannot call localhost directly. The preferred first live E2E test is a Vercel preview URL.
+
+Vercel preview/production:
+
+```bash
+PUBLIC_APP_URL=https://your-vercel-app.vercel.app
+```
+
+## 3. Apply Migrations
+
+Apply in order:
+
+1. `supabase/migrations/001_v1_core_schema.sql`
+2. `supabase/migrations/002_v1_swimmer_profile_fields.sql`
+3. `supabase/migrations/003_v1_private_video_storage_policies.sql`
+
+Confirm that:
+
+- RLS is enabled on all public V1 tables.
+- Storage policies exist for `private-videos`.
+- Helper functions such as `public.has_club_role` are present.
+
+## 4. Storage
+
+Create or confirm this bucket:
+
+- `private-videos`
+
+Bucket requirements:
+
+- Private bucket.
+- Never public.
+- Upload path format: `{club_id}/{swimmer_id}/{video_upload_id}/{filename}`.
+- Coaches access playback only through the signed URL API route.
+- Public shared reports must never expose storage paths or signed URLs.
+
+## 5. Auth
+
+In Supabase Auth settings:
+
+1. Enable email/password auth.
+2. Configure Site URL:
+   - Local: `http://localhost:5173`
+   - Vercel preview/production URL for hosted testing.
+3. Add redirect URLs:
+   - `http://localhost:5173/*`
+   - `https://your-vercel-app.vercel.app/*`
+   - Production custom domain when available.
+
+## 6. Service Role Safety
+
+- `SUPABASE_SERVICE_ROLE_KEY` must be configured only in Vercel server environment variables.
+- Never prefix the service role key with `VITE_`.
+- Never import `api/_lib/supabaseServer.js` from `src`.
+- Frontend code must use only `VITE_SUPABASE_ANON_KEY`.
+
+## 7. RLS QA Checklist
+
+Confirm live behavior:
+
+1. User can create/read own profile.
+2. User can create a club through API.
+3. User can read their own `club_members` row.
+4. Owner/admin/coach can create swimmers and video uploads for their club.
+5. Users cannot read another club's swimmers, videos, reports, findings, or jobs.
+6. Owner/admin/coach can trigger AI.
+7. Swimmer/parent cannot trigger AI.
+8. Owner/admin/coach can finalise/share reports.
+9. Public shared report endpoint works without auth and returns sanitized data only.
