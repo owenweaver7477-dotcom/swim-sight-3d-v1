@@ -1,151 +1,338 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { getSupabaseClient, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
 
 const AuthContext = createContext();
 
+function getAppOrigin() {
+  return import.meta.env.VITE_APP_BASE_URL || window.location.origin;
+}
+
+function getFullName(authUser) {
+  return (
+    authUser?.user_metadata?.full_name ||
+    authUser?.user_metadata?.name ||
+    authUser?.email?.split('@')[0] ||
+    ''
+  );
+}
+
+function mergeUserProfile(authUser, profile) {
+  if (!authUser) return null;
+
+  return {
+    id: authUser.id,
+    email: authUser.email,
+    full_name: profile?.full_name || getFullName(authUser),
+    app_role: profile?.app_role || 'user',
+    role: profile?.app_role || 'user',
+    profile,
+    auth_user: authUser,
+    created_at: profile?.created_at || authUser.created_at,
+    updated_at: profile?.updated_at,
+  };
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [session, setSession] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
+  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [appPublicSettings] = useState({ public_settings: { auth_required: true } });
 
-  useEffect(() => {
-    checkAppState();
+  const ensureProfile = useCallback(async (authUser) => {
+    if (!authUser) return null;
+
+    const supabase = getSupabaseClient();
+    const { data: existingProfile, error: selectError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+    if (existingProfile) return existingProfile;
+
+    const fullName = getFullName(authUser);
+    const { data: createdProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.id,
+        email: authUser.email,
+        full_name: fullName,
+        app_role: 'user',
+      })
+      .select('*')
+      .single();
+
+    if (insertError) throw insertError;
+    return createdProfile;
   }, []);
 
-  const checkAppState = async () => {
-    try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }
-  };
+  const applySession = useCallback(async (nextSession) => {
+    setSession(nextSession);
+    const authUser = nextSession?.user || null;
 
-  const checkUserAuth = async () => {
-    try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
+    if (!authUser) {
+      setUser(null);
+      setProfile(null);
+      setIsAuthenticated(false);
+      return null;
+    }
+
+    const nextProfile = await ensureProfile(authUser);
+    setProfile(nextProfile);
+    setUser(mergeUserProfile(authUser, nextProfile));
+    setIsAuthenticated(true);
+    return nextProfile;
+  }, [ensureProfile]);
+
+  const checkUserAuth = useCallback(async () => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+
+    if (!hasSupabaseBrowserEnv()) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
       setIsAuthenticated(false);
       setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+      setIsLoadingAuth(false);
+      return null;
+    }
+
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+
+      await applySession(data?.session || null);
+      setAuthChecked(true);
+      return data?.session || null;
+    } catch (error) {
+      console.error('Supabase auth check failed:', error);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setIsAuthenticated(false);
+      setAuthError({
+        type: 'auth_error',
+        message: error.message || 'Unable to check authentication status',
+      });
+      setAuthChecked(true);
+      return null;
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  }, [applySession]);
+
+  const checkAppState = useCallback(async () => {
+    setIsLoadingPublicSettings(false);
+    return checkUserAuth();
+  }, [checkUserAuth]);
+
+  useEffect(() => {
+    let mounted = true;
+    let subscription;
+
+    async function initialiseAuth() {
+      if (!hasSupabaseBrowserEnv()) {
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setIsAuthenticated(false);
+        setAuthChecked(true);
+        setIsLoadingAuth(false);
+        setIsLoadingPublicSettings(false);
+        return;
       }
-    }
-  };
 
-  const logout = (shouldRedirect = true) => {
+      const supabase = getSupabaseClient();
+      const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        if (!mounted) return;
+        setIsLoadingAuth(true);
+        applySession(nextSession)
+          .catch((error) => {
+            console.error('Supabase auth state update failed:', error);
+            setAuthError({
+              type: 'auth_error',
+              message: error.message || 'Unable to update authentication state',
+            });
+          })
+          .finally(() => {
+            if (!mounted) return;
+            setAuthChecked(true);
+            setIsLoadingAuth(false);
+          });
+      });
+
+      subscription = data?.subscription;
+      await checkAppState();
+    }
+
+    initialiseAuth();
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [applySession, checkAppState]);
+
+  const login = useCallback(async (email, password) => {
+    const supabase = getSupabaseClient();
+    setAuthError(null);
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    await applySession(data.session);
+    setAuthChecked(true);
+    return data;
+  }, [applySession]);
+
+  const register = useCallback(async ({ email, password, full_name } = {}) => {
+    const supabase = getSupabaseClient();
+    setAuthError(null);
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: full_name || email?.split('@')[0] || '' },
+        emailRedirectTo: `${getAppOrigin()}/club-onboarding`,
+      },
+    });
+
+    if (error) throw error;
+    if (data.session) await applySession(data.session);
+    setAuthChecked(true);
+    return data;
+  }, [applySession]);
+
+  const loginWithGoogle = useCallback(async (redirectTo = '/club-onboarding') => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${getAppOrigin()}${redirectTo}`,
+      },
+    });
+
+    if (error) throw error;
+    return data;
+  }, []);
+
+  const resetPasswordRequest = useCallback(async (email) => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${getAppOrigin()}/reset-password`,
+    });
+
+    if (error) throw error;
+    return data;
+  }, []);
+
+  const resetPassword = useCallback(async ({ newPassword }) => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) throw error;
+    return data;
+  }, []);
+
+  const updateProfile = useCallback(async (updates = {}) => {
+    if (!session?.user) throw new Error('You must be logged in to update your profile.');
+
+    const supabase = getSupabaseClient();
+    const profileUpdates = {
+      email: session.user.email,
+      full_name: updates.full_name,
+    };
+
+    const { data: updatedProfile, error } = await supabase
+      .from('profiles')
+      .update(profileUpdates)
+      .eq('id', session.user.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    setProfile(updatedProfile);
+    setUser(mergeUserProfile(session.user, updatedProfile));
+    return updatedProfile;
+  }, [session]);
+
+  const logout = useCallback(async (shouldRedirect = true) => {
+    if (hasSupabaseBrowserEnv()) {
+      const supabase = getSupabaseClient();
+      await supabase.auth.signOut();
+    }
+
+    setSession(null);
     setUser(null);
+    setProfile(null);
     setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
-  };
+    setAuthChecked(true);
 
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
-  };
+    if (shouldRedirect) {
+      window.location.assign('/login');
+    }
+  }, []);
+
+  const navigateToLogin = useCallback(() => {
+    window.location.assign('/login');
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    profile,
+    session,
+    loading: isLoadingAuth,
+    isAuthenticated,
+    isLoadingAuth,
+    isLoadingPublicSettings,
+    authError,
+    appPublicSettings,
+    authChecked,
+    login,
+    register,
+    loginWithGoogle,
+    resetPasswordRequest,
+    resetPassword,
+    updateProfile,
+    logout,
+    navigateToLogin,
+    checkUserAuth,
+    checkAppState,
+  }), [
+    user,
+    profile,
+    session,
+    isLoadingAuth,
+    isAuthenticated,
+    isLoadingPublicSettings,
+    authError,
+    appPublicSettings,
+    authChecked,
+    login,
+    register,
+    loginWithGoogle,
+    resetPasswordRequest,
+    resetPassword,
+    updateProfile,
+    logout,
+    navigateToLogin,
+    checkUserAuth,
+    checkAppState,
+  ]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      authChecked,
-      logout,
-      navigateToLogin,
-      checkUserAuth,
-      checkAppState
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

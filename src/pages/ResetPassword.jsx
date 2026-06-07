@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const resetToken = searchParams.get("token");
+  const navigate = useNavigate();
+  const { resetPassword, isAuthenticated, isLoadingAuth } = useAuth();
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,8 +25,8 @@ export default function ResetPassword() {
     }
     setLoading(true);
     try {
-      await base44.auth.resetPassword({ resetToken, newPassword });
-      window.location.href = "/login";
+      await resetPassword({ newPassword });
+      navigate("/login", { replace: true });
     } catch (err) {
       setError(err.message || "Failed to reset password");
     } finally {
@@ -34,12 +34,12 @@ export default function ResetPassword() {
     }
   };
 
-  if (!resetToken) {
+  if (!isLoadingAuth && !isAuthenticated) {
     return (
       <AuthLayout
         icon={AlertTriangle}
-        title="Invalid reset link"
-        subtitle="This password reset link is missing or invalid"
+        title="Open your reset link"
+        subtitle="Use the link from your password reset email"
         footer={
           <Link to="/forgot-password" className="text-primary font-medium hover:underline">
             Request a new link
@@ -47,7 +47,8 @@ export default function ResetPassword() {
         }
       >
         <p className="text-sm text-foreground text-center">
-          The link you used appears to be incomplete. Please request a new password reset email.
+          Supabase creates a temporary reset session from the email link. If you
+          opened this page directly, request a new password reset email first.
         </p>
       </AuthLayout>
     );

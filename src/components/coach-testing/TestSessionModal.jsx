@@ -3,6 +3,7 @@ import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { useClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 
 const DEFAULT_CHECKLIST = [
   { key: 'create_club',         label: 'Create/join club',                         route: '/club-onboarding' },
@@ -29,6 +30,7 @@ const DEFAULT_CHECKLIST = [
 
 export default function TestSessionModal({ onClose, onCreated }) {
   const { club } = useClubContext();
+  const { user } = useAuth();
   const [form, setForm] = useState({ tester_name: '', tester_role: '', testing_date: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -39,7 +41,6 @@ export default function TestSessionModal({ onClose, onCreated }) {
     if (!form.tester_name.trim() || saving || submitted) return;
     setSaving(true);
     setSubmitted(true);
-    const user = await base44.auth.me();
     const session = await base44.entities.CoachTestingSession.create({
       club_id: club.id,
       tester_name: form.tester_name,

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { base44 } from '@/api/base44Client';
 import { getActiveClub, getActiveRole, signOut } from '@/lib/swimState';
+import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, Upload, FlaskConical, Eye, FileText, Dumbbell,
   BookOpen, BarChart3, Map, Settings, Menu, X, ChevronDown, Lock
@@ -28,9 +28,9 @@ const NAV_MORE = [
 ];
 
 export default function Navbar() {
+  const { user, logout } = useAuth();
   const [club, setClub] = useState(null);
   const [role, setRole] = useState(null);
-  const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,7 +41,6 @@ export default function Navbar() {
       setRole(getActiveRole());
     };
     refresh();
-    base44.auth.me().then(u => setUser(u)).catch(() => {});
     window.addEventListener('storage', refresh);
     window.addEventListener('swimStateChanged', refresh);
     return () => {
@@ -52,7 +51,7 @@ export default function Navbar() {
 
   const handleSignOut = () => {
     signOut();
-    base44.auth.logout('/login');
+    logout();
   };
 
   const isActive = (to) => location.pathname === to;

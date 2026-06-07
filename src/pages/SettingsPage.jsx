@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { getActiveRole, signOut } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -12,7 +11,7 @@ import { ChevronDown, Lock, User, Settings, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { club } = useClubContext();
   const role = getActiveRole();
   const navigate = useNavigate();
@@ -27,7 +26,7 @@ export default function SettingsPage() {
   const handleUpdateName = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await base44.auth.updateMe({ full_name: name });
+    await updateProfile({ full_name: name });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

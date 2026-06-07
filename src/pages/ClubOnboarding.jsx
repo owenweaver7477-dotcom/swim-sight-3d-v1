@@ -13,7 +13,7 @@ import { Waves, Plus, KeyRound, Loader2, AlertCircle, CheckCircle2 } from 'lucid
 export default function ClubOnboarding() {
   const [tab, setTab] = useState('create'); // 'create' | 'join'
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Pre-fill invite code from URL ?code= param
   const urlParams = new URLSearchParams(window.location.search);
@@ -253,7 +253,7 @@ export default function ClubOnboarding() {
         {/* Sign out option */}
         <div className="mt-6 text-center">
           <button
-            onClick={() => base44.auth.logout('/login')}
+            onClick={() => logout()}
             className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
           >
             Sign out

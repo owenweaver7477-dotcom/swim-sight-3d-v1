@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { signOut, getActiveRole } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { resetClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, FlaskConical, BookOpen,
   Settings, ChevronDown, ChevronRight, Dumbbell,
@@ -44,16 +44,12 @@ const ADMIN_ROLES = ['owner', 'admin'];
 
 export default function Sidebar() {
   const { club, clubs, switchClub } = useClubContext();
-  const [user, setUser] = useState(null);
+  const { user, logout } = useAuth();
   const [adminOpen, setAdminOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [clubDropdownOpen, setClubDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    base44.auth.me().then(u => setUser(u)).catch(() => {});
-  }, []);
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
   useEffect(() => { setClubDropdownOpen(false); }, [location.pathname]);
@@ -61,7 +57,7 @@ export default function Sidebar() {
   const handleSignOut = () => {
     signOut();
     resetClubContext();
-    base44.auth.logout('/login');
+    logout();
   };
 
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + '/');

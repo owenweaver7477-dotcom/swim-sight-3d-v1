@@ -3,6 +3,7 @@ import { X, Bug, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { useClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const ROUTES = [
@@ -20,6 +21,7 @@ const SEV_STYLE = {
 
 export default function BugReportModal({ onClose, onSaved, defaultRoute }) {
   const { club } = useClubContext();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     title: '',
     page_route: defaultRoute || window.location.pathname,
@@ -37,7 +39,6 @@ export default function BugReportModal({ onClose, onSaved, defaultRoute }) {
     e.preventDefault();
     if (!form.what_happened.trim()) return;
     setSubmitting(true);
-    const user = await base44.auth.me();
     await base44.entities.CoachFeedback.create({
       club_id: club?.id || '',
       user_id: user?.id || '',

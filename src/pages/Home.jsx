@@ -5,7 +5,7 @@ import {
   Waves, Video, Brain, Camera, Pencil, BookOpen, BarChart3,
   FileText, ArrowRight, CheckCircle2, AlertTriangle, Lock, Shield, EyeOff
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 
 const FEATURES = [
   { icon: Video,     title: 'Video Review Workspace',            desc: 'Upload swim footage, step frame by frame, tag stroke phases, and build coach findings from any angle.' },
@@ -19,12 +19,13 @@ const FEATURES = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoadingAuth } = useAuth();
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then(authed => {
-      if (authed) navigate('/dashboard', { replace: true });
-    });
-  }, [navigate]);
+    if (!isLoadingAuth && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, isLoadingAuth, navigate]);
 
   return (
     <div className="min-h-screen bg-background">

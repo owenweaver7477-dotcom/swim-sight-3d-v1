@@ -47,6 +47,7 @@
 - Added V1 Supabase schema, RLS helpers/policies, and storage bucket plan.
 - Added Base44-like Supabase entity/function adapter scaffolds for incremental page migration.
 - Added Vercel API route scaffolds for signed video URLs, AI trigger/callback, shared reports, soft report delete, and timed-out job reset.
+- Replaced active Base44 auth flow with Supabase Auth in `AuthContext`, auth pages, protected route consumers, and shared shell logout/user display.
 
 ## Build Diagnosis
 
@@ -78,6 +79,14 @@
 - The Render AI callback must send `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>` for the new callback route to accept results.
 - Advanced features should remain deferred until the core V1 coach workflow is stable.
 - Existing dependency audit warnings are present in the exported app and were not addressed during baseline safety.
+- Local auth UI route testing was performed without a real `.env`, so register/login against Supabase must be repeated after `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured.
+
+## Supabase Auth Phase Notes
+
+- `useAuth` now exposes `user`, `profile`, `session`, `loading`, `isAuthenticated`, `isLoadingAuth`, `isLoadingPublicSettings`, `authError`, `authChecked`, `login`, `register`, `loginWithGoogle`, `resetPasswordRequest`, `resetPassword`, `updateProfile`, `logout`, `navigateToLogin`, `checkUserAuth`, and `checkAppState`.
+- Profile rows are ensured client-side through Supabase RLS. The schema allows users to insert only their own `profiles` row with `app_role = 'user'`.
+- `SUPABASE_SERVICE_ROLE_KEY` remains API-only and is not referenced under `src`.
+- Base44 entity/function calls remain for later migration phases, but `base44.auth.*` calls were removed from `src`.
 
 ## Deferred Features
 

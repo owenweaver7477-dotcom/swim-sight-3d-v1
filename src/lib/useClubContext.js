@@ -6,12 +6,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { getActiveClub, setActiveClub, setActiveRole } from '@/lib/swimState';
+import { useAuth } from '@/lib/AuthContext';
 
 let _globalClub = null;
 let _globalSetClub = null;
 let _globalClubs = [];
 let _globalSetClubs = null;
 let _initialized = false;
+let _initializedUserId = null;
 let _listeners = [];
 
 function notifyListeners() {
@@ -34,6 +36,7 @@ export async function loadUserClubs(userId) {
 }
 
 export function useClubContext() {
+  const { user, isAuthenticated, authChecked } = useAuth();
   const [club, setClub] = useState(_globalClub || getActiveClub());
   const [clubs, setClubs] = useState(_globalClubs);
   const [loading, setLoading] = useState(!_initialized);
@@ -46,35 +49,49 @@ export function useClubContext() {
     };
     _listeners.push(listener);
 
-    if (!_initialized) {
+    if (!authChecked) {
+      setLoading(true);
+      return () => {
+        _listeners = _listeners.filter(fn => fn !== listener);
+      };
+    }
+
+    if (!isAuthenticated || !user?.id) {
+      _globalClub = null;
+      _globalClubs = [];
+      _initialized = false;
+      _initializedUserId = null;
+      setClub(null);
+      setClubs([]);
+      setLoading(false);
+      notifyListeners();
+    } else if (!_initialized || _initializedUserId !== user.id) {
       _initialized = true;
-      base44.auth.me().then(user => {
-        if (!user) { setLoading(false); return; }
-        loadUserClubs(user.id).then(userClubs => {
-          _globalClubs = userClubs;
-          if (_globalSetClubs) _globalSetClubs(userClubs);
+      _initializedUserId = user.id;
+      loadUserClubs(user.id).then(userClubs => {
+        _globalClubs = userClubs;
+        if (_globalSetClubs) _globalSetClubs(userClubs);
 
-          const saved = getActiveClub();
-          let selected = null;
-          if (saved && userClubs.find(c => c.id === saved.id)) {
-            selected = userClubs.find(c => c.id === saved.id);
-          } else if (userClubs.length === 1) {
-            selected = userClubs[0];
-          } else if (userClubs.length > 1) {
-            selected = userClubs[0]; // auto-select most recent
-          }
+        const saved = getActiveClub();
+        let selected = null;
+        if (saved && userClubs.find(c => c.id === saved.id)) {
+          selected = userClubs.find(c => c.id === saved.id);
+        } else if (userClubs.length === 1) {
+          selected = userClubs[0];
+        } else if (userClubs.length > 1) {
+          selected = userClubs[0]; // auto-select most recent
+        }
 
-          if (selected) {
-            _globalClub = selected;
-            setActiveClub(selected);
-            setActiveRole(selected._memberRole || 'coach');
-            if (_globalSetClub) _globalSetClub(selected);
-            window.dispatchEvent(new Event('swimStateChanged'));
-          }
+        if (selected) {
+          _globalClub = selected;
+          setActiveClub(selected);
+          setActiveRole(selected._memberRole || 'coach');
+          if (_globalSetClub) _globalSetClub(selected);
+          window.dispatchEvent(new Event('swimStateChanged'));
+        }
 
-          notifyListeners();
-          setLoading(false);
-        }).catch(() => setLoading(false));
+        notifyListeners();
+        setLoading(false);
       }).catch(() => setLoading(false));
     } else {
       setLoading(false);
@@ -83,7 +100,7 @@ export function useClubContext() {
     return () => {
       _listeners = _listeners.filter(fn => fn !== listener);
     };
-  }, []);
+  }, [authChecked, isAuthenticated, user?.id]);
 
   // Also sync from swimStateChanged events
   useEffect(() => {
@@ -105,14 +122,13 @@ export function useClubContext() {
   }, []);
 
   const refreshClubs = useCallback(async () => {
-    const user = await base44.auth.me();
-    if (!user) return;
+    if (!user?.id) return [];
     const userClubs = await loadUserClubs(user.id);
     _globalClubs = userClubs;
     setClubs(userClubs);
     notifyListeners();
     return userClubs;
-  }, []);
+  }, [user?.id]);
 
   return { club, clubs, loading, switchClub, refreshClubs };
 }
@@ -121,5 +137,6 @@ export function resetClubContext() {
   _globalClub = null;
   _globalClubs = [];
   _initialized = false;
+  _initializedUserId = null;
   _listeners = [];
 }

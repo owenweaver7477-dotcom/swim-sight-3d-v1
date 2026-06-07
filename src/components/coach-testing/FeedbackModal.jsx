@@ -3,6 +3,7 @@ import { X, MessageSquare, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { useClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 
 const FEEDBACK_TYPES = [
   { value: 'usability',          label: 'Usability' },
@@ -35,6 +36,7 @@ function StarRating({ value, onChange }) {
 
 export default function FeedbackModal({ onClose, pageRoute }) {
   const { club } = useClubContext();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     feedback_type: 'usability',
     rating: null,
@@ -52,7 +54,6 @@ export default function FeedbackModal({ onClose, pageRoute }) {
     e.preventDefault();
     if (!form.message.trim()) return;
     setSubmitting(true);
-    const user = await base44.auth.me();
     await base44.entities.CoachFeedback.create({
       club_id: club?.id || '',
       user_id: user?.id || '',
