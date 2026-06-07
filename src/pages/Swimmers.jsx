@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,52 +18,52 @@ import SwimmerProgressAnalytics from '@/components/analytics/SwimmerProgressAnal
 import ReportHistoryList from '@/components/analytics/ReportHistoryList';
 import { activeCompletedReports, PENDING_STATUSES } from '@/components/analytics/analyticsHelpers';
 
-
+const MANAGE_SWIMMER_ROLES = ['owner', 'admin', 'coach'];
+const EMPTY_FORM = {
+  name: '',
+  squad_id: '',
+  main_strokes: '',
+  notes: '',
+  swimmer_email: '',
+  parent_email: '',
+};
 
 export default function Swimmers() {
-  const { club } = useClubContext();
+  const { club, memberRole } = useClubContext();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // swimmer to confirm delete
-  const [form, setForm] = useState({ name: '', squad_id: '', main_strokes: '', notes: '', swimmer_email: '', parent_email: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const canManageSwimmers = MANAGE_SWIMMER_ROLES.includes(memberRole);
 
   const { data: swimmers = [], isLoading } = useQuery({
     queryKey: ['swimmers', club?.id],
-    queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }),
+    queryFn: () => entities.Swimmer.filter({ club_id: club.id }, 'last_name', 250),
     enabled: !!club?.id,
   });
 
   const { data: squads = [] } = useQuery({
     queryKey: ['squads', club?.id],
-    queryFn: () => base44.entities.Squad.filter({ club_id: club.id }),
+    queryFn: () => entities.Squad.filter({ club_id: club.id }, 'name', 100),
     enabled: !!club?.id,
-  });
-
-  const { data: swimmerReviews = [] } = useQuery({
-    queryKey: ['reviews-for-swimmer', selected?.id],
-    queryFn: () => base44.entities.Review.filter({ swimmer_id: selected.id }),
-    enabled: !!selected?.id,
   });
 
   const { data: swimmerReports = [] } = useQuery({
     queryKey: ['reports-for-swimmer', selected?.id],
-    queryFn: () => base44.entities.Report.filter({ swimmer_id: selected.id }, '-created_date', 100),
+    queryFn: () => entities.Report.filter({ swimmer_id: selected.id }, '-created_date', 100),
     enabled: !!selected?.id,
   });
 
   const { data: swimmerFindings = [] } = useQuery({
     queryKey: ['findings-for-swimmer', selected?.id],
-    queryFn: () => base44.entities.Finding.filter({ swimmer_id: selected.id }, '-created_date', 500),
+    queryFn: () => entities.Finding.filter({ swimmer_id: selected.id }, '-created_date', 500),
     enabled: !!selected?.id,
   });
 
-  const { data: swimmerNotifications = [] } = useQuery({
-    queryKey: ['swimmer-notifications', selected?.id],
-    queryFn: () => base44.entities.Notification.filter({ swimmer_id: selected.id }, '-created_date', 50),
-    enabled: !!selected?.id,
-  });
+  const swimmerNotifications = [];
 
   // Accurate counters — active (non-deleted) reports only
   const activeReports = swimmerReports.filter(r => !r.is_deleted);
@@ -70,7 +71,7 @@ export default function Swimmers() {
   const pendingReports = activeReports.filter(r => PENDING_STATUSES.includes(r.status));
 
   const deleteSwimmer = useMutation({
-    mutationFn: (id) => base44.entities.Swimmer.delete(id),
+    mutationFn: (id) => entities.Swimmer.softDelete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['swimmers', club?.id] });
       setDeleteTarget(null);
@@ -79,11 +80,11 @@ export default function Swimmers() {
   });
 
   const addSwimmer = useMutation({
-    mutationFn: (data) => base44.entities.Swimmer.create(data),
+    mutationFn: (data) => entities.Swimmer.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['swimmers', club?.id] });
       setOpen(false);
-      setForm({ name: '', squad_id: '', main_strokes: '', notes: '' });
+      setForm(EMPTY_FORM);
     },
   });
 
@@ -163,12 +164,12 @@ export default function Swimmers() {
           <div className="p-4 rounded-xl bg-card border border-border">
             <div className="flex items-center gap-2 mb-3">
               <Bell className="w-4 h-4 text-primary" />
-              <div className="text-xs font-bold text-foreground">Notification History</div>
+            <div className="text-xs font-bold text-foreground">Notification History</div>
               <span className="text-[10px] text-muted-foreground ml-auto">{swimmerNotifications.length} total</span>
             </div>
             {swimmerNotifications.length === 0 ? (
               <div className="py-6 text-center text-xs text-muted-foreground">
-                No notifications sent yet. Finalise a report and click "Notify Swimmer" to create one.
+                Notifications are coming later in the Supabase migration. Email details are saved on the swimmer profile.
               </div>
             ) : (
               <div className="space-y-2">
@@ -212,50 +213,52 @@ export default function Swimmers() {
         title="Swimmers"
         subtitle={`${swimmers.length} swimmer${swimmers.length !== 1 ? 's' : ''} registered.`}
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-8 text-xs"><Plus className="w-3.5 h-3.5 mr-1" /> Add Swimmer</Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-border">
-              <DialogHeader><DialogTitle>Add Swimmer</DialogTitle></DialogHeader>
-              <form onSubmit={e => { e.preventDefault(); addSwimmer.mutate({ ...form, club_id: club.id }); }} className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Name</Label>
-                  <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" className="bg-secondary border-border mt-1" />
-                </div>
-                {squads.length > 0 && (
+          canManageSwimmers ? (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="h-8 text-xs"><Plus className="w-3.5 h-3.5 mr-1" /> Add Swimmer</Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-border">
+                <DialogHeader><DialogTitle>Add Swimmer</DialogTitle></DialogHeader>
+                <form onSubmit={e => { e.preventDefault(); addSwimmer.mutate({ ...form, club_id: club.id, created_by: user?.id }); }} className="space-y-3">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Squad</Label>
-                    <Select value={form.squad_id} onValueChange={v => setForm(p => ({ ...p, squad_id: v }))}>
-                      <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select squad" /></SelectTrigger>
-                      <SelectContent>
-                        {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" className="bg-secondary border-border mt-1" />
                   </div>
-                )}
-                <div>
-                  <Label className="text-xs text-muted-foreground">Main Strokes</Label>
-                  <Input value={form.main_strokes} onChange={e => setForm(p => ({ ...p, main_strokes: e.target.value }))} placeholder="e.g. Breaststroke, IM" className="bg-secondary border-border mt-1" />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Coach Notes</Label>
-                  <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Technical notes, injury flags..." className="bg-secondary border-border mt-1" rows={2} />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Swimmer Email (optional)</Label>
-                  <Input value={form.swimmer_email} onChange={e => setForm(p => ({ ...p, swimmer_email: e.target.value }))} placeholder="swimmer@email.com" className="bg-secondary border-border mt-1" />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Parent Email (optional)</Label>
-                  <Input value={form.parent_email} onChange={e => setForm(p => ({ ...p, parent_email: e.target.value }))} placeholder="parent@email.com" className="bg-secondary border-border mt-1" />
-                </div>
-                <Button type="submit" className="w-full" disabled={!form.name.trim() || addSwimmer.isPending}>
-                  {addSwimmer.isPending ? 'Adding...' : 'Add Swimmer'}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  {squads.length > 0 && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Squad</Label>
+                      <Select value={form.squad_id} onValueChange={v => setForm(p => ({ ...p, squad_id: v }))}>
+                        <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select squad" /></SelectTrigger>
+                        <SelectContent>
+                          {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Main Strokes</Label>
+                    <Input value={form.main_strokes} onChange={e => setForm(p => ({ ...p, main_strokes: e.target.value }))} placeholder="e.g. Breaststroke, IM" className="bg-secondary border-border mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Coach Notes</Label>
+                    <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Technical notes, injury flags..." className="bg-secondary border-border mt-1" rows={2} />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Swimmer Email (optional)</Label>
+                    <Input value={form.swimmer_email} onChange={e => setForm(p => ({ ...p, swimmer_email: e.target.value }))} placeholder="swimmer@email.com" className="bg-secondary border-border mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Parent Email (optional)</Label>
+                    <Input value={form.parent_email} onChange={e => setForm(p => ({ ...p, parent_email: e.target.value }))} placeholder="parent@email.com" className="bg-secondary border-border mt-1" />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={!form.name.trim() || addSwimmer.isPending}>
+                    {addSwimmer.isPending ? 'Adding...' : 'Add Swimmer'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          ) : null
         }
       />
 
@@ -263,8 +266,10 @@ export default function Swimmers() {
         <div className="p-10 rounded-xl bg-card border border-border text-center">
           <Waves className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <div className="text-sm font-medium text-foreground mb-1">No swimmers registered yet</div>
-          <p className="text-xs text-muted-foreground mb-4">Add your first swimmer to start tracking technique reviews and reports.</p>
-          <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Add First Swimmer</Button>
+          <p className="text-xs text-muted-foreground mb-4">Build your squad list before reviewing videos.</p>
+          {canManageSwimmers && (
+            <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Add Swimmer</Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -285,13 +290,15 @@ export default function Swimmers() {
                     <div className="text-sm font-semibold text-foreground">{s.name}</div>
                     {squad && <div className="text-[10px] text-muted-foreground">{squad.name}</div>}
                   </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}
-                    className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Remove swimmer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {canManageSwimmers && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}
+                      className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Remove swimmer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 {strokes.length > 0 && (
@@ -318,7 +325,7 @@ export default function Swimmers() {
           <div className="bg-card border border-border rounded-xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="text-sm font-bold text-foreground mb-1">Remove swimmer?</h3>
             <p className="text-xs text-muted-foreground mb-5">
-              <span className="font-semibold text-foreground">{deleteTarget.name}</span> will be removed from the club. Their videos and reports will remain but won't be linked to this profile.
+              <span className="font-semibold text-foreground">{deleteTarget.name}</span> will be archived from the active squad list. Their videos and reports stay linked for historical review.
             </p>
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>

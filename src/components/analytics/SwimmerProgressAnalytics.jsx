@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
@@ -82,7 +82,7 @@ export default function SwimmerProgressAnalytics({ swimmer }) {
 
   const { data: allReports = [], isLoading: loadingReports } = useQuery({
     queryKey: ['reports-swimmer-analytics', swimmer.id],
-    queryFn: () => base44.entities.Report.filter({ swimmer_id: swimmer.id }, '-created_date', 100),
+    queryFn: () => entities.Report.filter({ swimmer_id: swimmer.id }, '-created_date', 100),
     enabled: !!swimmer.id,
   });
 
@@ -91,7 +91,7 @@ export default function SwimmerProgressAnalytics({ swimmer }) {
 
   const { data: allFindings = [], isLoading: loadingFindings } = useQuery({
     queryKey: ['findings-swimmer-analytics', swimmer.id],
-    queryFn: () => base44.entities.Finding.filter({ swimmer_id: swimmer.id }, '-created_date', 500),
+    queryFn: () => entities.Finding.filter({ swimmer_id: swimmer.id }, '-created_date', 500),
     enabled: !!swimmer.id && completedReports.length > 0,
   });
 

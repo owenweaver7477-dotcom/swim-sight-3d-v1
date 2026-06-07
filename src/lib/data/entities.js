@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { getActiveClub } from '@/lib/swimState';
 
 const CREATED_ALIAS = 'created_date';
 const UPDATED_ALIAS = 'updated_date';
@@ -45,16 +46,31 @@ function stripUndefined(data) {
   );
 }
 
-function mapSwimmerToDb(data) {
-  if (!data?.name) return data;
-  const [firstName, ...rest] = data.name.trim().split(/\s+/);
-  const { name, main_strokes, notification_preference, can_receive_notifications, ...remaining } = data;
+function splitName(name = '') {
+  const [firstName, ...rest] = name.trim().split(/\s+/).filter(Boolean);
   return {
-    ...remaining,
-    first_name: data.first_name || firstName || name,
-    last_name: data.last_name || rest.join(' '),
-    notes: data.notes,
+    first_name: firstName || '',
+    last_name: rest.join(' '),
   };
+}
+
+function mapSwimmerToDb(data) {
+  if (!data) return data;
+  const { name, squad_id, ...remaining } = data;
+  const parsed = splitName(name || '');
+  const hasNameInput = Boolean(name || data.first_name !== undefined || data.last_name !== undefined);
+  const mapped = {
+    ...remaining,
+  };
+
+  if (squad_id !== undefined) mapped.squad_id = squad_id || null;
+
+  if (hasNameInput) {
+    mapped.first_name = data.first_name || parsed.first_name;
+    mapped.last_name = data.last_name ?? parsed.last_name ?? '';
+  }
+
+  return mapped;
 }
 
 function mapSwimmerFromDb(row) {
@@ -91,9 +107,21 @@ function mapFindingFromDb(row) {
   });
 }
 
+function mapReportFromDb(row) {
+  if (!row) return row;
+  const title = row.title || [row.stroke_type, row.analysis_type].filter(Boolean).join(' ') || 'Coach Report';
+  return withBase44DateAliases({
+    ...row,
+    title,
+  });
+}
+
 function getMappers(entityName) {
   if (entityName === 'Swimmer') {
     return { toDb: mapSwimmerToDb, fromDb: mapSwimmerFromDb };
+  }
+  if (entityName === 'Report') {
+    return { toDb: (data) => data, fromDb: mapReportFromDb };
   }
   if (entityName === 'Finding') {
     return { toDb: mapFindingToDb, fromDb: mapFindingFromDb };
@@ -101,13 +129,58 @@ function getMappers(entityName) {
   return { toDb: (data) => data, fromDb: withBase44DateAliases };
 }
 
+function currentClubId() {
+  return getActiveClub()?.id || null;
+}
+
+function isSwimmerEntity(entityName) {
+  return entityName === 'Swimmer';
+}
+
+function isClubScopedEntity(entityName) {
+  return ['Squad', 'Swimmer'].includes(entityName);
+}
+
+function applyEntityDefaults(entityName, data = {}) {
+  const cleaned = stripUndefined(data);
+  const clubId = cleaned.club_id || (isClubScopedEntity(entityName) ? currentClubId() : null);
+
+  if (isClubScopedEntity(entityName) && clubId) {
+    cleaned.club_id = clubId;
+  }
+
+  if (isSwimmerEntity(entityName) && cleaned.is_active === undefined) {
+    cleaned.is_active = true;
+  }
+
+  return cleaned;
+}
+
+function applyClubScope(query, entityName, filters = {}) {
+  if (!isClubScopedEntity(entityName)) return query;
+  const explicitClubId = filters.club_id;
+  const activeClubId = currentClubId();
+
+  if (explicitClubId) return query.eq('club_id', explicitClubId);
+  if (activeClubId) return query.eq('club_id', activeClubId);
+  return query;
+}
+
+function applyDefaultActiveScope(query, entityName, filters = {}, options = {}) {
+  if (!isSwimmerEntity(entityName)) return query;
+  if (options.includeInactive || filters.includeInactive || filters.is_active !== undefined) return query;
+  return query.eq('is_active', true);
+}
+
 function createEntityAdapter(entityName, tableName) {
   const { toDb, fromDb } = getMappers(entityName);
 
   return {
-    async list(order = '-created_at', limit = 100) {
+    async list(order = '-created_at', limit = 100, options = {}) {
       const { column, ascending } = normaliseOrder(order);
       let query = supabase.from(tableName).select('*').order(column, { ascending });
+      query = applyClubScope(query, entityName, {});
+      query = applyDefaultActiveScope(query, entityName, {}, options);
       if (limit) query = query.limit(limit);
 
       const { data, error } = await query;
@@ -115,14 +188,18 @@ function createEntityAdapter(entityName, tableName) {
       return (data || []).map(fromDb);
     },
 
-    async filter(filters = {}, order = '-created_at', limit = 100) {
+    async filter(filters = {}, order = '-created_at', limit = 100, options = {}) {
       const { column, ascending } = normaliseOrder(order);
       let query = supabase.from(tableName).select('*');
+      const cleanedFilters = stripUndefined(filters);
+      delete cleanedFilters.includeInactive;
 
-      Object.entries(stripUndefined(filters)).forEach(([key, value]) => {
+      Object.entries(cleanedFilters).forEach(([key, value]) => {
         query = query.eq(key, value);
       });
 
+      query = applyClubScope(query, entityName, cleanedFilters);
+      query = applyDefaultActiveScope(query, entityName, filters, options);
       query = query.order(column, { ascending });
       if (limit) query = query.limit(limit);
 
@@ -131,8 +208,14 @@ function createEntityAdapter(entityName, tableName) {
       return (data || []).map(fromDb);
     },
 
+    async query(filters = {}, order = '-created_at', limit = 100, options = {}) {
+      return this.filter(filters, order, limit, options);
+    },
+
     async get(id) {
-      const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
+      let query = supabase.from(tableName).select('*').eq('id', id);
+      query = applyClubScope(query, entityName, {});
+      const { data, error } = await query.single();
       if (error) throw error;
       return fromDb(data);
     },
@@ -140,7 +223,7 @@ function createEntityAdapter(entityName, tableName) {
     async create(data) {
       const { data: created, error } = await supabase
         .from(tableName)
-        .insert(stripUndefined(toDb(data)))
+        .insert(applyEntityDefaults(entityName, toDb(data)))
         .select('*')
         .single();
 
@@ -149,27 +232,34 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async update(id, data) {
-      const { data: updated, error } = await supabase
+      let query = supabase
         .from(tableName)
         .update(stripUndefined(toDb(data)))
-        .eq('id', id)
-        .select('*')
-        .single();
+        .eq('id', id);
+      query = applyClubScope(query, entityName, {});
+      const { data: updated, error } = await query.select('*').single();
 
       if (error) throw error;
       return fromDb(updated);
     },
 
     async delete(id) {
+      if (isSwimmerEntity(entityName)) {
+        return this.update(id, { is_active: false });
+      }
       const { error } = await supabase.from(tableName).delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
 
+    async softDelete(id) {
+      return this.update(id, { is_active: false });
+    },
+
     async bulkCreate(rows = []) {
       const { data, error } = await supabase
         .from(tableName)
-        .insert(rows.map((row) => stripUndefined(toDb(row))))
+        .insert(rows.map((row) => applyEntityDefaults(entityName, toDb(row))))
         .select('*');
 
       if (error) throw error;
