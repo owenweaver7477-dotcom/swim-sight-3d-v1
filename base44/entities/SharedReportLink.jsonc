@@ -1,0 +1,44 @@
+{
+  "name": "SharedReportLink",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Reference to the Report"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to the swimmer"
+    },
+    "token": {
+      "type": "string",
+      "description": "Secure random token for public URL"
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "User who created this share link"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the link is active"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "Optional ISO expiry timestamp"
+    },
+    "last_viewed_at": {
+      "type": "string",
+      "description": "ISO timestamp of last public view"
+    }
+  },
+  "required": [
+    "club_id",
+    "report_id",
+    "token"
+  ]
+}

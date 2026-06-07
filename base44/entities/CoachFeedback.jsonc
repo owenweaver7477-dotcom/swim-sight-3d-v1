@@ -1,0 +1,82 @@
+{
+  "name": "CoachFeedback",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who submitted feedback"
+    },
+    "page_route": {
+      "type": "string",
+      "description": "Page route where feedback was submitted"
+    },
+    "feedback_type": {
+      "type": "string",
+      "enum": [
+        "usability",
+        "visual_design",
+        "workflow_confusion",
+        "ai_trust",
+        "report_quality",
+        "bug",
+        "feature_request"
+      ],
+      "default": "usability"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Optional rating 1\u20135"
+    },
+    "title": {
+      "type": "string",
+      "description": "Optional short title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Feedback message"
+    },
+    "screenshot_note": {
+      "type": "string",
+      "description": "Optional note about a screenshot or visual context"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Severity \u2014 required for bugs"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "reviewed",
+        "resolved",
+        "wont_fix"
+      ],
+      "default": "new"
+    },
+    "what_happened": {
+      "type": "string",
+      "description": "For bugs: what actually happened"
+    },
+    "what_expected": {
+      "type": "string",
+      "description": "For bugs: what was expected"
+    },
+    "steps_to_reproduce": {
+      "type": "string",
+      "description": "For bugs: steps to reproduce"
+    }
+  },
+  "required": [
+    "message"
+  ]
+}

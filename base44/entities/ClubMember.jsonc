@@ -1,0 +1,30 @@
+{
+  "name": "ClubMember",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Reference to the user"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "owner",
+        "admin",
+        "coach",
+        "assistant_coach",
+        "swimmer"
+      ],
+      "default": "coach",
+      "description": "Role of the user within the club"
+    }
+  },
+  "required": [
+    "club_id",
+    "user_id"
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "name": "Annotation",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Reference to report (optional)"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to video upload"
+    },
+    "analysis_session_id": {
+      "type": "string",
+      "description": "Reference to analysis session (optional)"
+    },
+    "finding_id": {
+      "type": "string",
+      "description": "Reference to linked finding (optional)"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created this annotation"
+    },
+    "annotation_type": {
+      "type": "string",
+      "enum": [
+        "line",
+        "arrow",
+        "angle",
+        "circle",
+        "rectangle",
+        "freehand",
+        "text",
+        "body_line",
+        "knee_width",
+        "head_position",
+        "catch_angle",
+        "streamline_line"
+      ],
+      "default": "line",
+      "description": "Type of annotation drawn"
+    },
+    "timestamp_seconds": {
+      "type": "number",
+      "description": "Video timestamp this annotation relates to"
+    },
+    "frame_image_uri": {
+      "type": "string",
+      "description": "Optional private URI of captured frame image"
+    },
+    "video_time_label": {
+      "type": "string",
+      "description": "Human-readable time label, e.g. '1:23'"
+    },
+    "coordinates_json": {
+      "type": "string",
+      "description": "JSON string of drawing coordinates/points"
+    },
+    "label": {
+      "type": "string",
+      "description": "Short display label for this annotation"
+    },
+    "note": {
+      "type": "string",
+      "description": "Longer coach note attached to this annotation"
+    },
+    "stroke_phase": {
+      "type": "string",
+      "description": "Stroke phase this annotation relates to (optional)"
+    },
+    "colour": {
+      "type": "string",
+      "default": "#00A6C8",
+      "description": "Annotation colour (hex)"
+    },
+    "is_included_in_report": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to include in printed/shared report"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "coach",
+        "ai_suggested"
+      ],
+      "default": "coach",
+      "description": "coach = coach-created; ai_suggested = AI server suggested, requires coach review"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "coach_only",
+        "report",
+        "shared_report"
+      ],
+      "default": "coach_only",
+      "description": "coach_only = internal; report = printed report; shared_report = public share link"
+    }
+  },
+  "required": [
+    "club_id",
+    "video_upload_id",
+    "annotation_type"
+  ]
+}

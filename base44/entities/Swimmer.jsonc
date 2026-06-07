@@ -1,0 +1,53 @@
+{
+  "name": "Swimmer",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to parent club"
+    },
+    "squad_id": {
+      "type": "string",
+      "description": "Reference to squad"
+    },
+    "name": {
+      "type": "string",
+      "description": "Swimmer full name"
+    },
+    "main_strokes": {
+      "type": "string",
+      "description": "Comma-separated main strokes"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Coach notes about swimmer"
+    },
+    "swimmer_email": {
+      "type": "string",
+      "description": "Swimmer's own email for notifications"
+    },
+    "parent_email": {
+      "type": "string",
+      "description": "Parent/guardian email for notifications"
+    },
+    "notification_preference": {
+      "type": "string",
+      "enum": [
+        "none",
+        "in_app",
+        "email"
+      ],
+      "default": "in_app",
+      "description": "How this swimmer/parent prefers to receive notifications"
+    },
+    "can_receive_notifications": {
+      "type": "boolean",
+      "default": false,
+      "description": "Coach must explicitly enable this before notifications are sent"
+    }
+  },
+  "required": [
+    "club_id",
+    "name"
+  ]
+}

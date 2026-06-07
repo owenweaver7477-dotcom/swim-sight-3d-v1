@@ -1,0 +1,42 @@
+{
+  "name": "ReferenceProfile",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Formal reference profile name"
+    },
+    "stroke_group": {
+      "type": "string",
+      "description": "Stroke group category"
+    },
+    "event_distance": {
+      "type": "string",
+      "description": "Event distance"
+    },
+    "technical_inspiration": {
+      "type": "string",
+      "description": "Technical inspiration label"
+    },
+    "teaches": {
+      "type": "string",
+      "description": "Comma-separated teaching points"
+    },
+    "key_phases": {
+      "type": "string",
+      "description": "Comma-separated key phases"
+    },
+    "coach_cues": {
+      "type": "string",
+      "description": "Comma-separated coach cues"
+    },
+    "related_drills": {
+      "type": "string",
+      "description": "Comma-separated related drills"
+    }
+  },
+  "required": [
+    "name",
+    "stroke_group"
+  ]
+}

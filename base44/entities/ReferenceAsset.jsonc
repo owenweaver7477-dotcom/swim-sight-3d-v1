@@ -1,0 +1,57 @@
+{
+  "name": "ReferenceAsset",
+  "type": "object",
+  "properties": {
+    "reference_profile_id": {
+      "type": "string",
+      "description": "Reference to profile"
+    },
+    "owner_scope": {
+      "type": "string",
+      "enum": [
+        "platform",
+        "club"
+      ],
+      "description": "Asset ownership scope"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Club ID if club-owned"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video",
+        "3d_model"
+      ],
+      "description": "Type of asset"
+    },
+    "asset_url": {
+      "type": "string",
+      "description": "Asset file URL"
+    },
+    "camera_angle": {
+      "type": "string",
+      "description": "Camera angle"
+    },
+    "phase": {
+      "type": "string",
+      "description": "Stroke phase"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "processing",
+        "archived"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "reference_profile_id",
+    "asset_type",
+    "asset_url"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "KeyFrame",
+  "type": "object",
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "Reference to review"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Reference to AI report"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to video upload"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "timestamp_seconds": {
+      "type": "number",
+      "description": "Video timestamp in seconds"
+    },
+    "phase": {
+      "type": "string",
+      "description": "Stroke phase label"
+    },
+    "label": {
+      "type": "string",
+      "description": "Short label for this key frame"
+    },
+    "note": {
+      "type": "string",
+      "description": "Key frame note / description"
+    }
+  },
+  "required": []
+}

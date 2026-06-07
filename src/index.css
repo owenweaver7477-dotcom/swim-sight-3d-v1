@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Main surfaces */
+    --background: 210 40% 98%;        /* #F8FAFC */
+    --foreground: 210 74% 12%;        /* #0B1F33 — deep navy headings */
+    --card: 0 0% 100%;                /* #FFFFFF */
+    --card-foreground: 222 47% 11%;   /* #111827 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary = Pool Blue #0077B6 */
+    --primary: 201 100% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary = soft aqua tint #E6F7FB */
+    --secondary: 191 67% 94%;
+    --secondary-foreground: 207 61% 25%;
+
+    /* Muted surfaces */
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;  /* #64748B */
+
+    /* Accent = Aqua #00A6C8 */
+    --accent: 191 100% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    /* States */
+    --destructive: 0 72% 51%;         /* #DC2626 */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Chrome */
+    --border: 214 32% 91%;            /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 201 100% 36%;
+    --radius: 0.5rem;
+
+    /* Charts */
+    --chart-1: 201 100% 36%;
+    --chart-2: 191 100% 39%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 142 72% 29%;
+    --chart-5: 0 72% 51%;
+
+    /* Sidebar vars (kept for compatibility but sidebar uses inline colours) */
+    --sidebar-background: 210 74% 12%;
+    --sidebar-foreground: 209 55% 91%;   /* #EAF4F8 */
+    --sidebar-primary: 191 100% 39%;
+    --sidebar-primary-foreground: 210 74% 12%;
+    --sidebar-accent: 207 61% 18%;       /* #12324A */
+    --sidebar-accent-foreground: 209 55% 91%;
+    --sidebar-border: 207 50% 22%;
+    --sidebar-ring: 191 100% 39%;
+
+    /* Custom */
+    --surface: 214 32% 96%;
+    --surface-foreground: 222 47% 11%;
+    --report-bg: 0 0% 100%;
+    --report-fg: 222 47% 11%;
+  }
+
+  .dark {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 201 100% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 191 67% 94%;
+    --secondary-foreground: 207 61% 18%;
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 191 100% 39%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 201 100% 36%;
+    --chart-1: 201 100% 36%;
+    --chart-2: 191 100% 39%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 142 72% 29%;
+    --chart-5: 0 72% 51%;
+    --sidebar-background: 210 74% 12%;
+    --sidebar-foreground: 210 30% 80%;
+    --sidebar-primary: 191 100% 39%;
+    --sidebar-primary-foreground: 210 74% 12%;
+    --sidebar-accent: 207 61% 18%;
+    --sidebar-accent-foreground: 210 30% 90%;
+    --sidebar-border: 207 50% 20%;
+    --sidebar-ring: 191 100% 39%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+@media print {
+  /* Hide everything by default */
+  body * { visibility: hidden !important; }
+
+  /* Show only the printable report area and all its descendants */
+  #printable-report-area,
+  #printable-report-area * {
+    visibility: visible !important;
+  }
+
+  /* Position the report area to fill the page */
+  #printable-report-area {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Ensure colors and gradients print accurately */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* A4 page margins */
+  .print-report {
+    padding: 1.5rem !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  /* Prevent page breaks inside finding cards */
+  .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Hide print button itself when printing */
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

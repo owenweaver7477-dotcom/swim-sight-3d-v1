@@ -1,0 +1,84 @@
+{
+  "name": "ClubInvite",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created the invite"
+    },
+    "invite_code": {
+      "type": "string",
+      "description": "Unique invite code (short alphanumeric)"
+    },
+    "invite_type": {
+      "type": "string",
+      "enum": [
+        "coach",
+        "swimmer",
+        "parent",
+        "admin"
+      ],
+      "default": "coach",
+      "description": "Type of invite"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "owner",
+        "admin",
+        "coach",
+        "swimmer",
+        "parent"
+      ],
+      "default": "coach",
+      "description": "ClubMember role granted on joining"
+    },
+    "email": {
+      "type": "string",
+      "description": "Optional specific email this invite is for"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Optional swimmer profile to link on join"
+    },
+    "max_uses": {
+      "type": "number",
+      "description": "Maximum number of uses (null = unlimited)"
+    },
+    "use_count": {
+      "type": "number",
+      "default": 0,
+      "description": "How many times this code has been used"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "Optional ISO expiry timestamp"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this invite is still active"
+    },
+    "revoked_at": {
+      "type": "string",
+      "description": "ISO timestamp when revoked"
+    },
+    "revoked_by": {
+      "type": "string",
+      "description": "User ID who revoked the invite"
+    },
+    "last_used_at": {
+      "type": "string",
+      "description": "ISO timestamp of last successful use"
+    }
+  },
+  "required": [
+    "club_id",
+    "invite_code",
+    "role"
+  ]
+}

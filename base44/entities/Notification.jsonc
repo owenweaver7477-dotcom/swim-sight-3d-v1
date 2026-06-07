@@ -1,0 +1,94 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Related report (optional)"
+    },
+    "finding_id": {
+      "type": "string",
+      "description": "Related finding (optional)"
+    },
+    "recipient_type": {
+      "type": "string",
+      "enum": [
+        "swimmer",
+        "parent",
+        "coach"
+      ],
+      "default": "swimmer"
+    },
+    "recipient_name": {
+      "type": "string"
+    },
+    "recipient_email": {
+      "type": "string"
+    },
+    "notification_type": {
+      "type": "string",
+      "enum": [
+        "report_ready",
+        "focus_assigned",
+        "drill_assigned",
+        "report_shared",
+        "review_required"
+      ],
+      "default": "report_ready"
+    },
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "queued",
+        "sent",
+        "failed",
+        "read"
+      ],
+      "default": "draft"
+    },
+    "delivery_channel": {
+      "type": "string",
+      "enum": [
+        "in_app",
+        "email_placeholder"
+      ],
+      "default": "in_app"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID of the coach who created this"
+    },
+    "sent_at": {
+      "type": "string",
+      "description": "ISO timestamp when sent"
+    },
+    "read_at": {
+      "type": "string",
+      "description": "ISO timestamp when read"
+    },
+    "action_url": {
+      "type": "string",
+      "description": "Internal link or public share link"
+    }
+  },
+  "required": [
+    "club_id",
+    "title",
+    "message"
+  ]
+}

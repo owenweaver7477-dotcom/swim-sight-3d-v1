@@ -1,0 +1,56 @@
+{
+  "name": "Review",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to video upload"
+    },
+    "review_type": {
+      "type": "string",
+      "enum": [
+        "full_review",
+        "quick_coach_review",
+        "dryland_movement_review"
+      ],
+      "default": "full_review"
+    },
+    "stroke_or_movement": {
+      "type": "string",
+      "description": "Stroke or movement being reviewed"
+    },
+    "camera_angle": {
+      "type": "string",
+      "description": "Camera angle used"
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "swim",
+        "dryland"
+      ]
+    },
+    "coach_notes": {
+      "type": "string",
+      "description": "Coach notes for this review"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_progress",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": []
+}

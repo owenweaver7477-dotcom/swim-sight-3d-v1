@@ -1,0 +1,158 @@
+{
+  "name": "DragAnalysis",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Reference to report (optional)"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to video upload"
+    },
+    "analysis_session_id": {
+      "type": "string",
+      "description": "Reference to analysis session (optional)"
+    },
+    "finding_id": {
+      "type": "string",
+      "description": "Reference to linked finding (optional)"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created this record"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "ai_pose",
+        "coach_annotation",
+        "combined"
+      ],
+      "default": "coach_annotation",
+      "description": "How this drag risk was identified"
+    },
+    "analysis_mode": {
+      "type": "string",
+      "enum": [
+        "real_pose",
+        "manual",
+        "placeholder"
+      ],
+      "default": "manual",
+      "description": "Quality of underlying evidence"
+    },
+    "drag_risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Estimated drag risk level \u2014 not a measured drag force"
+    },
+    "drag_zone": {
+      "type": "string",
+      "enum": [
+        "head",
+        "shoulders",
+        "torso",
+        "hips",
+        "knees",
+        "ankles",
+        "arms",
+        "streamline",
+        "full_body"
+      ],
+      "description": "Body zone where resistance risk is estimated"
+    },
+    "stroke_phase": {
+      "type": "string",
+      "description": "Stroke phase this applies to"
+    },
+    "timestamp_start": {
+      "type": "number",
+      "description": "Video timestamp start (seconds)"
+    },
+    "timestamp_end": {
+      "type": "number",
+      "description": "Video timestamp end (seconds)"
+    },
+    "risk_score": {
+      "type": "number",
+      "description": "Optional estimate 0-100 \u2014 not a measured drag coefficient"
+    },
+    "measurement_summary": {
+      "type": "string",
+      "description": "Evidence summary from pose data or coach annotation"
+    },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "pose_measurement",
+        "annotation",
+        "video_observation",
+        "coach_review"
+      ],
+      "description": "How the evidence was obtained"
+    },
+    "coordinates_json": {
+      "type": "string",
+      "description": "Optional JSON string of overlay drawing coordinates"
+    },
+    "overlay_type": {
+      "type": "string",
+      "enum": [
+        "body_line",
+        "frontal_area",
+        "flow_arrows",
+        "kick_width",
+        "streamline_break",
+        "head_lift",
+        "hip_drop"
+      ],
+      "description": "Visual overlay style to render"
+    },
+    "coach_notes": {
+      "type": "string",
+      "description": "Coach explanation of this risk area"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "included_in_report": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to include in final coach report"
+    },
+    "linked_standard_id": {
+      "type": "string",
+      "description": "Optional linked TechnicalStandard ID \u2014 connects this drag risk to a club technical standard"
+    },
+    "linked_standard_title": {
+      "type": "string",
+      "description": "Cached standard title for display"
+    }
+  },
+  "required": [
+    "club_id",
+    "video_upload_id",
+    "drag_zone"
+  ]
+}

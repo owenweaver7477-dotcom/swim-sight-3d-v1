@@ -1,0 +1,134 @@
+{
+  "name": "Report",
+  "type": "object",
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "Reference to review (optional for AI reports)"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club for branding"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to video upload (AI-generated reports)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Report title"
+    },
+    "public_share_id": {
+      "type": "string",
+      "description": "Unique share identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "ai_complete",
+        "awaiting_review"
+      ],
+      "default": "draft"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "coach",
+        "ai"
+      ],
+      "default": "coach",
+      "description": "Who created this report"
+    },
+    "analysis_mode": {
+      "type": "string",
+      "enum": [
+        "placeholder",
+        "real_pose",
+        "manual",
+        "error"
+      ],
+      "default": "placeholder",
+      "description": "placeholder = demo/test, real_pose = genuine pose analysis, manual = coach-created, error = processing failed"
+    },
+    "ai_engine_version": {
+      "type": "string",
+      "description": "Version string of the AI engine (e.g. 'pose-mvp-0.1')"
+    },
+    "model_name": {
+      "type": "string",
+      "description": "Pose model used by the AI server (e.g. 'mediapipe_pose')"
+    },
+    "real_pose_detected": {
+      "type": "boolean",
+      "description": "True only when real human pose keypoints were detected and used for analysis"
+    },
+    "frame_count_processed": {
+      "type": "number",
+      "description": "Number of video frames sampled and processed by the AI server"
+    },
+    "detected_keypoints_count": {
+      "type": "number",
+      "description": "Average number of keypoints detected per frame"
+    },
+    "overall_score": {
+      "type": "number",
+      "description": "AI-generated overall technique score (0-100), only set for real_pose mode"
+    },
+    "technical_summary": {
+      "type": "string",
+      "description": "AI-generated technical summary derived from pose evidence"
+    },
+    "phase_breakdown": {
+      "type": "string",
+      "description": "JSON string of phase breakdown data from AI"
+    },
+    "processed_video_url": {
+      "type": "string",
+      "description": "URL to AI-processed video with pose overlay"
+    },
+    "pose_data_file_url": {
+      "type": "string",
+      "description": "URL to raw pose data file"
+    },
+    "ai_completed_at": {
+      "type": "string",
+      "description": "ISO timestamp when AI processing completed"
+    },
+    "ai_error_message": {
+      "type": "string",
+      "description": "Error message if AI processing failed or pose detection was insufficient"
+    },
+    "coach_feedback_summary": {
+      "type": "string",
+      "description": "Plain-English summary comparing AI suggestions vs coach decisions"
+    },
+    "coach_feedback_generated_at": {
+      "type": "string",
+      "description": "ISO timestamp when coach feedback summary was last generated"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft-delete flag \u2014 hidden from all normal views when true"
+    },
+    "deleted_at": {
+      "type": "string",
+      "description": "ISO timestamp when this report was deleted"
+    },
+    "deleted_by": {
+      "type": "string",
+      "description": "User ID who deleted this report"
+    },
+    "delete_reason": {
+      "type": "string",
+      "description": "Optional reason for deletion"
+    }
+  },
+  "required": []
+}

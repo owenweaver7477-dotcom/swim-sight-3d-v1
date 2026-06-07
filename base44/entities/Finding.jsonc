@@ -1,0 +1,163 @@
+{
+  "name": "Finding",
+  "type": "object",
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "Reference to review"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Reference to AI report"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to video upload"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "key_frame_id": {
+      "type": "string",
+      "description": "Reference to key frame"
+    },
+    "finding_name": {
+      "type": "string",
+      "description": "Name of the finding"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Severity level"
+    },
+    "phase": {
+      "type": "string",
+      "description": "Stroke phase"
+    },
+    "coach_sees": {
+      "type": "string",
+      "description": "What the coach observes / finding description"
+    },
+    "why_it_matters": {
+      "type": "string",
+      "description": "Technical explanation"
+    },
+    "cue": {
+      "type": "string",
+      "description": "Coaching cue / recommended correction"
+    },
+    "drill": {
+      "type": "string",
+      "description": "Assigned drill"
+    },
+    "next_focus": {
+      "type": "string",
+      "description": "Next coaching focus area"
+    },
+    "included_in_report": {
+      "type": "boolean",
+      "default": true
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "coach",
+        "ai"
+      ],
+      "default": "coach",
+      "description": "Whether this finding was created by a coach or AI"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "pending",
+        "rejected"
+      ],
+      "default": "approved",
+      "description": "Coach approval status for AI-suggested findings"
+    },
+    "linked_standard_id": {
+      "type": "string",
+      "description": "Optional linked TechnicalStandard ID or title (for default standards)"
+    },
+    "linked_standard_title": {
+      "type": "string",
+      "description": "Cached standard title for display without re-fetching"
+    },
+    "timestamp_start": {
+      "type": "number",
+      "description": "Video timestamp start (seconds)"
+    },
+    "timestamp_end": {
+      "type": "number",
+      "description": "Video timestamp end (seconds)"
+    },
+    "confidence_score": {
+      "type": "number",
+      "description": "AI confidence score 0-1"
+    },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "pose_measurement",
+        "video_observation",
+        "insufficient_evidence"
+      ],
+      "description": "How this finding was derived by the AI"
+    },
+    "measurement_summary": {
+      "type": "string",
+      "description": "Raw measurement details from the AI \u2014 coach-internal only"
+    },
+    "frame_reference": {
+      "type": "string",
+      "description": "Optional URL to an annotated frame image \u2014 coach-internal only"
+    },
+    "original_finding_name": {
+      "type": "string",
+      "description": "AI's original finding name \u2014 preserved"
+    },
+    "original_coach_sees": {
+      "type": "string",
+      "description": "AI's original observation \u2014 preserved"
+    },
+    "original_why_it_matters": {
+      "type": "string",
+      "description": "AI's original why-it-matters \u2014 preserved"
+    },
+    "original_cue": {
+      "type": "string",
+      "description": "AI's original recommended correction \u2014 preserved"
+    },
+    "original_drill": {
+      "type": "string",
+      "description": "AI's original drill \u2014 preserved"
+    },
+    "original_next_focus": {
+      "type": "string",
+      "description": "AI's original next focus \u2014 preserved"
+    },
+    "original_severity": {
+      "type": "string",
+      "description": "AI's original severity \u2014 preserved"
+    },
+    "original_phase": {
+      "type": "string",
+      "description": "AI's original stroke phase \u2014 preserved"
+    }
+  },
+  "required": [
+    "finding_name"
+  ]
+}

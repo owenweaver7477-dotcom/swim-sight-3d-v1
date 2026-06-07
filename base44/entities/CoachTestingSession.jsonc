@@ -1,0 +1,64 @@
+{
+  "name": "CoachTestingSession",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "tester_name": {
+      "type": "string",
+      "description": "Name of the coach tester"
+    },
+    "tester_role": {
+      "type": "string",
+      "description": "Role of the tester (e.g. Head Coach, Assistant Coach)"
+    },
+    "testing_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the test session"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "in_progress",
+        "completed"
+      ],
+      "default": "planned"
+    },
+    "overall_rating": {
+      "type": "number",
+      "description": "Overall rating 1\u20135"
+    },
+    "ease_of_use_rating": {
+      "type": "number",
+      "description": "Ease of use 1\u20135"
+    },
+    "professional_look_rating": {
+      "type": "number",
+      "description": "Professional look and feel 1\u20135"
+    },
+    "ai_trust_rating": {
+      "type": "number",
+      "description": "Trust in AI output 1\u20135"
+    },
+    "report_quality_rating": {
+      "type": "number",
+      "description": "Report quality 1\u20135"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Session notes and observations"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created this session"
+    }
+  },
+  "required": [
+    "club_id",
+    "tester_name"
+  ]
+}

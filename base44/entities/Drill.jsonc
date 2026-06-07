@@ -1,0 +1,137 @@
+{
+  "name": "Drill",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Drill title"
+    },
+    "stroke": {
+      "type": "string",
+      "enum": [
+        "Freestyle",
+        "Breaststroke",
+        "Backstroke",
+        "Butterfly",
+        "IM",
+        "General"
+      ],
+      "description": "Stroke this drill targets"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "Body Line",
+        "Catch",
+        "Pull",
+        "Recovery",
+        "Breathing",
+        "Kick Recovery",
+        "Kick Drive",
+        "Glide",
+        "Timing",
+        "Rotation",
+        "Entry",
+        "Turn",
+        "Underwater",
+        "Breakout",
+        "Start",
+        "Finish",
+        "General"
+      ],
+      "description": "Stroke phase"
+    },
+    "fault_tags": {
+      "type": "string",
+      "description": "Comma-separated fault keywords this drill addresses"
+    },
+    "purpose": {
+      "type": "string",
+      "description": "What this drill aims to fix or build"
+    },
+    "instructions": {
+      "type": "string",
+      "description": "Step-by-step drill instructions"
+    },
+    "coaching_cues": {
+      "type": "string",
+      "description": "Coaching cues to say aloud"
+    },
+    "equipment": {
+      "type": "string",
+      "description": "Required equipment (none, board, fins, etc.)"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "Beginner",
+        "Intermediate",
+        "Advanced",
+        "Elite"
+      ],
+      "default": "Intermediate"
+    },
+    "intensity": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "default": "Medium"
+    },
+    "duration_or_reps": {
+      "type": "string",
+      "description": "e.g. 6x25m or 8x10 kicks"
+    },
+    "common_mistakes": {
+      "type": "string",
+      "description": "Common errors to watch for"
+    },
+    "progression": {
+      "type": "string",
+      "description": "How to make it harder"
+    },
+    "regression": {
+      "type": "string",
+      "description": "How to simplify if struggling"
+    },
+    "safety_notes": {
+      "type": "string",
+      "description": "Safety considerations"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "Optional demo video URL"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Optional image URL"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created this drill"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Club ID for club-private drills (empty for shared_default)"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "club_private",
+        "shared_default"
+      ],
+      "default": "shared_default",
+      "description": "shared_default = visible to all clubs"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "title",
+    "stroke"
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "name": "TechnicalStandard",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Club that owns this standard (empty for shared_default)"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created this standard"
+    },
+    "title": {
+      "type": "string",
+      "description": "Standard title"
+    },
+    "stroke": {
+      "type": "string",
+      "enum": [
+        "Freestyle",
+        "Breaststroke",
+        "Backstroke",
+        "Butterfly",
+        "IM",
+        "General"
+      ],
+      "description": "Stroke this standard applies to"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "Body Line",
+        "Catch",
+        "Pull",
+        "Recovery",
+        "Breathing",
+        "Kick Recovery",
+        "Kick Drive",
+        "Glide",
+        "Timing",
+        "Rotation",
+        "Entry",
+        "Turn",
+        "Underwater",
+        "Breakout",
+        "Start",
+        "Finish",
+        "General"
+      ],
+      "description": "Stroke phase this standard addresses"
+    },
+    "standard_type": {
+      "type": "string",
+      "enum": [
+        "club_standard",
+        "squad_standard",
+        "swimmer_specific",
+        "default_reference"
+      ],
+      "default": "club_standard",
+      "description": "Scope of this standard"
+    },
+    "technical_goal": {
+      "type": "string",
+      "description": "What this standard aims to achieve technically"
+    },
+    "key_positions": {
+      "type": "string",
+      "description": "What the coach should see \u2014 body/limb positions, timing markers"
+    },
+    "coach_cues": {
+      "type": "string",
+      "description": "Short coach cue phrases"
+    },
+    "common_faults": {
+      "type": "string",
+      "description": "What faults this standard addresses"
+    },
+    "linked_fault_tags": {
+      "type": "string",
+      "description": "Comma-separated fault keyword tags"
+    },
+    "linked_drill_ids": {
+      "type": "string",
+      "description": "Comma-separated Drill entity IDs linked to this standard"
+    },
+    "linked_reference_asset_ids": {
+      "type": "string",
+      "description": "Comma-separated ReferenceAsset IDs"
+    },
+    "linked_3d_asset_ids": {
+      "type": "string",
+      "description": "Comma-separated ThreeDAssets IDs"
+    },
+    "linked_drag_zones": {
+      "type": "string",
+      "description": "Comma-separated drag zones this standard relates to"
+    },
+    "success_criteria": {
+      "type": "string",
+      "description": "What improved technique looks like \u2014 what to re-check at next review"
+    },
+    "scoring_guidance": {
+      "type": "string",
+      "description": "Coach notes on how to assess progress against this standard"
+    },
+    "difficulty_level": {
+      "type": "string",
+      "enum": [
+        "Development",
+        "Competitive",
+        "National",
+        "Elite"
+      ],
+      "default": "Competitive",
+      "description": "Skill/competition level this standard targets"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "club_private",
+        "shared_default"
+      ],
+      "default": "club_private",
+      "description": "shared_default = visible to all clubs as a reference"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "title",
+    "stroke"
+  ]
+}

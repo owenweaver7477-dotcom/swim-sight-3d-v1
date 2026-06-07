@@ -1,0 +1,228 @@
+{
+  "name": "VideoUpload",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "uploaded_by_user_id": {
+      "type": "string",
+      "description": "User who uploaded the video"
+    },
+    "analysis_session_id": {
+      "type": "string",
+      "description": "Reference to the AnalysisSession this video belongs to"
+    },
+    "file_uri": {
+      "type": "string",
+      "description": "Private storage URI (never expose to frontend directly)"
+    },
+    "original_filename": {
+      "type": "string",
+      "description": "Original file name"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "File size in bytes"
+    },
+    "mime_type": {
+      "type": "string",
+      "description": "MIME type of the video file"
+    },
+    "stroke_type": {
+      "type": "string",
+      "enum": [
+        "Freestyle",
+        "Backstroke",
+        "Breaststroke",
+        "Butterfly",
+        "IM",
+        "Start",
+        "Turn",
+        "Underwater",
+        "Dryland"
+      ],
+      "description": "Stroke or movement type"
+    },
+    "analysis_type": {
+      "type": "string",
+      "enum": [
+        "Technique Review",
+        "Race Review",
+        "Start Review",
+        "Turn Review",
+        "Underwater Review"
+      ],
+      "default": "Technique Review",
+      "description": "Type of analysis"
+    },
+    "camera_angle": {
+      "type": "string",
+      "enum": [
+        "underwater_side",
+        "underwater_front",
+        "underwater_rear",
+        "above_water_side",
+        "above_water_front",
+        "above_water_rear",
+        "deck_view",
+        "Side",
+        "Front",
+        "Rear",
+        "Overhead",
+        "UnderwaterSide",
+        "UnderwaterFront",
+        "Unknown",
+        "other"
+      ],
+      "default": "underwater_side",
+      "description": "Camera angle"
+    },
+    "angle_label": {
+      "type": "string",
+      "description": "Custom label for this angle"
+    },
+    "is_primary_angle": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this is the primary angle selected for AI processing"
+    },
+    "sync_offset_seconds": {
+      "type": "number",
+      "description": "Timing offset in seconds relative to other angles in the same session"
+    },
+    "capture_device": {
+      "type": "string",
+      "enum": [
+        "swimpro",
+        "gopro",
+        "iphone",
+        "ipad",
+        "generic_camera",
+        "other"
+      ],
+      "description": "Device used to capture this video"
+    },
+    "video_quality_rating": {
+      "type": "string",
+      "enum": [
+        "poor",
+        "usable",
+        "good",
+        "excellent"
+      ],
+      "description": "Coach-assessed quality rating for this video"
+    },
+    "pose_visibility_score": {
+      "type": "number",
+      "description": "Optional 0-1 score indicating how visible the swimmer's pose is"
+    },
+    "upload_order": {
+      "type": "number",
+      "description": "Order in which this video was uploaded in a multi-angle session"
+    },
+    "frame_rate": {
+      "type": "number",
+      "description": "Frames per second"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Coach notes about this video"
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "uploaded",
+        "pending_ai",
+        "processing",
+        "completed",
+        "error"
+      ],
+      "default": "uploaded",
+      "description": "Processing pipeline status"
+    },
+    "ai_requested_at": {
+      "type": "string",
+      "description": "ISO timestamp when AI analysis was requested"
+    },
+    "ai_started_at": {
+      "type": "string",
+      "description": "ISO timestamp when AI processing started"
+    },
+    "ai_error_message": {
+      "type": "string",
+      "description": "Error message if AI processing failed"
+    },
+    "review_goal": {
+      "type": "string",
+      "description": "Coach's main goal for this review session"
+    },
+    "session_type": {
+      "type": "string",
+      "enum": [
+        "training",
+        "race",
+        "skills",
+        "test_set",
+        "other"
+      ],
+      "description": "Type of footage session"
+    },
+    "report_depth": {
+      "type": "string",
+      "enum": [
+        "quick_review",
+        "full_report"
+      ],
+      "default": "full_report",
+      "description": "How detailed the output report should be"
+    },
+    "primary_focus": {
+      "type": "string",
+      "enum": [
+        "body_line",
+        "kick",
+        "pull",
+        "breathing",
+        "timing",
+        "starts_turns",
+        "drag_risk",
+        "general"
+      ],
+      "description": "Primary technical focus area for this review"
+    },
+    "coach_question": {
+      "type": "string",
+      "description": "Specific question or concern the coach wants the review to address"
+    },
+    "injury_or_limitations_note": {
+      "type": "string",
+      "description": "Optional note about swimmer injury or physical limitations"
+    },
+    "desired_output": {
+      "type": "string",
+      "enum": [
+        "coach_notes_only",
+        "swimmer_report",
+        "parent_friendly_report",
+        "squad_feedback"
+      ],
+      "default": "swimmer_report",
+      "description": "Intended audience for the final report"
+    },
+    "review_context_completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when coach has completed the review setup questions"
+    }
+  },
+  "required": [
+    "club_id",
+    "original_filename"
+  ]
+}

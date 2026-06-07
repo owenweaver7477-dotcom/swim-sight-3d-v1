@@ -1,0 +1,38 @@
+{
+  "name": "Club",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Club name"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly unique slug"
+    },
+    "initials": {
+      "type": "string",
+      "description": "Club initials for logo placeholder"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Club logo URL"
+    },
+    "primary_color": {
+      "type": "string",
+      "description": "Primary brand colour hex"
+    },
+    "accent_color": {
+      "type": "string",
+      "description": "Accent brand colour hex"
+    },
+    "location": {
+      "type": "string",
+      "description": "Club location"
+    }
+  },
+  "required": [
+    "name",
+    "slug"
+  ]
+}

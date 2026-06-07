@@ -1,0 +1,165 @@
+{
+  "name": "AIProcessingJob",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer (optional)"
+    },
+    "video_upload_id": {
+      "type": "string",
+      "description": "Reference to the VideoUpload being processed"
+    },
+    "analysis_session_id": {
+      "type": "string",
+      "description": "Reference to AnalysisSession (optional)"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who triggered this job"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Unique local job identifier"
+    },
+    "server_job_id": {
+      "type": "string",
+      "description": "Job ID returned by the Python AI server"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "downloading_video",
+        "extracting_frames",
+        "running_pose_detection",
+        "analysing_stroke",
+        "generating_outputs",
+        "callback_sending",
+        "completed",
+        "unreliable_pose",
+        "error"
+      ],
+      "default": "queued",
+      "description": "Current job lifecycle status"
+    },
+    "stage": {
+      "type": "string",
+      "description": "Human-readable stage description from server"
+    },
+    "progress_percent": {
+      "type": "number",
+      "description": "Progress 0\u2013100 from server polling"
+    },
+    "message": {
+      "type": "string",
+      "description": "Latest status message from server"
+    },
+    "analysis_mode": {
+      "type": "string",
+      "enum": [
+        "real_pose",
+        "placeholder",
+        "error"
+      ],
+      "description": "Resolved analysis mode from callback"
+    },
+    "real_pose_detected": {
+      "type": "boolean",
+      "description": "True only when real pose confirmed"
+    },
+    "frame_count_processed": {
+      "type": "number",
+      "description": "Frames sampled by Python server"
+    },
+    "detected_keypoints_count": {
+      "type": "number",
+      "description": "Average keypoints per frame"
+    },
+    "detection_ratio": {
+      "type": "number",
+      "description": "Ratio of frames with detected pose (0\u20131)"
+    },
+    "pose_reliability": {
+      "type": "string",
+      "enum": [
+        "reliable",
+        "partial",
+        "weak",
+        "failed"
+      ],
+      "description": "Overall pose reliability assessment from server"
+    },
+    "quality_flags": {
+      "type": "string",
+      "description": "Comma-separated quality flags from server"
+    },
+    "recommended_next_action": {
+      "type": "string",
+      "description": "Server-recommended action for coach"
+    },
+    "video_duration_seconds": {
+      "type": "number",
+      "description": "Detected video duration"
+    },
+    "video_fps": {
+      "type": "number",
+      "description": "Detected video FPS"
+    },
+    "processing_duration_seconds": {
+      "type": "number",
+      "description": "Total server processing time"
+    },
+    "started_at": {
+      "type": "string",
+      "description": "ISO timestamp when job was started by server"
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "ISO timestamp when job completed"
+    },
+    "failed_at": {
+      "type": "string",
+      "description": "ISO timestamp when job failed"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error detail if status=error"
+    },
+    "ai_engine_version": {
+      "type": "string",
+      "description": "AI engine version string from server"
+    },
+    "model_name": {
+      "type": "string",
+      "description": "Pose model used"
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of retry attempts"
+    },
+    "primary_camera_angle": {
+      "type": "string",
+      "description": "Camera angle of the primary video"
+    },
+    "callback_received": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when Base44 received the completion callback"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Created/updated report ID after callback"
+    }
+  },
+  "required": [
+    "club_id",
+    "video_upload_id",
+    "job_id"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "Squad",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to parent club"
+    },
+    "name": {
+      "type": "string",
+      "description": "Squad name"
+    }
+  },
+  "required": [
+    "club_id",
+    "name"
+  ]
+}

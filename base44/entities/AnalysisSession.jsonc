@@ -1,0 +1,97 @@
+{
+  "name": "AnalysisSession",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "swimmer_id": {
+      "type": "string",
+      "description": "Reference to swimmer"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created the session"
+    },
+    "stroke_type": {
+      "type": "string",
+      "enum": [
+        "Freestyle",
+        "Backstroke",
+        "Breaststroke",
+        "Butterfly",
+        "IM",
+        "Start",
+        "Turn",
+        "Underwater",
+        "Dryland"
+      ],
+      "description": "Stroke or movement type for this session"
+    },
+    "analysis_type": {
+      "type": "string",
+      "enum": [
+        "Technique Review",
+        "Race Review",
+        "Start Review",
+        "Turn Review",
+        "Underwater Review"
+      ],
+      "default": "Technique Review"
+    },
+    "session_title": {
+      "type": "string",
+      "description": "Coach-given title for the session"
+    },
+    "session_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the footage was captured"
+    },
+    "camera_setup_type": {
+      "type": "string",
+      "enum": [
+        "single_angle",
+        "multi_angle"
+      ],
+      "default": "single_angle",
+      "description": "Whether one or multiple camera angles were used"
+    },
+    "primary_video_upload_id": {
+      "type": "string",
+      "description": "VideoUpload ID chosen as the primary angle for AI processing"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "ready_for_ai",
+        "processing",
+        "awaiting_review",
+        "completed",
+        "error"
+      ],
+      "default": "draft",
+      "description": "Session pipeline status"
+    },
+    "ai_confidence_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Coach-assessed or system-inferred confidence level for this session"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Session-level coach notes"
+    }
+  },
+  "required": [
+    "club_id"
+  ]
+}

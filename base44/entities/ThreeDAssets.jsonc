@@ -1,0 +1,75 @@
+{
+  "name": "ThreeDAssets",
+  "type": "object",
+  "properties": {
+    "asset_name": {
+      "type": "string",
+      "description": "Display name of the 3D asset"
+    },
+    "stroke_type": {
+      "type": "string",
+      "description": "Stroke type: General, Freestyle, Backstroke, Breaststroke, Butterfly, IM"
+    },
+    "stroke_phase": {
+      "type": "string",
+      "description": "Stroke phase this asset targets (e.g. Catch, Entry, Body Line, Kick Recovery)"
+    },
+    "technical_category": {
+      "type": "string",
+      "description": "Technical category label (e.g. Catch / Early Vertical Forearm)"
+    },
+    "flaw_matched": {
+      "type": "string",
+      "description": "Comma-separated keywords matching flaws this model can illustrate"
+    },
+    "model_url": {
+      "type": "string",
+      "description": "Public external .glb model URL \u2014 never a private file URI"
+    },
+    "model_pose_type": {
+      "type": "string",
+      "enum": [
+        "Base",
+        "Fault Pose",
+        "Correction Pose",
+        "Animation"
+      ],
+      "default": "Base",
+      "description": "Type of posed model: Base rig, specific fault, correction, or animated"
+    },
+    "animation_name": {
+      "type": "string",
+      "description": "Optional: animation clip name within the .glb if model_pose_type is Animation"
+    },
+    "correction_focus": {
+      "type": "string",
+      "description": "Optional: short label for what correction this model demonstrates"
+    },
+    "coaching_cue": {
+      "type": "string",
+      "description": "Coaching cue to display alongside the 3D model"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Optional thumbnail image URL"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this asset is available for use"
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, available to all clubs"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Club ID for club-specific assets (null/empty for global assets)"
+    }
+  },
+  "required": [
+    "asset_name",
+    "model_url"
+  ]
+}
