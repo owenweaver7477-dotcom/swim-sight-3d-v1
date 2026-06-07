@@ -116,9 +116,77 @@ function mapReportFromDb(row) {
   });
 }
 
+function mapVideoUploadToDb(data) {
+  if (!data) return data;
+  const {
+    file_uri,
+    file_name,
+    file_size,
+    uploaded_by_user_id,
+    stroke,
+    review_goal,
+    session_type,
+    report_depth,
+    primary_focus,
+    coach_question,
+    injury_or_limitations_note,
+    desired_output,
+    review_context_completed,
+    upload_order,
+    pose_visibility_score,
+    frame_rate,
+    notes,
+    ...remaining
+  } = data;
+
+  const reviewContextFields = {
+    review_goal,
+    session_type,
+    report_depth,
+    primary_focus,
+    coach_question,
+    injury_or_limitations_note,
+    desired_output,
+    review_context_completed,
+    upload_order,
+    pose_visibility_score,
+    frame_rate,
+    notes,
+  };
+  const reviewContext = Object.fromEntries(
+    Object.entries(reviewContextFields).filter(([, value]) => value !== undefined)
+  );
+
+  return {
+    ...remaining,
+    original_filename: remaining.original_filename || file_name,
+    file_size_bytes: remaining.file_size_bytes ?? file_size,
+    created_by: remaining.created_by || uploaded_by_user_id,
+    stroke_type: remaining.stroke_type || stroke,
+    review_context: Object.keys(reviewContext).length
+      ? { ...(remaining.review_context || {}), ...reviewContext }
+      : remaining.review_context,
+  };
+}
+
+function mapVideoUploadFromDb(row) {
+  if (!row) return row;
+  return withBase44DateAliases({
+    ...row,
+    file_uri: row.file_bucket && row.file_path ? `private://${row.file_bucket}/${row.file_path}` : undefined,
+    file_name: row.original_filename,
+    file_size: row.file_size_bytes,
+    stroke: row.stroke_type,
+    uploaded_by_user_id: row.created_by,
+  });
+}
+
 function getMappers(entityName) {
   if (entityName === 'Swimmer') {
     return { toDb: mapSwimmerToDb, fromDb: mapSwimmerFromDb };
+  }
+  if (entityName === 'VideoUpload') {
+    return { toDb: mapVideoUploadToDb, fromDb: mapVideoUploadFromDb };
   }
   if (entityName === 'Report') {
     return { toDb: (data) => data, fromDb: mapReportFromDb };
@@ -138,7 +206,7 @@ function isSwimmerEntity(entityName) {
 }
 
 function isClubScopedEntity(entityName) {
-  return ['Squad', 'Swimmer'].includes(entityName);
+  return ['Squad', 'Swimmer', 'VideoUpload'].includes(entityName);
 }
 
 function applyEntityDefaults(entityName, data = {}) {

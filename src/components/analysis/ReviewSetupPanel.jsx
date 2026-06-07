@@ -5,7 +5,7 @@
  * Non-blocking — coach can skip or return later.
  */
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ClipboardList, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -84,13 +84,18 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
   const handleSave = async () => {
     if (!videoUploadId) return;
     setSaving(true);
-    await base44.entities.VideoUpload.update(videoUploadId, {
-      ...context,
-      review_context_completed: hasAnyInput,
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await entities.VideoUpload.update(videoUploadId, {
+        review_context: {
+          ...context,
+          review_context_completed: hasAnyInput,
+        },
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import entities from '@/lib/data/entities';
+import functions from '@/lib/data/functions';
 import { Button } from '@/components/ui/button';
 import {
   Film, Trash2, Play, Calendar, Camera, Activity, Loader2,
-  AlertCircle, Tag, Brain, CheckCircle2, RotateCcw, Clock,
-  FileText, ArrowRight, RefreshCw, FlaskConical, ChevronDown, ChevronUp,
-  AlertTriangle, Info
+  AlertCircle, Tag, Brain, RotateCw, Clock, FileText, ArrowRight,
+  RefreshCw, AlertTriangle, Info
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
-import TestAICallbackHelper from './TestAICallbackHelper';
-import AIJobStatusBadge, { JOB_STATUS_CONFIG } from './AIJobStatusBadge';
+import AIJobStatusBadge from './AIJobStatusBadge';
 
-const COACH_ROLES = ['owner', 'admin', 'coach'];
+const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const ACTIVE_PROCESSING_STATUSES = ['queued_ai', 'processing_ai', 'pending_ai', 'processing'];
 
-// Recommendation labels from Python server
 const NEXT_ACTION_LABELS = {
   use_clearer_video: 'Try uploading a clearer or higher-quality video.',
   try_above_water_angle: 'Try adding an above-water angle for better visibility.',
@@ -33,9 +32,14 @@ const QUALITY_FLAG_LABELS = {
   underwater_distortion: 'Underwater optical distortion',
 };
 
-function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, canTriggerAI, canTestAI, onAIStatusChange }) {
+function asQualityFlags(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').filter(Boolean);
+  return [];
+}
+
+function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, canTriggerAI, onAIStatusChange }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [signedUrl, setSignedUrl] = useState(null);
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [urlError, setUrlError] = useState('');
@@ -44,69 +48,50 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
   const [aiError, setAiError] = useState('');
-  const [showAdminTools, setShowAdminTools] = useState(false);
 
   const status = upload.processing_status || 'uploaded';
 
-  // Fetch linked AI report (only non-deleted)
   const { data: linkedReports = [] } = useQuery({
     queryKey: ['ai-report-for-video', upload.id],
-    queryFn: () => base44.entities.Report.filter({ video_upload_id: upload.id, source: 'ai' }),
+    queryFn: () => entities.Report.filter({ video_upload_id: upload.id, source: 'ai' }),
     enabled: !!upload.id,
     staleTime: 30 * 1000,
   });
   const linkedReport = linkedReports.find(r => !r.is_deleted) || null;
   const reportWasDeleted = linkedReports.length > 0 && !linkedReport;
 
-  // Check if stuck: pending or processing for more than 10 minutes
   const isStuck = (() => {
-    if (!['pending_ai', 'processing'].includes(status)) return false;
-    const ts = upload.ai_requested_at || upload.updated_date;
+    if (!ACTIVE_PROCESSING_STATUSES.includes(status)) return false;
+    const ts = upload.updated_date || upload.created_date;
     if (!ts) return false;
     return differenceInMinutes(new Date(), new Date(ts)) >= 10;
   })();
 
-  // Derive job status for richer display
   const jobStatus = job?.status;
   const jobStage = job?.stage;
-  const jobMessage = job?.message;
   const jobProgress = job?.progress_percent;
-  const qualityFlags = job?.quality_flags ? job.quality_flags.split(',').filter(Boolean) : [];
+  const qualityFlags = asQualityFlags(job?.quality_flags);
   const nextAction = job?.recommended_next_action;
-  const poseReliability = job?.pose_reliability;
 
   const handleTriggerAI = async () => {
     setAiLoading(true);
-    setAiMessage('Queuing for pose-assisted review…');
+    setAiMessage('');
     setAiError('');
-    try {
-      const res = await base44.functions.invoke('triggerPoseAnalysis', { video_upload_id: upload.id });
-      if (res.data?.success) {
-        setAiMessage('Job accepted. Video is queued for AI analysis.');
-        // Optimistic status update
-        onAIStatusChange(upload.id, 'pending_ai');
-      } else {
-        const errMsg = res.data?.error || 'Unexpected response from server';
-        setAiError(errMsg);
-      }
-    } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Failed to send to AI';
-      setAiError(msg);
-    } finally {
+    window.setTimeout(() => {
       setAiLoading(false);
-    }
+      setAiError('AI Review connection is being migrated next. Manual review remains available.');
+    }, 250);
   };
 
   const loadSignedUrl = async () => {
-    if (signedUrl) { setShowPlayer(true); return; }
+    if (signedUrl) {
+      setShowPlayer(true);
+      return;
+    }
     setLoadingUrl(true);
     setUrlError('');
     try {
-      const res = await base44.functions.invoke('getSignedVideoUrl', { video_upload_id: upload.id });
+      const res = await functions.getSignedVideoUrl(upload.id);
       if (res.data?.signed_url) {
         setSignedUrl(res.data.signed_url);
         setShowPlayer(true);
@@ -114,17 +99,15 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         setUrlError('Could not load video.');
       }
     } catch (err) {
-      setUrlError(err?.response?.data?.error || 'Failed to load video.');
+      setUrlError(err?.message || 'Failed to load video.');
     } finally {
       setLoadingUrl(false);
     }
   };
 
-  const uploadDate = upload.created_date ? format(new Date(upload.created_date), 'dd MMM yyyy') : '—';
+  const uploadDate = upload.created_date ? format(new Date(upload.created_date), 'dd MMM yyyy') : '-';
   const isUnreliable = (status === 'completed' && linkedReport?.analysis_mode === 'placeholder' && !linkedReport?.real_pose_detected)
     || jobStatus === 'unreliable_pose';
-
-  // Timed out: job errored with stage=timed_out, and video is now back to 'uploaded'
   const isTimedOut = jobStatus === 'error' && job?.stage === 'timed_out' && status === 'uploaded';
 
   const renderPrimaryAction = () => {
@@ -133,27 +116,22 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <div className="space-y-1.5">
           <div className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-800">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-600" />
-            <span>AI processing timed out. Retry with a <strong>shorter clip (5–10s)</strong> or continue with manual review.</span>
+            <span>AI processing timed out. Retry with a shorter clip later, or continue with manual review.</span>
           </div>
-          <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
-            onClick={handleTriggerAI} disabled={aiLoading || !upload.stroke_type}>
-            {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCcw className="w-3 h-3 mr-1.5" />}
-            {aiLoading ? 'Queuing…' : 'Retry AI Review'}
-          </Button>
-          <Button size="sm" variant="outline" className="w-full h-7 text-xs"
-            onClick={() => onStartReview(upload)}>
+          <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => onStartReview(upload)}>
             <Play className="w-3 h-3 mr-1" /> Continue Manual Review
           </Button>
         </div>
       );
     }
 
-    if (reportWasDeleted) {
+    if (reportWasDeleted || status === 'error') {
       return (
-        <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
-          onClick={handleTriggerAI} disabled={aiLoading || !upload.stroke_type}>
-          {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Brain className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Sending…' : 'Run AI Analysis Again'}
+        <Button size="sm" variant="outline"
+          className="w-full h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
+          onClick={handleTriggerAI} disabled={aiLoading}>
+          {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1.5" />}
+          {aiLoading ? 'Checking...' : 'AI Review Migration Next'}
         </Button>
       );
     }
@@ -164,11 +142,6 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           <Button size="sm" className="w-full h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white font-semibold"
             onClick={() => navigate(`/ai-review?report_id=${linkedReport?.id}`)}>
             <FileText className="w-3 h-3 mr-1.5" /> Open Manual Review
-          </Button>
-          <Button size="sm" variant="outline" className="w-full h-7 text-[10px]"
-            onClick={handleTriggerAI} disabled={aiLoading}>
-            {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RotateCcw className="w-3 h-3 mr-1" />}
-            {aiLoading ? 'Sending…' : 'Retry with Clearer Video'}
           </Button>
         </div>
       );
@@ -186,55 +159,33 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     if (status === 'completed') {
       return (
         <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
-          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Preparing Report…
+          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Preparing Report...
         </Button>
       );
     }
 
-    if (['pending_ai', 'processing'].includes(status)) {
+    if (ACTIVE_PROCESSING_STATUSES.includes(status)) {
       return (
         <div className="space-y-1.5">
-          <Button size="sm" className="w-full h-8 text-xs" variant="outline"
-            disabled={!isStuck} onClick={isStuck ? handleTriggerAI : undefined}>
-            {isStuck
-              ? <><RotateCcw className="w-3 h-3 mr-1.5" /> Retry AI Analysis</>
-              : <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> AI Processing…</>
-            }
+          <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
+            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> AI Processing...
           </Button>
           {isStuck && (
             <div className="flex items-center gap-1.5 text-[10px] text-yellow-500">
               <AlertCircle className="w-3 h-3 flex-shrink-0" />
-              Still processing after 10+ minutes. Try retrying.
+              Still processing after 10+ minutes. AI retry wiring comes next.
             </div>
           )}
         </div>
       );
     }
 
-    if (status === 'error') {
-      return (
-        <Button size="sm" variant="outline"
-          className="w-full h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
-          onClick={handleTriggerAI} disabled={aiLoading}>
-          {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCcw className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Sending…' : 'Retry AI Analysis'}
-        </Button>
-      );
-    }
-
     if (canTriggerAI) {
-      if (!upload.stroke_type) {
-        return (
-          <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
-            <Brain className="w-3 h-3 mr-1.5" /> Set Stroke to Enable AI
-          </Button>
-        );
-      }
       return (
         <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
           onClick={handleTriggerAI} disabled={aiLoading}>
           {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Brain className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Queuing…' : 'Send to AI Analysis'}
+          {aiLoading ? 'Checking...' : 'Send to AI Analysis'}
         </Button>
       );
     }
@@ -249,10 +200,18 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
   return (
     <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-      {/* Video thumbnail / player */}
       {showPlayer && signedUrl ? (
         <div className="rounded-lg overflow-hidden bg-black" style={{ aspectRatio: '16/9' }}>
-          <video src={signedUrl} controls className="w-full h-full object-contain" />
+          <video
+            src={signedUrl}
+            controls
+            className="w-full h-full object-contain"
+            onError={() => {
+              setSignedUrl(null);
+              setShowPlayer(false);
+              setUrlError('Video link expired. Click retry to load a fresh private link.');
+            }}
+          />
         </div>
       ) : (
         <div
@@ -278,7 +237,6 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         </div>
       )}
 
-      {/* Meta */}
       <div className="space-y-1.5">
         <div className="text-sm font-medium text-foreground truncate">
           {upload.original_filename || 'Untitled Video'}
@@ -309,27 +267,22 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           </div>
         )}
 
-        {/* Status badge — use job status when available for granularity */}
         <AIJobStatusBadge status={status} jobStatus={jobStatus} />
 
-        {/* Job stage detail (while processing) */}
-        {['pending_ai', 'processing'].includes(status) && jobStage && (
+        {ACTIVE_PROCESSING_STATUSES.includes(status) && jobStage && (
           <div className="text-[10px] text-muted-foreground leading-relaxed">{jobStage}</div>
         )}
 
-        {/* Progress bar (while processing) */}
-        {['pending_ai', 'processing'].includes(status) && jobProgress != null && jobProgress > 0 && (
+        {ACTIVE_PROCESSING_STATUSES.includes(status) && jobProgress != null && jobProgress > 0 && (
           <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${jobProgress}%` }} />
           </div>
         )}
 
-        {/* Error message */}
         {status === 'error' && upload.ai_error_message && (
           <div className="text-[10px] text-destructive leading-relaxed line-clamp-2">{upload.ai_error_message}</div>
         )}
 
-        {/* Unreliable pose detail */}
         {isUnreliable && (
           <div className="space-y-1">
             {qualityFlags.length > 0 && (
@@ -350,19 +303,16 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           </div>
         )}
 
-        {/* AI trigger feedback */}
         {aiMessage && !aiError && (
           <div className="text-[10px] text-green-600 leading-relaxed">{aiMessage}</div>
         )}
         {aiError && (
-          <div className="text-[10px] text-destructive leading-relaxed">{aiError}</div>
+          <div className="text-[10px] text-muted-foreground leading-relaxed">{aiError}</div>
         )}
       </div>
 
-      {/* PRIMARY ACTION */}
       {renderPrimaryAction()}
 
-      {/* Secondary: manual review */}
       {status !== 'completed' && (
         <Button size="sm" variant="ghost"
           className="w-full h-7 text-xs text-muted-foreground hover:text-foreground"
@@ -371,33 +321,6 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         </Button>
       )}
 
-      {/* Admin / Test Tools */}
-      {canTestAI && ['uploaded', 'processing', 'error', 'pending_ai'].includes(status) && (
-        <div className="border-t border-border pt-2">
-          <button
-            className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full"
-            onClick={() => setShowAdminTools(v => !v)}
-          >
-            <FlaskConical className="w-3 h-3" />
-            Admin / Test Tools
-            {showAdminTools ? <ChevronUp className="w-3 h-3 ml-auto" /> : <ChevronDown className="w-3 h-3 ml-auto" />}
-          </button>
-          {showAdminTools && (
-            <div className="mt-2">
-              <TestAICallbackHelper
-                upload={upload}
-                onComplete={() => {
-                  onAIStatusChange(upload.id, 'completed');
-                  queryClient.invalidateQueries({ queryKey: ['ai-report-for-video', upload.id] });
-                  queryClient.invalidateQueries({ queryKey: ['ai-reports'] });
-                }}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Delete */}
       {canDelete && (
         <div className="pt-1">
           {!confirmDelete ? (
@@ -423,37 +346,38 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
   const queryClient = useQueryClient();
   const canManage = COACH_ROLES.includes(memberRole);
   const canDelete = canManage;
-  const canTestAI = ['owner', 'admin'].includes(memberRole);
 
   const { data: uploads = [], isLoading } = useQuery({
     queryKey: ['video-uploads', clubId, swimmerId],
     queryFn: () => {
       const filter = { club_id: clubId };
       if (swimmerId) filter.swimmer_id = swimmerId;
-      return base44.entities.VideoUpload.filter(filter, '-created_date', 50);
+      return entities.VideoUpload.filter(filter, '-created_date', 50);
     },
     enabled: !!clubId,
     staleTime: 15 * 1000,
     refetchInterval: (query) => {
-      // Auto-refresh every 10s if any video is in an active processing state
-      const uploads = query?.state?.data;
-      const active = Array.isArray(uploads) && uploads.some(u => ['pending_ai', 'processing'].includes(u.processing_status));
+      const currentUploads = query?.state?.data;
+      const active = Array.isArray(currentUploads)
+        && currentUploads.some(u => ACTIVE_PROCESSING_STATUSES.includes(u.processing_status));
       return active ? 10000 : false;
     },
   });
 
-  // Fetch recent AIProcessingJobs — used for active status AND timed-out detection
-  const activeVideoIds = uploads.filter(u => ['pending_ai', 'processing'].includes(u.processing_status)).map(u => u.id);
+  const activeVideoIds = uploads
+    .filter(u => ACTIVE_PROCESSING_STATUSES.includes(u.processing_status))
+    .map(u => u.id);
+
   const { data: activeJobs = [] } = useQuery({
     queryKey: ['ai-jobs-active', clubId],
-    queryFn: () => base44.entities.AIProcessingJob.filter({ club_id: clubId }, '-created_date', 50),
+    queryFn: () => entities.AIProcessingJob.filter({ club_id: clubId }, '-created_date', 50),
     enabled: !!clubId,
     staleTime: 8 * 1000,
     refetchInterval: activeVideoIds.length > 0 ? 8000 : false,
   });
 
   const deleteUpload = useMutation({
-    mutationFn: (id) => base44.entities.VideoUpload.delete(id),
+    mutationFn: (id) => entities.VideoUpload.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['video-uploads'] }),
   });
 
@@ -479,13 +403,12 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
         <Film className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
         <div className="text-sm font-medium text-foreground mb-1">No videos uploaded yet</div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Upload a video first using the upload section above. Once uploaded, the video card will appear here with a <strong>Send to AI Analysis</strong> button.
+          Upload a video first using the upload section above. Once uploaded, the video card will appear here with private signed playback and manual review options.
         </p>
       </div>
     );
   }
 
-  // Map jobs by video_upload_id (take the latest per video)
   const jobsByVideo = {};
   for (const job of activeJobs) {
     const vid = job.video_upload_id;
@@ -522,7 +445,6 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
               job={job}
               canDelete={canDelete}
               canTriggerAI={canManage}
-              canTestAI={canTestAI}
               onStartReview={onStartReview}
               onDelete={(id) => deleteUpload.mutate(id)}
               onAIStatusChange={handleAIStatusChange}

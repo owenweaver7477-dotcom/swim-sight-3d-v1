@@ -6,6 +6,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
+import functions from '@/lib/data/functions';
+import { uploadPrivateVideo } from '@/lib/data/videoUploads';
 import { getReviewSession, setReviewSession, setCoachModeFinding,
   SWIM_STROKES_FULL, CAMERA_ANGLES, SESSION_TYPES, SEVERITY_LEVELS, FAULT_SUGGESTIONS } from '@/lib/swimState';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -107,9 +110,9 @@ export default function Analyse() {
   const fileRef = useRef();
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
+  const [durationWarning, setDurationWarning] = useState('');
   const [uploadStatus, setUploadStatus] = useState('idle');
   const [uploadedUrl, setUploadedUrl] = useState(''); // signed URL for playback
-  const [uploadedFileUri, setUploadedFileUri] = useState(''); // private URI for storage
   const [videoUploadId, setVideoUploadId] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadedVideoId, setUploadedVideoId] = useState(null); // tracks most recently uploaded video for CTA
@@ -151,13 +154,13 @@ export default function Analyse() {
   // ── Queries ─────────────────────────────────────────────────────────────────
   const { data: swimmers = [] } = useQuery({
     queryKey: ['swimmers', club?.id],
-    queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }),
+    queryFn: () => entities.Swimmer.filter({ club_id: club.id }, 'last_name', 250),
     enabled: !!club?.id,
   });
 
   const { data: squads = [] } = useQuery({
     queryKey: ['squads', club?.id],
-    queryFn: () => base44.entities.Squad.filter({ club_id: club.id }),
+    queryFn: () => entities.Squad.filter({ club_id: club.id }, 'name', 100),
     enabled: !!club?.id,
   });
 
@@ -183,7 +186,7 @@ export default function Analyse() {
       // Update VideoUpload with the stroke/angle chosen in Step 2 (Configure),
       // so the AI server always gets the coach's actual selection.
       if (videoUploadId) {
-        await base44.entities.VideoUpload.update(videoUploadId, {
+        await entities.VideoUpload.update(videoUploadId, {
           stroke_type: stroke,
           camera_angle: angle,
           analysis_type: sessionType,
@@ -220,7 +223,6 @@ export default function Analyse() {
       });
       // Clear local file state now that review is created
       setFile(null);
-      setUploadedFileUri('');
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
       setStep(3);
     },
@@ -262,12 +264,30 @@ export default function Analyse() {
     return null;
   };
 
+  const detectVideoDuration = (f) => {
+    setDurationWarning('');
+    const url = URL.createObjectURL(f);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      const seconds = video.duration || 0;
+      if (seconds > 15) {
+        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. AI Review works best with 5-10 second clips; clips over 15 seconds may time out.`);
+      }
+    };
+    video.onerror = () => URL.revokeObjectURL(url);
+    video.src = url;
+  };
+
   const handleFilePick = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    setDurationWarning('');
     const err = validateFile(f);
     setFileError(err || '');
     setFile(err ? null : f);
+    if (!err) detectVideoDuration(f);
     setUploadStatus('idle');
     setUploadedUrl('');
   };
@@ -276,9 +296,11 @@ export default function Analyse() {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
     if (!f) return;
+    setDurationWarning('');
     const err = validateFile(f);
     setFileError(err || '');
     setFile(err ? null : f);
+    if (!err) detectVideoDuration(f);
   };
 
   const handleUpload = async () => {
@@ -286,29 +308,25 @@ export default function Analyse() {
     setUploadStatus('uploading');
     setFileError('');
     try {
-      // 1. Upload to private storage
-      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
-      setUploadedFileUri(file_uri);
-
-      // 2. Create VideoUpload record (file_uri stays server-side)
-      const uploadRecord = await base44.entities.VideoUpload.create({
-        club_id: club?.id,
-        swimmer_id: selectedSwimmer?.id || undefined,
-        uploaded_by_user_id: user?.id || undefined,
-        file_uri,
-        original_filename: file.name,
-        file_size: file.size,
-        mime_type: file.type,
-        stroke_type: stroke,
-        analysis_type: sessionType || 'Technique Review',
-        camera_angle: angle,
-        processing_status: 'uploaded',
+      const uploadRecord = await uploadPrivateVideo({
+        file,
+        clubId: club?.id,
+        swimmer: selectedSwimmer,
+        userId: user?.id,
+        metadata: {
+          stroke_type: stroke,
+          analysis_type: sessionType || 'Technique Review',
+          camera_angle: angle,
+          review_context: {
+            session_mode: sessionMode,
+            review_title: reviewTitle || null,
+          },
+        },
       });
       setVideoUploadId(uploadRecord.id);
       setUploadedVideoId(uploadRecord.id);
 
-      // 3. Get signed URL for immediate preview (via ID, not raw URI)
-      const res = await base44.functions.invoke('getSignedVideoUrl', { video_upload_id: uploadRecord.id });
+      const res = await functions.getSignedVideoUrl(uploadRecord.id);
       if (res.data?.signed_url) {
         setUploadedUrl(res.data.signed_url);
       }
@@ -330,7 +348,7 @@ export default function Analyse() {
     setSessionType(upload.analysis_type || 'Technique Review');
     // Fetch signed URL so Step 3 has video ready
     try {
-      const res = await base44.functions.invoke('getSignedVideoUrl', { video_upload_id: upload.id });
+      const res = await functions.getSignedVideoUrl(upload.id);
       if (res.data?.signed_url) setUploadedUrl(res.data.signed_url);
     } catch {
       // Non-fatal — coach can still do analysis without playback
@@ -784,7 +802,7 @@ export default function Analyse() {
                 <div className="text-sm font-medium">{file.name}</div>
                 <div className="text-xs text-muted-foreground">{formatBytes(file.size)}</div>
                 <button className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 mt-1"
-                  onClick={e => { e.stopPropagation(); setFile(null); setUploadStatus('idle'); setUploadedUrl(''); setUploadedFileUri(''); setVideoUploadId(null); setFileError(''); }}>
+                  onClick={e => { e.stopPropagation(); setFile(null); setUploadStatus('idle'); setUploadedUrl(''); setVideoUploadId(null); setFileError(''); setDurationWarning(''); }}>
                   <X className="w-3 h-3" /> Remove
                 </button>
               </div>
@@ -799,6 +817,13 @@ export default function Analyse() {
             )}
           </div>
           {fileError && <div className="text-xs text-destructive flex items-center gap-1 mb-3"><AlertCircle className="w-3.5 h-3.5" />{fileError}</div>}
+          {durationWarning && <div className="text-xs text-amber-700 flex items-start gap-1 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{durationWarning}</div>}
+          {!selectedSwimmer && file && (
+            <div className="text-xs text-muted-foreground flex items-start gap-1 mb-3 p-3 rounded-lg bg-card border border-border">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              Select a swimmer before uploading. Private videos must be linked to a club swimmer in V1.
+            </div>
+          )}
           {uploadStatus === 'uploading' && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 p-3 rounded-lg bg-card border border-border">
               <Loader2 className="w-4 h-4 animate-spin text-primary" /> Uploading to private secure storage...
@@ -845,7 +870,7 @@ export default function Analyse() {
           )}
           <div className="flex gap-3">
             {uploadStatus !== 'done' && (
-              <Button className="flex-1 bg-primary text-primary-foreground" disabled={!file || uploadStatus === 'uploading'} onClick={handleUpload}>
+              <Button className="flex-1 bg-primary text-primary-foreground" disabled={!file || uploadStatus === 'uploading' || !selectedSwimmer} onClick={handleUpload}>
                 {uploadStatus === 'uploading' ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : <><Upload className="w-4 h-4 mr-2" />Upload to Private Storage</>}
               </Button>
             )}

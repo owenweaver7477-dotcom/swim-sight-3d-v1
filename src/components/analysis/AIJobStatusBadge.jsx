@@ -4,9 +4,13 @@ import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle, Brain, Download, 
 export const JOB_STATUS_CONFIG = {
   // VideoUpload.processing_status
   uploaded:         { label: 'Ready',                              color: 'text-green-600 bg-green-50 border-green-200',    icon: CheckCircle2, spin: false },
+  queued_ai:        { label: 'Queued for AI review',              color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
   pending_ai:       { label: 'Queued for AI review',              color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
+  processing_ai:    { label: 'AI Processing...',                  color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true },
   processing:       { label: 'AI Processing…',                    color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true },
   completed:        { label: 'Review Ready',                       color: 'text-cyan-600 bg-cyan-50 border-cyan-200',       icon: CheckCircle2, spin: false },
+  manual_review:    { label: 'Manual Review',                     color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
+  unreliable_pose:  { label: 'Pose Unreliable',                   color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   analysis_unreliable: { label: 'Pose Unreliable',               color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   error:            { label: 'Processing Failed',                  color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
 
@@ -17,7 +21,7 @@ export const JOB_STATUS_CONFIG = {
   running_pose_detection: { label: 'Checking swimmer visibility',        color: 'text-primary bg-primary/10 border-primary/20',   icon: Eye,          spin: true  },
   analysing_stroke:       { label: 'Running stroke-specific checks',     color: 'text-primary bg-primary/10 border-primary/20',   icon: Brain,        spin: true  },
   generating_outputs:     { label: 'Generating findings',                color: 'text-primary bg-primary/10 border-primary/20',   icon: Zap,          spin: true  },
-  callback_sending:       { label: 'Sending results to Base44…',         color: 'text-primary bg-primary/10 border-primary/20',   icon: Send,         spin: true  },
+  callback_sending:       { label: 'Sending results to Swim Sight 3D...', color: 'text-primary bg-primary/10 border-primary/20',   icon: Send,         spin: true  },
   unreliable_pose:        { label: 'Pose unreliable — manual review rec.',color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
 };
 

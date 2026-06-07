@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { uploadPrivateVideo } from '@/lib/data/videoUploads';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -82,23 +82,20 @@ export default function MultiAngleUploadCard({
     setStatus('uploading');
     setFileError('');
     try {
-      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
-      const record = await base44.entities.VideoUpload.create({
-        club_id: clubId,
-        swimmer_id: swimmerId || undefined,
-        uploaded_by_user_id: userId || undefined,
-        analysis_session_id: sessionId || undefined,
-        file_uri,
-        original_filename: file.name,
-        file_size: file.size,
-        mime_type: file.type,
-        camera_angle: angleKey,
-        capture_device: device || undefined,
-        video_quality_rating: quality || undefined,
-        sync_offset_seconds: syncOffset ? parseFloat(syncOffset) : undefined,
-        is_primary_angle: isPrimary,
-        upload_order: uploadOrder,
-        processing_status: 'uploaded',
+      const record = await uploadPrivateVideo({
+        file,
+        clubId,
+        swimmer: { id: swimmerId },
+        userId,
+        metadata: {
+          analysis_session_id: sessionId || null,
+          camera_angle: angleKey,
+          capture_device: device || undefined,
+          video_quality_rating: quality || undefined,
+          sync_offset_seconds: syncOffset ? parseFloat(syncOffset) : undefined,
+          is_primary_angle: isPrimary,
+          review_context: { upload_order: uploadOrder },
+        },
       });
       setStatus('done');
       onUploaded(angleKey, record, isPrimary);
