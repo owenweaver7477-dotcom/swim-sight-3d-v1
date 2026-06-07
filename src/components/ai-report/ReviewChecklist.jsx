@@ -26,8 +26,8 @@ export default function ReviewChecklist({ report, video, findings, dragItems = [
   const hasDragItem      = dragItems.some(d => d.approval_status === 'approved');
   const hasDrill         = approvedFindings.some(f => f.drill);
   const hasStandard      = approvedFindings.some(f => f.linked_standard_id);
-  const hasSummary       = !!report?.technical_summary;
-  const isFinalised      = report?.status === 'published';
+  const hasSummary       = !!(report?.coach_summary || report?.technical_summary);
+  const isFinalised      = ['coach_approved', 'finalised', 'published', 'shared'].includes(report?.status);
 
   const ITEMS = [
     { done: !!video,                  label: 'Source video reviewed' },

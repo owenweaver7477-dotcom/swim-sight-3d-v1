@@ -30,15 +30,15 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
   const hasReviewContext = !!(rc.review_goal || rc.primary_focus || rc.coach_question || rc.session_type);
   const approvedFindings = findings.filter(f => f.approval_status === 'approved' && f.included_in_report);
 
-  // analysis_mode is OK for finalisation as long as it's not undefined/null
-  const analysisModeLabelOk = !!report.analysis_mode && report.analysis_mode !== 'error';
+  const analysisModeLabelOk = !!report.analysis_mode;
+  const hasCoachSummary = !!(report.coach_summary || report.technical_summary);
 
   const checks = [
     { ok: !!swimmer,                         label: 'Swimmer selected' },
     { ok: !!video?.stroke_type,              label: 'Stroke type selected' },
-    { ok: approvedFindings.length > 0,       label: `At least one approved finding (${approvedFindings.length} found)` },
+    { ok: approvedFindings.length > 0,       label: `At least one approved finding (${approvedFindings.length} found) or coach confirms none are needed` },
     { ok: approvedFindings.length === 0 || approvedFindings.every(f => f.cue || f.next_focus), label: 'All included findings have a cue or next focus' },
-    { ok: !!report.technical_summary,        label: 'Coach technical summary present' },
+    { ok: hasCoachSummary,                   label: 'Coach summary present' },
     {
       ok: analysisModeLabelOk,
       label: `AI result labelled (${report.analysis_mode || 'not set'})`,
@@ -97,7 +97,7 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
         )}
 
         {/* Draft summary template — only if technical_summary is empty */}
-        {!report.technical_summary && (
+        {!hasCoachSummary && (
           <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
             <div className="text-[10px] font-semibold text-slate-700 mb-1.5">Coach Summary — suggested structure</div>
             <div className="text-[10px] text-slate-500 space-y-0.5 font-mono leading-relaxed">

@@ -1,12 +1,17 @@
 import { createServiceClient, handleApiError, sendJson } from '../_lib/server.js';
 
 function sanitizeFinding(finding) {
+  const observation = finding.observation || '';
+  const cue = finding.correction_cue || '';
   return {
     severity: finding.severity,
     phase: finding.stroke_phase,
-    observation: finding.observation,
+    finding_name: observation,
+    observation,
+    coach_sees: observation,
     why_it_matters: finding.why_it_matters,
-    correction_cue: finding.correction_cue,
+    correction_cue: cue,
+    cue,
     drill: finding.drill,
     next_focus: finding.next_focus,
   };
@@ -44,13 +49,13 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (reportError) throw reportError;
-    if (!report || !['finalised', 'published', 'shared'].includes(report.status)) {
+    if (!report || !['coach_approved', 'finalised', 'published', 'shared'].includes(report.status)) {
       return sendJson(res, 404, { error: 'Report not found or not ready to share' });
     }
 
     const [{ data: swimmer }, { data: club }, { data: findings }, { data: keyFrames }] = await Promise.all([
       service.from('swimmers').select('first_name,last_name').eq('id', report.swimmer_id).maybeSingle(),
-      service.from('clubs').select('name,slug').eq('id', report.club_id).maybeSingle(),
+      service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
       service
         .from('findings')
         .select('severity,stroke_phase,observation,why_it_matters,correction_cue,drill,next_focus,approval_status')
@@ -76,17 +81,23 @@ export default async function handler(req, res) {
         next_focus: report.next_focus,
         finalised_at: report.finalised_at,
         created_at: report.created_at,
+        ai_completed_at: report.finalised_at || report.updated_at || report.created_at,
+      },
+      video_meta: {
+        stroke_type: report.stroke_type,
+        analysis_type: report.analysis_type,
       },
       swimmer: swimmer
         ? { name: [swimmer.first_name, swimmer.last_name].filter(Boolean).join(' ') }
         : null,
-      club: club ? { name: club.name, slug: club.slug } : null,
+      club: club ? { name: club.name } : null,
       findings: (findings || []).map(sanitizeFinding),
       key_frames: (keyFrames || []).map((frame) => ({
         timestamp_seconds: frame.timestamp_seconds,
         label: frame.label,
         note: frame.note,
       })),
+      drag_items: [],
       disclaimer: 'AI-assisted evidence supports coach review. Final report content is coach-approved.',
     });
   } catch (error) {

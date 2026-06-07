@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import entities from '@/lib/data/entities';
+import functions from '@/lib/data/functions';
 import { Button } from '@/components/ui/button';
 import { Share2, Copy, Link2, CheckCircle2, XCircle, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,13 +9,14 @@ import { toast } from 'sonner';
 export default function ShareReportSection({ report, reportId, canEdit, isCoachApproved, findings = [], analysisMode }) {
   const queryClient = useQueryClient();
   const [shareUrl, setShareUrl] = useState('');
+  const [activeLinkId, setActiveLinkId] = useState('');
   const [copied, setCopied] = useState(false);
   const [functionError, setFunctionError] = useState('');
 
   // Load existing active share link on mount
   const { data: existingLinks = [] } = useQuery({
     queryKey: ['shared-links', reportId],
-    queryFn: () => base44.entities.SharedReportLink.filter({ report_id: reportId, is_active: true }),
+    queryFn: () => entities.SharedReportLink.filter({ report_id: reportId, status: 'active' }),
     enabled: !!reportId && isCoachApproved && canEdit,
   });
 
@@ -22,19 +24,18 @@ export default function ShareReportSection({ report, reportId, canEdit, isCoachA
     if (existingLinks.length > 0 && !shareUrl) {
       const link = existingLinks[0];
       const origin = window.location.origin;
+      setActiveLinkId(link.id);
       setShareUrl(`${origin}/shared-report/${link.token}`);
     }
   }, [existingLinks]);
 
-  const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
   const pendingCount = findings.filter(f => f.approval_status === 'pending').length;
-  const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
-  const canShare = approvedCount > 0;
+  const canShare = isCoachApproved && pendingCount === 0;
 
   const createLink = useMutation({
     mutationFn: async () => {
       setFunctionError('');
-      const res = await base44.functions.invoke('createSharedReportLink', { report_id: reportId });
+      const res = await functions.createSharedReportLink(reportId);
       return res.data;
     },
     onSuccess: (data) => {
@@ -43,6 +44,7 @@ export default function ShareReportSection({ report, reportId, canEdit, isCoachA
         toast.error(data.error);
       } else {
         setShareUrl(data.public_url);
+        setActiveLinkId(data.share_link_id || '');
         queryClient.invalidateQueries({ queryKey: ['shared-links', reportId] });
         toast.success('Share link created');
       }
@@ -56,10 +58,12 @@ export default function ShareReportSection({ report, reportId, canEdit, isCoachA
 
   const disableLink = useMutation({
     mutationFn: async () => {
-      await base44.functions.invoke('disableSharedReportLink', { report_id: reportId });
+      if (!activeLinkId) throw new Error('No active share link selected.');
+      await functions.disableSharedReportLink(activeLinkId);
     },
     onSuccess: () => {
       setShareUrl('');
+      setActiveLinkId('');
       queryClient.invalidateQueries({ queryKey: ['shared-links', reportId] });
       toast.success('Share link disabled');
     },
@@ -92,7 +96,7 @@ export default function ShareReportSection({ report, reportId, canEdit, isCoachA
 
   // Block sharing for placeholder reports unless all findings have been manually reviewed
   const isPlaceholder = !analysisMode || analysisMode === 'placeholder';
-  const allFindingsReviewed = findings.length > 0 && findings.every(f => f.approval_status !== 'pending');
+  const allFindingsReviewed = findings.every(f => f.approval_status !== 'pending');
 
   if (isPlaceholder && !allFindingsReviewed) {
     return (

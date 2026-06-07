@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import entities from '@/lib/data/entities';
+import functions from '@/lib/data/functions';
+import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import PageHeader from '@/components/shared/PageHeader';
 import AIFindingCard from '@/components/ai-report/AIFindingCard';
 import ApprovedCoachReport from '@/components/ai-report/ApprovedCoachReport';
@@ -12,19 +15,13 @@ import PrintableReport from '@/components/reports/PrintableReport';
 import {
   Brain, CheckCircle2, Clock, Activity, Loader2,
   ArrowLeft, Star, Camera, Film, AlertTriangle, ClipboardCheck, Share2, Download, ChevronRight,
-  Trash2, Bell
+  Trash2, Plus, Save
 } from 'lucide-react';
-import NotifySwimmerModal from '@/components/notifications/NotifySwimmerModal';
 import { format } from 'date-fns';
-import Technical3DViewer from '@/components/viewer/Technical3DViewer';
 import WorkflowStepper from '@/components/ai-report/WorkflowStepper';
 import ReportNavActions from '@/components/ai-report/ReportNavActions';
-import CoachFeedbackComparison from '@/components/ai-report/CoachFeedbackComparison';
 import PlaceholderWarningBanner from '@/components/ai-report/PlaceholderWarningBanner';
 import PoseEvidencePanel from '@/components/ai-report/PoseEvidencePanel';
-import SupportingAnglesPanel from '@/components/ai-report/SupportingAnglesPanel';
-import AnnotationsPanel from '@/components/annotations/AnnotationsPanel';
-import DragRiskPanel from '@/components/drag/DragRiskPanel';
 import ReviewChecklist from '@/components/ai-report/ReviewChecklist';
 import FinaliseQualityGate from '@/components/ai-report/FinaliseQualityGate';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
@@ -62,32 +59,31 @@ const REVIEW_STATUS_CONFIG = {
   coach_approved:  { label: 'Coach Approved',    color: 'text-green-400 bg-green-900/20 border-green-700/30', icon: CheckCircle2 },
 };
 
-const COACH_ROLES = ['owner', 'admin', 'coach'];
+const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { club } = useClubContext();
+  const { user } = useAuth();
 
   const urlParams = new URLSearchParams(window.location.search);
   const reportId = urlParams.get('report_id');
 
   const [finalising, setFinalising] = useState(false);
   const [showQualityGate, setShowQualityGate] = useState(false);
-  const [selected3DAsset, setSelected3DAsset] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [signedVideoUrl, setSignedVideoUrl] = useState('');
+  const [signedVideoError, setSignedVideoError] = useState('');
+  const [coachSummary, setCoachSummary] = useState('');
+  const [nextFocus, setNextFocus] = useState('');
+  const [manualObservation, setManualObservation] = useState('');
+  const [manualCue, setManualCue] = useState('');
+  const [manualNextFocus, setManualNextFocus] = useState('');
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  // Fetch all active 3D assets once — low priority, long stale time
-  const { data: threeDAssets = [] } = useQuery({
-    queryKey: ['3d-assets'],
-    queryFn: () => base44.entities.ThreeDAssets.filter({ is_active: true }),
-    enabled: !!club,
-    staleTime: 10 * 60 * 1000,
-  });
 
   // Determine coach role
   const memberRole = club?._memberRole || 'coach';
@@ -95,7 +91,7 @@ export default function AIReportPage() {
 
   const { data: reportArr = [], isLoading: loadingReport } = useQuery({
     queryKey: ['ai-report', reportId],
-    queryFn: () => base44.entities.Report.filter({ id: reportId }),
+    queryFn: () => entities.Report.filter({ id: reportId }),
     enabled: !!reportId,
     staleTime: 60 * 1000,
   });
@@ -103,137 +99,127 @@ export default function AIReportPage() {
 
   const { data: findings = [], isLoading: loadingFindings } = useQuery({
     queryKey: ['ai-findings', reportId],
-    queryFn: () => base44.entities.Finding.filter({ report_id: reportId }, '-created_date', 50),
+    queryFn: () => entities.Finding.filter({ report_id: reportId }, '-created_date', 50),
     enabled: !!reportId,
     staleTime: 60 * 1000,
   });
 
   const { data: keyFrames = [] } = useQuery({
     queryKey: ['ai-keyframes', reportId],
-    queryFn: () => base44.entities.KeyFrame.filter({ report_id: reportId }, 'timestamp_seconds', 50),
+    queryFn: () => entities.KeyFrame.filter({ report_id: reportId }, 'timestamp_seconds', 50),
     enabled: !!reportId,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: swimmerArr = [] } = useQuery({
     queryKey: ['swimmer-for-report', report?.swimmer_id],
-    queryFn: () => base44.entities.Swimmer.filter({ id: report.swimmer_id }),
+    queryFn: () => entities.Swimmer.filter({ id: report.swimmer_id }),
     enabled: !!report?.swimmer_id,
     staleTime: 10 * 60 * 1000,
   });
   const swimmer = swimmerArr[0];
 
-  // Fetch share link for notify modal — only when published
-  const { data: shareLinks = [] } = useQuery({
-    queryKey: ['share-links-for-notify', reportId],
-    queryFn: () => base44.entities.SharedReportLink.filter({ report_id: reportId, is_active: true }),
-    enabled: !!reportId && report?.status === 'published',
-    staleTime: 2 * 60 * 1000,
-  });
-  const activeShareLink = shareLinks[0] || null;
-
   const { data: videoArr = [] } = useQuery({
     queryKey: ['video-for-report', report?.video_upload_id],
-    queryFn: () => base44.entities.VideoUpload.filter({ id: report.video_upload_id }),
+    queryFn: () => entities.VideoUpload.filter({ id: report.video_upload_id }),
     enabled: !!report?.video_upload_id,
     staleTime: 10 * 60 * 1000,
   });
   const video = videoArr[0];
 
-  // Drag analysis — deferred until video is loaded
-  const { data: dragAnalysisItems = [] } = useQuery({
-    queryKey: ['drag-analysis', report?.video_upload_id],
-    queryFn: () => base44.entities.DragAnalysis.filter({ video_upload_id: report.video_upload_id }, '-created_date', 50),
-    enabled: !!report?.video_upload_id,
+  const { data: jobArr = [] } = useQuery({
+    queryKey: ['ai-job-for-report', report?.ai_processing_job_id],
+    queryFn: () => entities.AIProcessingJob.filter({ id: report.ai_processing_job_id }),
+    enabled: !!report?.ai_processing_job_id,
     staleTime: 60 * 1000,
   });
+  const aiJob = jobArr[0] || null;
 
-  // Annotations — deferred until video is loaded
-  const { data: annotations = [] } = useQuery({
-    queryKey: ['annotations', report?.video_upload_id],
-    queryFn: () => base44.entities.Annotation.filter({ video_upload_id: report.video_upload_id }, '-created_date', 100),
-    enabled: !!report?.video_upload_id,
-    staleTime: 60 * 1000,
-  });
+  const dragAnalysisItems = [];
+  const annotations = [];
 
   const approveFinding = useMutation({
-    mutationFn: (f) => base44.entities.Finding.update(f.id, { approval_status: 'approved', included_in_report: true }),
+    mutationFn: (f) => entities.Finding.update(f.id, { approval_status: 'approved' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const rejectFinding = useMutation({
-    mutationFn: (f) => base44.entities.Finding.update(f.id, { approval_status: 'rejected', included_in_report: false }),
+    mutationFn: (f) => entities.Finding.update(f.id, { approval_status: 'rejected' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const updateCue = useMutation({
-    mutationFn: ({ finding, cue }) => base44.entities.Finding.update(finding.id, { cue }),
+    mutationFn: ({ finding, cue }) => entities.Finding.update(finding.id, { cue }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const updateNote = useMutation({
-    mutationFn: ({ finding, note }) => base44.entities.Finding.update(finding.id, { next_focus: note }),
+    mutationFn: ({ finding, note }) => entities.Finding.update(finding.id, { next_focus: note }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
-  const updateStandard = useMutation({
-    mutationFn: ({ finding, standardId, standardTitle }) => base44.entities.Finding.update(finding.id, { linked_standard_id: standardId, linked_standard_title: standardTitle }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
+  const updateReportSummary = useMutation({
+    mutationFn: () => entities.Report.update(reportId, {
+      coach_summary: coachSummary,
+      next_focus: nextFocus,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] }),
   });
 
-  const handle3DLoad = (finding) => {
-    if (!threeDAssets.length) { setSelected3DAsset(null); return; }
+  const createManualFinding = useMutation({
+    mutationFn: () => entities.Finding.create({
+      club_id: report.club_id,
+      report_id: report.id,
+      swimmer_id: report.swimmer_id,
+      video_upload_id: report.video_upload_id,
+      source: 'coach',
+      approval_status: 'approved',
+      severity: 'medium',
+      observation: manualObservation,
+      correction_cue: manualCue,
+      next_focus: manualNextFocus,
+      created_by: user?.id,
+    }),
+    onSuccess: () => {
+      setManualObservation('');
+      setManualCue('');
+      setManualNextFocus('');
+      queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
+    },
+  });
 
-    const stroke = (video?.stroke_type || '').toLowerCase();
-    const phase  = (finding.phase || '').toLowerCase();
-    const findingText = [
-      finding.finding_name, finding.phase, finding.coach_sees, finding.why_it_matters
-    ].join(' ').toLowerCase();
+  useEffect(() => {
+    if (!report) return;
+    setCoachSummary(report.coach_summary || '');
+    setNextFocus(report.next_focus || '');
+  }, [report?.id]);
 
-    const clubId = club?.id;
+  useEffect(() => {
+    let cancelled = false;
+    setSignedVideoUrl('');
+    setSignedVideoError('');
+    if (!video?.id) return () => { cancelled = true; };
 
-    // Pool: global OR club-specific, active only
-    const active = threeDAssets.filter(a =>
-      a.is_active !== false && (a.is_global || a.club_id === clubId)
-    );
+    functions.getSignedVideoUrl(video.id)
+      .then((res) => {
+        if (!cancelled) setSignedVideoUrl(res.data?.signed_url || '');
+      })
+      .catch((err) => {
+        if (!cancelled) setSignedVideoError(err?.message || 'Could not load private video preview.');
+      });
 
-    const strokePool = active.filter(a => a.stroke_type?.toLowerCase() === stroke);
-    const phasePool  = strokePool.filter(a => a.stroke_phase?.toLowerCase() === phase);
-
-    const byFlaw = (pool) => pool.find(a => {
-      const flaws = (a.flaw_matched || '').toLowerCase().split(',').map(f => f.trim()).filter(Boolean);
-      return flaws.some(f => findingText.includes(f));
-    });
-
-    // Priority matching:
-    // 1. Stroke + Phase + flaw keyword
-    // 2. Stroke + Phase (any)
-    // 3. Stroke + flaw keyword
-    // 4. Stroke (any)
-    // 5. Global flaw keyword
-    // 6. General fallback
-    const best =
-      byFlaw(phasePool)  ||
-      phasePool[0]       ||
-      byFlaw(strokePool) ||
-      strokePool[0]      ||
-      byFlaw(active)     ||
-      active.find(a => a.stroke_type === 'General') ||
-      active[0] ||
-      null;
-
-    setSelected3DAsset({ ...best, _linkedFindingName: finding.finding_name });
-
-    // Scroll viewer into view on mobile
-    // Scroll mobile viewer into view if on small screen
-    const mobileEl = document.getElementById('tech-3d-viewer-mobile');
-    if (mobileEl && window.innerWidth < 1024) mobileEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+    return () => { cancelled = true; };
+  }, [video?.id]);
 
   const handleFinaliseConfirmed = async () => {
     setFinalising(true);
     setShowQualityGate(false);
-    await base44.entities.Report.update(reportId, { status: 'published' });
+    await entities.Report.update(reportId, {
+      status: 'finalised',
+      finalised_at: new Date().toISOString(),
+      coach_summary: coachSummary,
+      next_focus: nextFocus,
+    });
     queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] });
     queryClient.invalidateQueries({ queryKey: ['ai-reports'] });
     setFinalising(false);
@@ -241,7 +227,7 @@ export default function AIReportPage() {
 
   const handleDelete = async () => {
     setDeleting(true);
-    await base44.functions.invoke('deleteAIReport', { report_id: reportId });
+    await functions.deleteAIReport(reportId);
     queryClient.invalidateQueries({ queryKey: ['ai-reports'] });
     queryClient.invalidateQueries({ queryKey: ['reports-dashboard'] });
     navigate('/ai-reviews');
@@ -251,10 +237,15 @@ export default function AIReportPage() {
   const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
   const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
   const approvedFindings = findings.filter(f => f.approval_status === 'approved');
+  const isReportFinalised = FINAL_REPORT_STATUSES.includes(report?.status);
+  const isManualReviewReport = report?.analysis_mode === 'error'
+    || report?.analysis_mode === 'placeholder'
+    || report?.analysis_mode === 'manual_review'
+    || report?.real_pose_detected === false;
 
   // Derive workflow step for stepper (safe — report may not be loaded yet)
   const workflowStep = !report ? 'ai' : (() => {
-    if (report.status === 'published') return 'export';
+    if (isReportFinalised) return 'export';
     if (approvedCount > 0 && pendingCount === 0) return 'final';
     if (approvedCount > 0 || rejectedCount > 0) return 'review';
     return 'ai';
@@ -266,7 +257,11 @@ export default function AIReportPage() {
 
   let phaseBreakdown = null;
   if (report?.phase_breakdown) {
-    try { phaseBreakdown = JSON.parse(report.phase_breakdown); } catch { /* noop */ }
+    if (typeof report.phase_breakdown === 'string') {
+      try { phaseBreakdown = JSON.parse(report.phase_breakdown); } catch { /* noop */ }
+    } else if (typeof report.phase_breakdown === 'object') {
+      phaseBreakdown = report.phase_breakdown;
+    }
   }
 
   if (!reportId) {
@@ -358,7 +353,7 @@ export default function AIReportPage() {
               <ChevronRight className="w-4 h-4 text-yellow-400 flex-shrink-0" />
             </div>
           )}
-          {workflowStep === 'review' && canEdit && approvedCount > 0 && report?.status !== 'published' && (
+          {workflowStep === 'review' && canEdit && approvedCount > 0 && !isReportFinalised && (
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-3">
               <ClipboardCheck className="w-5 h-5 text-primary flex-shrink-0" />
               <div className="flex-1">
@@ -369,7 +364,7 @@ export default function AIReportPage() {
               </div>
             </div>
           )}
-          {workflowStep === 'final' && canEdit && report?.status !== 'published' && (
+          {workflowStep === 'final' && canEdit && !isReportFinalised && (
             <div className="p-4 rounded-xl bg-green-900/10 border border-green-700/20 flex items-center gap-3">
               <ClipboardCheck className="w-5 h-5 text-green-400 flex-shrink-0" />
               <div className="flex-1">
@@ -405,6 +400,13 @@ export default function AIReportPage() {
 
           {/* Real pose evidence panel — coach internal only */}
           <PoseEvidencePanel report={report} />
+          {aiJob && (
+            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[10px] text-muted-foreground">
+              <span className="font-semibold text-foreground">AI job:</span> {aiJob.status}
+              {aiJob.stage && <span> · {aiJob.stage}</span>}
+              {aiJob.pose_reliability && <span> · reliability: {aiJob.pose_reliability}</span>}
+            </div>
+          )}
 
           {/* AI transparency notice */}
           <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-900/10 border border-yellow-700/20">
@@ -414,10 +416,59 @@ export default function AIReportPage() {
             </p>
           </div>
 
+          {/* Coach summary / next focus */}
+          <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+            <div>
+              <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Summary</div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Written by the coach and included in the final shared report.
+              </p>
+            </div>
+            <Textarea
+              value={coachSummary}
+              onChange={e => setCoachSummary(e.target.value)}
+              disabled={!canEdit || isReportFinalised}
+              className="text-xs min-h-[76px]"
+              placeholder="Summarise the key technical focus for this swimmer..."
+            />
+            <Textarea
+              value={nextFocus}
+              onChange={e => setNextFocus(e.target.value)}
+              disabled={!canEdit || isReportFinalised}
+              className="text-xs min-h-[56px]"
+              placeholder="Next focus for training..."
+            />
+            {canEdit && !isReportFinalised && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => updateReportSummary.mutate()}
+                disabled={updateReportSummary.isPending}
+              >
+                {updateReportSummary.isPending ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Save className="w-3 h-3 mr-1.5" />}
+                Save Summary
+              </Button>
+            )}
+          </div>
+
           {/* Video metadata */}
           {video && (
             <div className="p-4 rounded-xl bg-card border border-border">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Source Video</div>
+              {signedVideoUrl ? (
+                <div className="rounded-lg overflow-hidden bg-black mb-3" style={{ aspectRatio: '16/9' }}>
+                  <video src={signedVideoUrl} controls className="w-full h-full object-contain" />
+                </div>
+              ) : signedVideoError ? (
+                <div className="mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                  {signedVideoError}
+                </div>
+              ) : (
+                <div className="mb-3 p-3 rounded-lg bg-secondary/50 border border-border text-xs text-muted-foreground">
+                  Loading private video preview...
+                </div>
+              )}
               <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Film className="w-3.5 h-3.5" />{video.original_filename || 'Untitled'}</span>
                 {video.stroke_type && <span className="flex items-center gap-1.5 text-foreground font-medium"><Activity className="w-3.5 h-3.5" />{video.stroke_type}</span>}
@@ -428,32 +479,9 @@ export default function AIReportPage() {
             </div>
           )}
 
-          {/* Supporting angles panel — only shown for multi-angle sessions */}
-          <SupportingAnglesPanel report={report} video={video} canEdit={canEdit} />
-
-          {/* Drag Risk Visualisation */}
-          {video && (
-            <DragRiskPanel
-              report={report}
-              video={video}
-              findings={findings}
-              canEdit={canEdit}
-            />
-          )}
-
-          {/* Coach Annotations */}
-          {video && (
-            <AnnotationsPanel
-              videoUploadId={video.id}
-              swimmerId={report.swimmer_id}
-              clubId={report.club_id}
-              reportId={reportId}
-              sessionId={video.analysis_session_id}
-              findings={findings}
-              strokeType={video.stroke_type}
-              canEdit={canEdit}
-            />
-          )}
+          <div className="p-3 rounded-xl bg-secondary/40 border border-border text-[10px] text-muted-foreground">
+            Multi-angle review, drag risk, annotations, and 3D references are preserved for later migration phases and are intentionally hidden from this V1 Supabase report workflow.
+          </div>
 
           {/* Score + summary */}
           {(report.overall_score != null || report.technical_summary) && (
@@ -519,23 +547,7 @@ export default function AIReportPage() {
             </div>
           )}
 
-          {/* 3D Viewer — mobile: shows here, above findings */}
-          <div className="lg:hidden" id="tech-3d-viewer-mobile">
-            <Technical3DViewer
-              modelUrl={selected3DAsset?.model_url}
-              assetName={selected3DAsset?.asset_name}
-              coachingCue={selected3DAsset?.coaching_cue}
-              strokeType={selected3DAsset?.stroke_type}
-              strokePhase={selected3DAsset?.stroke_phase}
-              technicalCategory={selected3DAsset?.technical_category}
-              modelPoseType={selected3DAsset?.model_pose_type}
-              correctionFocus={selected3DAsset?.correction_focus}
-              linkedFindingName={selected3DAsset?._linkedFindingName}
-              onReset={() => setSelected3DAsset(null)}
-            />
-          </div>
-
-          {/* Navigation actions (published only) */}
+          {/* Navigation actions */}
           <ReportNavActions
             report={report}
             swimmer={swimmer}
@@ -545,6 +557,52 @@ export default function AIReportPage() {
             onScrollToShare={() => scrollTo('section-share')}
             onDownloadPDF={() => window.print()}
           />
+
+          {canEdit && !isReportFinalised && (
+            <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+              <div className="flex items-start gap-2">
+                <Plus className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="text-xs font-bold text-foreground uppercase tracking-wider">Add Coach Finding</div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Use this for manual review, especially when pose evidence was unreliable.
+                  </p>
+                </div>
+              </div>
+              {isManualReviewReport && (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-800">
+                  Pose evidence was unreliable or unavailable. Add real coach observations here; no AI findings are fabricated.
+                </div>
+              )}
+              <Textarea
+                value={manualObservation}
+                onChange={e => setManualObservation(e.target.value)}
+                className="text-xs min-h-[64px]"
+                placeholder="What did the coach observe?"
+              />
+              <Textarea
+                value={manualCue}
+                onChange={e => setManualCue(e.target.value)}
+                className="text-xs min-h-[48px]"
+                placeholder="Correction cue or drill..."
+              />
+              <Textarea
+                value={manualNextFocus}
+                onChange={e => setManualNextFocus(e.target.value)}
+                className="text-xs min-h-[48px]"
+                placeholder="Next focus..."
+              />
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-primary text-primary-foreground"
+                onClick={() => createManualFinding.mutate()}
+                disabled={createManualFinding.isPending || !manualObservation.trim()}
+              >
+                {createManualFinding.isPending ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Plus className="w-3 h-3 mr-1.5" />}
+                Add Approved Coach Finding
+              </Button>
+            </div>
+          )}
 
           {/* AI Suggested Findings */}
           <div id="section-ai-findings" className="space-y-3">
@@ -573,9 +631,7 @@ export default function AIReportPage() {
                     onReject={(finding) => rejectFinding.mutate(finding)}
                     onUpdateCue={(finding, cue) => updateCue.mutateAsync({ finding, cue })}
                     onUpdateNote={(finding, note) => updateNote.mutateAsync({ finding, note })}
-                    onUpdateStandard={(finding, id, title) => updateStandard.mutate({ finding, standardId: id, standardTitle: title })}
                     clubId={report?.club_id}
-                    onLoad3D={handle3DLoad}
                   />
                 ))}
               </div>
@@ -626,16 +682,6 @@ export default function AIReportPage() {
             </div>
           </div>
 
-          {/* Coach Feedback Comparison — coach-only, not on public/print */}
-          <div className="print:hidden">
-            <CoachFeedbackComparison
-              report={report}
-              reportId={reportId}
-              findings={findings}
-              canEdit={canEdit}
-            />
-          </div>
-
           {/* Share Report */}
           <div id="section-share" className="space-y-3">
             <h2 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
@@ -645,14 +691,14 @@ export default function AIReportPage() {
               report={report}
               reportId={reportId}
               canEdit={canEdit}
-              isCoachApproved={reviewStatus === 'coach_approved'}
+              isCoachApproved={isReportFinalised}
               findings={findings}
               analysisMode={report.analysis_mode}
             />
           </div>
 
           {/* Finalise button */}
-          {canEdit && approvedCount > 0 && report.status !== 'published' && (
+          {canEdit && !isReportFinalised && pendingCount === 0 && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-3">
               {(!report.analysis_mode || report.analysis_mode === 'placeholder') && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
@@ -666,8 +712,8 @@ export default function AIReportPage() {
                 <div>
                   <div className="text-xs font-semibold text-foreground">Ready to finalise?</div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {approvedCount} finding{approvedCount !== 1 ? 's' : ''} approved.
-                    {pendingCount > 0 && ` ${pendingCount} still pending.`}
+                    {approvedCount} approved finding{approvedCount !== 1 ? 's' : ''}.
+                    {approvedCount === 0 && ' You can finalise intentionally with no findings after confirming the quality gate.'}
                   </p>
                 </div>
                 <Button
@@ -696,7 +742,7 @@ export default function AIReportPage() {
             />
           )}
 
-          {report.status === 'published' && (
+          {isReportFinalised && (
             <>
               <div className="flex items-center gap-2.5 p-3 rounded-lg bg-green-900/10 border border-green-700/20">
                 <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
@@ -704,16 +750,6 @@ export default function AIReportPage() {
                   This report has been finalised by a coach.
                   {report.ai_completed_at && ` · Generated ${format(new Date(report.ai_completed_at), 'dd MMM yyyy')}`}
                 </p>
-                {swimmer && canEdit && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs flex-shrink-0 border-green-600/40 text-green-700 hover:bg-green-50"
-                    onClick={() => setShowNotifyModal(true)}
-                  >
-                    <Bell className="w-3 h-3 mr-1" /> Notify Swimmer
-                  </Button>
-                )}
               </div>
               {/* Bottom nav — repeat for convenience */}
               <ReportNavActions
@@ -729,25 +765,13 @@ export default function AIReportPage() {
           )}
 
           {/* Footer note */}
-          {report.status !== 'published' && (
+          {!isReportFinalised && (
             <div className="text-[10px] text-muted-foreground border-t border-border pt-3">
               AI findings are suggestions only. All approvals and edits are saved automatically.
               {report.ai_completed_at && (
                 <span className="ml-1"> · Generated {format(new Date(report.ai_completed_at), 'dd MMM yyyy')}</span>
               )}
             </div>
-          )}
-
-          {/* Notify Swimmer Modal */}
-          {showNotifyModal && (
-            <NotifySwimmerModal
-              open={showNotifyModal}
-              onClose={() => setShowNotifyModal(false)}
-              report={report}
-              swimmer={swimmer}
-              club={club}
-              shareLink={activeShareLink}
-            />
           )}
 
           <FeedbackButton pageRoute="/ai-review" />
@@ -789,21 +813,9 @@ export default function AIReportPage() {
         </div>
 
         {/* ── RIGHT STICKY PANEL — desktop only ── */}
-        <div className="hidden lg:block w-80 flex-shrink-0 space-y-4 sticky top-6" id="tech-3d-viewer">
+        <div className="hidden lg:block w-80 flex-shrink-0 space-y-4 sticky top-6">
           {/* Coach Review Assistant — above the 3D viewer */}
           <CoachReviewAssistantCard video={video} report={report} />
-          <Technical3DViewer
-            modelUrl={selected3DAsset?.model_url}
-            assetName={selected3DAsset?.asset_name}
-            coachingCue={selected3DAsset?.coaching_cue}
-            strokeType={selected3DAsset?.stroke_type}
-            strokePhase={selected3DAsset?.stroke_phase}
-            technicalCategory={selected3DAsset?.technical_category}
-            modelPoseType={selected3DAsset?.model_pose_type}
-            correctionFocus={selected3DAsset?.correction_focus}
-            linkedFindingName={selected3DAsset?._linkedFindingName}
-            onReset={() => setSelected3DAsset(null)}
-          />
         </div>
 
       </div>

@@ -85,13 +85,27 @@ function mapSwimmerFromDb(row) {
 
 function mapFindingToDb(data) {
   if (!data) return data;
-  const { finding_name, phase, coach_sees, cue, confidence_score, ...remaining } = data;
+  const {
+    finding_name,
+    phase,
+    coach_sees,
+    cue,
+    confidence_score,
+    included_in_report,
+    timestamp_start,
+    timestamp_end,
+    evidence_type,
+    measurement_summary,
+    frame_reference,
+    ...remaining
+  } = data;
   return {
     ...remaining,
     observation: remaining.observation || coach_sees || finding_name,
     stroke_phase: remaining.stroke_phase || phase,
     correction_cue: remaining.correction_cue || cue,
     ai_confidence: remaining.ai_confidence ?? confidence_score,
+    timestamp_seconds: remaining.timestamp_seconds ?? timestamp_start,
   };
 }
 
@@ -104,7 +118,22 @@ function mapFindingFromDb(row) {
     coach_sees: row.coach_sees || row.observation,
     cue: row.cue || row.correction_cue,
     confidence_score: row.confidence_score ?? row.ai_confidence,
+    included_in_report: row.included_in_report ?? row.approval_status === 'approved',
+    timestamp_start: row.timestamp_start ?? row.timestamp_seconds,
   });
+}
+
+function mapReportToDb(data) {
+  if (!data) return data;
+  const {
+    title,
+    source,
+    ai_completed_at,
+    ai_error_message,
+    public_share_id,
+    ...remaining
+  } = data;
+  return remaining;
 }
 
 function mapReportFromDb(row) {
@@ -113,6 +142,9 @@ function mapReportFromDb(row) {
   return withBase44DateAliases({
     ...row,
     title,
+    source: row.source || 'ai',
+    ai_completed_at: row.ai_completed_at || row.finalised_at || row.updated_at || row.created_at,
+    ai_error_message: row.ai_error_message || row.technical_summary,
   });
 }
 
@@ -171,8 +203,10 @@ function mapVideoUploadToDb(data) {
 
 function mapVideoUploadFromDb(row) {
   if (!row) return row;
+  const reviewContext = row.review_context || {};
   return withBase44DateAliases({
     ...row,
+    ...reviewContext,
     file_uri: row.file_bucket && row.file_path ? `private://${row.file_bucket}/${row.file_path}` : undefined,
     file_name: row.original_filename,
     file_size: row.file_size_bytes,
@@ -189,7 +223,7 @@ function getMappers(entityName) {
     return { toDb: mapVideoUploadToDb, fromDb: mapVideoUploadFromDb };
   }
   if (entityName === 'Report') {
-    return { toDb: (data) => data, fromDb: mapReportFromDb };
+    return { toDb: mapReportToDb, fromDb: mapReportFromDb };
   }
   if (entityName === 'Finding') {
     return { toDb: mapFindingToDb, fromDb: mapFindingFromDb };
@@ -206,7 +240,20 @@ function isSwimmerEntity(entityName) {
 }
 
 function isClubScopedEntity(entityName) {
-  return ['Squad', 'Swimmer', 'VideoUpload'].includes(entityName);
+  return [
+    'Squad',
+    'Swimmer',
+    'VideoUpload',
+    'AIProcessingJob',
+    'Report',
+    'Finding',
+    'KeyFrame',
+    'SharedReportLink',
+  ].includes(entityName);
+}
+
+function isReportEntity(entityName) {
+  return entityName === 'Report';
 }
 
 function applyEntityDefaults(entityName, data = {}) {
@@ -235,9 +282,17 @@ function applyClubScope(query, entityName, filters = {}) {
 }
 
 function applyDefaultActiveScope(query, entityName, filters = {}, options = {}) {
-  if (!isSwimmerEntity(entityName)) return query;
-  if (options.includeInactive || filters.includeInactive || filters.is_active !== undefined) return query;
-  return query.eq('is_active', true);
+  if (isSwimmerEntity(entityName)) {
+    if (options.includeInactive || filters.includeInactive || filters.is_active !== undefined) return query;
+    return query.eq('is_active', true);
+  }
+
+  if (isReportEntity(entityName)) {
+    if (options.includeDeleted || filters.includeDeleted || filters.is_deleted !== undefined) return query;
+    return query.eq('is_deleted', false);
+  }
+
+  return query;
 }
 
 function createEntityAdapter(entityName, tableName) {
@@ -261,6 +316,7 @@ function createEntityAdapter(entityName, tableName) {
       let query = supabase.from(tableName).select('*');
       const cleanedFilters = stripUndefined(filters);
       delete cleanedFilters.includeInactive;
+      delete cleanedFilters.includeDeleted;
 
       Object.entries(cleanedFilters).forEach(([key, value]) => {
         query = query.eq(key, value);

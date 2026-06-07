@@ -38,16 +38,19 @@ export default async function handler(req, res) {
 
     if (findingsError) throw findingsError;
 
-    const approvedCount = (findings || []).filter((finding) => finding.approval_status === 'approved').length;
     const pendingCount = (findings || []).filter((finding) => finding.approval_status === 'pending').length;
+    const shareableStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
+
+    if (!shareableStatuses.includes(report.status)) {
+      return sendJson(res, 400, {
+        error: 'Report must be finalised by a coach before it can be shared.',
+      });
+    }
 
     if (pendingCount > 0) {
       return sendJson(res, 400, {
         error: `Report cannot be shared: ${pendingCount} finding${pendingCount === 1 ? '' : 's'} still pending review.`,
       });
-    }
-    if (approvedCount === 0) {
-      return sendJson(res, 400, { error: 'Report cannot be shared: at least one finding must be approved.' });
     }
 
     const { data: existing, error: existingError } = await service
@@ -87,7 +90,7 @@ export default async function handler(req, res) {
 
     await service
       .from('reports')
-      .update({ status: report.status === 'published' ? 'shared' : report.status })
+      .update({ status: 'shared' })
       .eq('id', report.id);
 
     return sendJson(res, 200, {

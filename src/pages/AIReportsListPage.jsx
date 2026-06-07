@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import entities from '@/lib/data/entities';
+import functions from '@/lib/data/functions';
 import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/shared/PageHeader';
@@ -15,20 +16,21 @@ import { format } from 'date-fns';
 // ── Reliability label ──────────────────────────────────────────────────────────
 function ReliabilityLabel({ report }) {
   if (report.analysis_mode === 'real_pose' && report.real_pose_detected) {
-    return <span className="text-[10px] font-medium text-green-700">Pose-assisted</span>;
+    return <span className="text-[10px] font-medium text-green-700">Reliable pose-assisted review — coach approval required</span>;
   }
+  if (report.pose_reliability === 'partial') return <span className="text-[10px] font-medium text-amber-700">Partial pose evidence — use alongside manual review</span>;
   if (report.analysis_mode === 'error') {
-    return <span className="text-[10px] font-medium text-red-600">Processing failed</span>;
+    return <span className="text-[10px] font-medium text-red-600">Processing failed — retry or complete manual review</span>;
   }
   if (report.real_pose_detected === false) {
-    return <span className="text-[10px] font-medium text-amber-700">Manual review recommended</span>;
+    return <span className="text-[10px] font-medium text-amber-700">Pose unreliable — manual review recommended</span>;
   }
   return <span className="text-[10px] font-medium text-amber-600">Partial evidence</span>;
 }
 
 // ── Status label ───────────────────────────────────────────────────────────────
 function CoachStatusLabel({ report, pending, approved }) {
-  if (report.status === 'published') return <span className="text-[10px] font-semibold text-green-700">Final report ready</span>;
+  if (['coach_approved', 'finalised', 'published', 'shared'].includes(report.status)) return <span className="text-[10px] font-semibold text-green-700">Final report ready</span>;
   if (pending > 0) return <span className="text-[10px] font-semibold text-amber-700">Coach review required</span>;
   if (approved > 0) return <span className="text-[10px] font-semibold text-slate-600">In review</span>;
   return <span className="text-[10px] text-slate-400">No findings yet</span>;
@@ -64,7 +66,7 @@ function ReportRow({ report, swimmer, video, findings, onDelete, canDelete }) {
 
   const pending  = findings.filter(f => f.approval_status === 'pending').length;
   const approved = findings.filter(f => f.approval_status === 'approved').length;
-  const isFinalised = report.status === 'published';
+  const isFinalised = ['coach_approved', 'finalised', 'published', 'shared'].includes(report.status);
   const needsReview = pending > 0;
 
   return (
@@ -150,19 +152,19 @@ export default function AIReportsListPage() {
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ['ai-reports', club?.id],
-    queryFn: () => base44.entities.Report.filter({ club_id: club.id, source: 'ai' }, '-created_date', 50),
+    queryFn: () => entities.Report.filter({ club_id: club.id }, '-created_date', 50),
     enabled: !!club?.id, staleTime: 2 * 60 * 1000,
   });
   const reports = allReports.filter(r => !r.is_deleted);
 
   const deleteReport = useMutation({
-    mutationFn: (report_id) => base44.functions.invoke('deleteAIReport', { report_id }),
+    mutationFn: (report_id) => functions.deleteAIReport(report_id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-reports', club?.id] }),
   });
 
-  const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }), enabled: !!club?.id, staleTime: 5 * 60 * 1000 });
-  const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => base44.entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
-  const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => base44.entities.Finding.filter({ club_id: club.id, source: 'ai' }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
+  const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled: !!club?.id, staleTime: 5 * 60 * 1000 });
+  const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
+  const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
 
   const swimmerMap = Object.fromEntries(swimmers.map(s => [s.id, s]));
   const videoMap   = Object.fromEntries(videos.map(v => [v.id, v]));
@@ -175,10 +177,15 @@ export default function AIReportsListPage() {
   const canDelete = ['owner', 'admin', 'coach'].includes(club?._memberRole);
 
   // Queue sections
-  const needsReview   = reports.filter(r => r.status !== 'published' && (findingsByReport[r.id] || []).some(f => f.approval_status === 'pending'));
-  const processing    = reports.filter(r => r.status !== 'published' && !(findingsByReport[r.id] || []).some(f => f.approval_status === 'pending') && (r.analysis_mode === 'error' || r.real_pose_detected === false || (!r.analysis_mode)));
-  const inReview      = reports.filter(r => r.status !== 'published' && !needsReview.includes(r) && !processing.includes(r));
-  const finalised     = reports.filter(r => r.status === 'published');
+  const finalisedStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
+  const isManualReviewReport = (r) => r.analysis_mode === 'error'
+    || r.analysis_mode === 'placeholder'
+    || r.analysis_mode === 'manual_review'
+    || r.real_pose_detected === false;
+  const needsReview   = reports.filter(r => !finalisedStatuses.includes(r.status) && (findingsByReport[r.id] || []).some(f => f.approval_status === 'pending'));
+  const processing    = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && isManualReviewReport(r));
+  const inReview      = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && !processing.includes(r));
+  const finalised     = reports.filter(r => finalisedStatuses.includes(r.status));
 
   const rowProps = (r) => ({
     report: r,

@@ -26,7 +26,6 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import PublicReport from './pages/PublicReport';
 import AIReportPage from './pages/AIReportPage';
 import AIReportsListPage from './pages/AIReportsListPage';
 import SharedReportPage from './pages/SharedReportPage';

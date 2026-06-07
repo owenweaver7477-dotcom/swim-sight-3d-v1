@@ -5,7 +5,7 @@ import { ClipboardCheck, Brain, Film, User, Download, Share2 } from 'lucide-reac
 
 export default function ReportNavActions({ report, swimmer, video, onScrollToFindings, onScrollToFinalReport, onScrollToShare, onDownloadPDF }) {
   const navigate = useNavigate();
-  const isPublished = report?.status === 'published';
+  const isPublished = ['coach_approved', 'finalised', 'published', 'shared'].includes(report?.status);
 
   if (!isPublished) return null;
 

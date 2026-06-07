@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import DragRiskReportSection from '@/components/drag/DragRiskReportSection';
 import { useParams } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import functions from '@/lib/data/functions';
 import { Loader2, AlertTriangle, CheckCircle2, Waves, Target, Dumbbell, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -103,10 +103,24 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, drag
       )}
 
       {/* Technical summary */}
+      {report.coach_summary && (
+        <div className="px-8 py-6 border-b border-slate-200">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Coach Summary</h3>
+          <p className="text-sm text-slate-700 leading-relaxed">{report.coach_summary}</p>
+        </div>
+      )}
+
       {report.technical_summary && (
         <div className="px-8 py-6 border-b border-slate-200">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Technical Summary</h3>
           <p className="text-sm text-slate-700 leading-relaxed">{report.technical_summary}</p>
+        </div>
+      )}
+
+      {report.next_focus && (
+        <div className="px-8 py-6 border-b border-slate-200">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Next Focus</h3>
+          <p className="text-sm text-slate-700 leading-relaxed">{report.next_focus}</p>
         </div>
       )}
 
@@ -232,10 +246,10 @@ export default function SharedReportPage() {
 
   useEffect(() => {
     if (!token) { setError('Invalid link.'); setLoading(false); return; }
-    base44.functions.invoke('getSharedReport', { token })
+    functions.getSharedReport(token)
       .then(res => { setData(res.data); })
       .catch(err => {
-        setError(err?.response?.data?.error || 'Report not found or link expired.');
+        setError(err?.message || 'Report not found or link expired.');
       })
       .finally(() => setLoading(false));
   }, [token]);
