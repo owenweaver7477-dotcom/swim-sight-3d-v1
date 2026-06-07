@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { base44 } from '@/api/base44Client';
 import { setActiveClub, setActiveRole } from '@/lib/swimState';
-import { resetClubContext } from '@/lib/useClubContext';
+import { normaliseClub, resetClubContext } from '@/lib/useClubContext';
+import functions from '@/lib/data/functions';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import { Waves, Plus, KeyRound, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -13,7 +13,7 @@ import { Waves, Plus, KeyRound, Loader2, AlertCircle, CheckCircle2 } from 'lucid
 export default function ClubOnboarding() {
   const [tab, setTab] = useState('create'); // 'create' | 'join'
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   // Pre-fill invite code from URL ?code= param
   const urlParams = new URLSearchParams(window.location.search);
@@ -28,26 +28,14 @@ export default function ClubOnboarding() {
 
   const createClub = useMutation({
     mutationFn: async () => {
-      const slug = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const initials = form.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 3);
-      const club = await base44.entities.Club.create({
-        name: form.name,
-        slug,
-        initials,
-        location: form.location || undefined,
-        primary_color: '#0077B6',
-        accent_color: '#00A6C8',
+      const { data } = await functions.createClubWorkspace({
+        name: form.name.trim(),
+        location: form.location.trim() || undefined,
       });
-      if (user?.id) {
-        await base44.entities.ClubMember.create({
-          club_id: club.id,
-          user_id: user.id,
-          role: 'owner',
-        });
-      }
-      return { ...club, _memberRole: 'owner' };
+      return data;
     },
-    onSuccess: (clubWithRole) => {
+    onSuccess: ({ club, membership }) => {
+      const clubWithRole = normaliseClub(club, membership);
       setActiveClub(clubWithRole);
       setActiveRole('owner');
       resetClubContext();
@@ -71,57 +59,11 @@ export default function ClubOnboarding() {
       const code = inviteCode.trim().toUpperCase();
       if (!code) throw new Error('Please enter an invite code.');
 
-      // Look up ClubInvite by code
-      const invites = await base44.entities.ClubInvite.filter({ invite_code: code, is_active: true });
-      const invite = invites[0];
-
-      if (!invite) {
-        throw new Error('Invite code not found, expired, or no longer active.');
-      }
-
-      // Check expiry
-      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-        throw new Error('This invite code has expired.');
-      }
-
-      // Check max uses
-      if (invite.max_uses && invite.use_count >= invite.max_uses) {
-        throw new Error('This invite code has reached its maximum number of uses.');
-      }
-
-      // Fetch club
-      const clubs = await base44.entities.Club.filter({ id: invite.club_id });
-      const club = clubs[0];
-      if (!club) throw new Error('Club not found.');
-
-      // Check already member
-      if (user?.id) {
-        const existing = await base44.entities.ClubMember.filter({
-          club_id: club.id,
-          user_id: user.id,
-        });
-        if (existing.length > 0) {
-          // Already a member — just activate and redirect
-          return { ...club, _memberRole: existing[0].role };
-        }
-
-        // Create ClubMember with the invite's role
-        await base44.entities.ClubMember.create({
-          club_id: club.id,
-          user_id: user.id,
-          role: invite.role,
-        });
-
-        // Increment use_count and set last_used_at
-        await base44.entities.ClubInvite.update(invite.id, {
-          use_count: (invite.use_count || 0) + 1,
-          last_used_at: new Date().toISOString(),
-        });
-      }
-
-      return { ...club, _memberRole: invite.role };
+      const { data } = await functions.joinClubWithInviteCode({ invite_code: code });
+      return data;
     },
-    onSuccess: (clubWithRole) => {
+    onSuccess: ({ club, membership }) => {
+      const clubWithRole = normaliseClub(club, membership);
       setActiveClub(clubWithRole);
       setActiveRole(clubWithRole._memberRole);
       resetClubContext();

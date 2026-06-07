@@ -30,7 +30,33 @@ async function postJson(url, payload) {
   return parseResponse(response);
 }
 
+async function patchJson(url, payload) {
+  const authHeaders = await getAuthHeaders();
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders },
+    body: JSON.stringify(payload || {}),
+  });
+  return parseResponse(response);
+}
+
 export const functions = {
+  createClubWorkspace(payload) {
+    return postJson('/api/clubs/create', payload);
+  },
+
+  joinClubWithInviteCode(payload) {
+    return postJson('/api/clubs/join-invite', payload);
+  },
+
+  createClubInvite(payload) {
+    return postJson('/api/clubs/invites/create', payload);
+  },
+
+  revokeClubInvite(inviteId) {
+    return patchJson(`/api/clubs/invites/${inviteId}/revoke`, {});
+  },
+
   triggerPoseAnalysis(payload) {
     return postJson('/api/ai/trigger', payload);
   },

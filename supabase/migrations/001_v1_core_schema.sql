@@ -532,10 +532,10 @@ for select using (public.is_club_member(club_id) or public.is_app_admin());
 drop policy if exists "swimmers_manage_coaches" on public.swimmers;
 create policy "swimmers_manage_coaches" on public.swimmers
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
@@ -546,10 +546,10 @@ for select using (public.is_club_member(club_id) or public.is_app_admin());
 drop policy if exists "video_uploads_manage_coaches" on public.video_uploads;
 create policy "video_uploads_manage_coaches" on public.video_uploads
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
@@ -560,10 +560,10 @@ for select using (public.is_club_member(club_id) or public.is_app_admin());
 drop policy if exists "ai_jobs_manage_coaches" on public.ai_processing_jobs;
 create policy "ai_jobs_manage_coaches" on public.ai_processing_jobs
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
@@ -574,10 +574,10 @@ for select using (public.is_club_member(club_id) or public.is_app_admin());
 drop policy if exists "reports_manage_coaches" on public.reports;
 create policy "reports_manage_coaches" on public.reports
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
@@ -588,10 +588,10 @@ for select using (public.is_club_member(club_id) or public.is_app_admin());
 drop policy if exists "findings_manage_coaches" on public.findings;
 create policy "findings_manage_coaches" on public.findings
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
@@ -602,27 +602,27 @@ for select using (public.is_club_member(club_id) or public.is_app_admin());
 drop policy if exists "key_frames_manage_coaches" on public.key_frames;
 create policy "key_frames_manage_coaches" on public.key_frames
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
 drop policy if exists "shared_report_links_select_coaches" on public.shared_report_links;
 create policy "shared_report_links_select_coaches" on public.shared_report_links
 for select using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
 drop policy if exists "shared_report_links_manage_coaches" on public.shared_report_links;
 create policy "shared_report_links_manage_coaches" on public.shared_report_links
 for all using (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 ) with check (
-  public.has_club_role(club_id, array['owner', 'admin', 'coach']::public.club_member_role[])
+  public.has_club_role(club_id, array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[])
   or public.is_app_admin()
 );
 
@@ -641,7 +641,7 @@ for insert with check (
   and auth.role() = 'authenticated'
   and public.has_club_role(
     public.storage_path_club_id(name),
-    array['owner', 'admin', 'coach']::public.club_member_role[]
+    array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[]
   )
 );
 
@@ -651,13 +651,13 @@ for all using (
   bucket_id = 'private-videos'
   and public.has_club_role(
     public.storage_path_club_id(name),
-    array['owner', 'admin', 'coach']::public.club_member_role[]
+    array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[]
   )
 ) with check (
   bucket_id = 'private-videos'
   and public.has_club_role(
     public.storage_path_club_id(name),
-    array['owner', 'admin', 'coach']::public.club_member_role[]
+    array['owner', 'admin', 'coach', 'assistant_coach']::public.club_member_role[]
   )
 );
 

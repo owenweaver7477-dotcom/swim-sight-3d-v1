@@ -1,6 +1,6 @@
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from './supabaseServer.js';
 
-export const COACH_ROLES = ['owner', 'admin', 'coach'];
+export const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 export const ADMIN_ROLES = ['owner', 'admin'];
 
 export function createServiceClient() {

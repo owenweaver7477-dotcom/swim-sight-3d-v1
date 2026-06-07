@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { supabase, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
 import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,7 @@ function ClubEditCard({ club }) {
   const [accentColor, setAccentColor] = useState(club.accent_color || '#06b6d4');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     setName(club.name || '');
@@ -63,18 +64,23 @@ function ClubEditCard({ club }) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
-    await base44.entities.Club.update(club.id, {
-      name: name.trim(),
-      initials: initials.trim() || name.trim().charAt(0).toUpperCase(),
-      location: location.trim() || undefined,
-      primary_color: primaryColor,
-      accent_color: accentColor,
-    });
-    await refreshClubs();
-    queryClient.invalidateQueries({ queryKey: ['club'] });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveError('');
+
+    try {
+      const { error } = await supabase
+        .from('clubs')
+        .update({ name: name.trim() })
+        .eq('id', club.id);
+      if (error) throw error;
+      await refreshClubs();
+      queryClient.invalidateQueries({ queryKey: ['club'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      setSaveError(error.message || 'Unable to save club changes.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -152,6 +158,7 @@ function ClubEditCard({ club }) {
             'Save Changes'
           )}
         </Button>
+        {saveError && <div className="text-xs text-destructive">{saveError}</div>}
       </form>
     </div>
   );
@@ -168,12 +175,23 @@ export default function ClubSettings() {
 
   const { data: squads = [] } = useQuery({
     queryKey: ['squads', club?.id],
-    queryFn: () => base44.entities.Squad.filter({ club_id: club.id }),
-    enabled: !!club?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('squads')
+        .select('*')
+        .eq('club_id', club.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!club?.id && hasSupabaseBrowserEnv(),
   });
 
   const addSquad = useMutation({
-    mutationFn: (data) => base44.entities.Squad.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from('squads').insert(data);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['squads', club?.id] });
       setSquadName('');
@@ -338,10 +356,10 @@ export default function ClubSettings() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 p-4 rounded-xl bg-card border border-border">
               <div className="space-y-2 text-xs font-mono">
-                <div className="flex justify-between"><span className="text-muted-foreground">Backend</span><span className="text-primary">Base44 Connected</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Backend</span><span className="text-primary">Supabase Connected</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Active Club</span><span className="text-foreground">{club?.name || 'None'}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Club ID</span><span className="text-foreground">{club?.id || 'N/A'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Data Source</span><span className="text-foreground">Base44 Entities</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Data Source</span><span className="text-foreground">Supabase Tables</span></div>
               </div>
             </CollapsibleContent>
           </Collapsible>

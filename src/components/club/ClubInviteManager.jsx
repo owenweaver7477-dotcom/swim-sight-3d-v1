@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/lib/AuthContext';
+import { supabase, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
+import functions from '@/lib/data/functions';
 import {
   Plus, Copy, Link, Ban, KeyRound, Check, AlertCircle, Clock, Users
 } from 'lucide-react';
@@ -15,17 +15,17 @@ const ROLE_CONFIG = {
   swimmer: { label: 'Swimmer', colour: 'text-green-400 bg-green-900/20 border-green-700/30' },
   parent:  { label: 'Parent',  colour: 'text-purple-400 bg-purple-900/20 border-purple-700/30' },
   owner:   { label: 'Owner',   colour: 'text-orange-400 bg-orange-900/20 border-orange-700/30' },
+  assistant_coach: { label: 'Assistant Coach', colour: 'text-sky-400 bg-sky-900/20 border-sky-700/30' },
 };
 
-function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+const BASE_URL = import.meta.env.VITE_APP_BASE_URL || window.location.origin;
+
+function swimmerName(swimmer) {
+  const fullName = [swimmer.first_name, swimmer.last_name].filter(Boolean).join(' ').trim();
+  return fullName || swimmer.name || 'Unnamed swimmer';
 }
 
-const BASE_URL = window.location.origin;
-
 export default function ClubInviteManager({ club, memberRole }) {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const canManage = ['owner', 'admin'].includes(memberRole);
 
@@ -37,37 +37,51 @@ export default function ClubInviteManager({ club, memberRole }) {
 
   const { data: invites = [] } = useQuery({
     queryKey: ['club-invites', club?.id],
-    queryFn: () => base44.entities.ClubInvite.filter({ club_id: club.id }, '-created_date', 50),
-    enabled: !!club?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('club_invites')
+        .select('*')
+        .eq('club_id', club.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!club?.id && hasSupabaseBrowserEnv() && canManage,
   });
 
   const { data: swimmers = [] } = useQuery({
     queryKey: ['swimmers-for-invite', club?.id],
-    queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }, 'name', 100),
-    enabled: !!club?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('swimmers')
+        .select('id, first_name, last_name')
+        .eq('club_id', club.id)
+        .eq('is_active', true)
+        .order('last_name', { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!club?.id && hasSupabaseBrowserEnv() && canManage,
   });
 
   const [selectedSwimmer, setSelectedSwimmer] = useState('');
 
   const createInvite = useMutation({
     mutationFn: async () => {
-      const code = generateCode();
-      const data = {
+      const expiresAt = expiryDays
+        ? new Date(Date.now() + parseInt(expiryDays, 10) * 86400000).toISOString()
+        : null;
+      const { data } = await functions.createClubInvite({
         club_id: club.id,
-        created_by: user?.id || '',
-        invite_code: code,
-        invite_type: newRole,
         role: newRole,
-        is_active: true,
-        use_count: 0,
         email: newEmail.trim() || undefined,
         swimmer_id: selectedSwimmer || undefined,
-        max_uses: maxUses ? parseInt(maxUses) : undefined,
-        expires_at: expiryDays
-          ? new Date(Date.now() + parseInt(expiryDays) * 86400000).toISOString()
-          : undefined,
-      };
-      return base44.entities.ClubInvite.create(data);
+        max_uses: maxUses ? parseInt(maxUses, 10) : undefined,
+        expires_at: expiresAt,
+      });
+      return data.invite;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club-invites', club?.id] });
@@ -79,11 +93,7 @@ export default function ClubInviteManager({ club, memberRole }) {
   });
 
   const revokeInvite = useMutation({
-    mutationFn: (invite) => base44.entities.ClubInvite.update(invite.id, {
-      is_active: false,
-      revoked_at: new Date().toISOString(),
-      revoked_by: user?.id || '',
-    }),
+    mutationFn: (invite) => functions.revokeClubInvite(invite.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['club-invites', club?.id] }),
   });
 
@@ -120,6 +130,7 @@ export default function ClubInviteManager({ club, memberRole }) {
                 className="mt-1 w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs"
               >
                 <option value="coach">Coach</option>
+                <option value="assistant_coach">Assistant Coach</option>
                 <option value="swimmer">Swimmer</option>
                 <option value="parent">Parent</option>
                 {memberRole === 'owner' && <option value="admin">Admin</option>}
@@ -146,7 +157,7 @@ export default function ClubInviteManager({ club, memberRole }) {
                   className="mt-1 w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs"
                 >
                   <option value="">— None —</option>
-                  {swimmers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {swimmers.map(s => <option key={s.id} value={s.id}>{swimmerName(s)}</option>)}
                 </select>
               </div>
             )}
@@ -155,6 +166,12 @@ export default function ClubInviteManager({ club, memberRole }) {
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             {createInvite.isPending ? 'Creating…' : 'Generate Invite Code'}
           </Button>
+          {createInvite.isError && (
+            <div className="flex items-center gap-2 text-xs text-destructive">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              {createInvite.error?.message || 'Unable to create invite.'}
+            </div>
+          )}
         </div>
       )}
 

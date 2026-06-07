@@ -2,7 +2,7 @@
  * Swim Sight 3D — ClubMember permission helpers
  *
  * These helpers encode the role hierarchy used by ClubMember records.
- * Roles (from ClubMember entity):  owner | admin | coach | swimmer | parent
+ * Roles (from club_members): owner | admin | coach | assistant_coach | swimmer | parent
  *
  * Usage:
  *   import { canManageClub } from '@/lib/permissions';
@@ -17,6 +17,7 @@ export const ROLES = {
   OWNER:   'owner',
   ADMIN:   'admin',
   COACH:   'coach',
+  ASSISTANT_COACH: 'assistant_coach',
   SWIMMER: 'swimmer',
   PARENT:  'parent',
 };
@@ -38,32 +39,32 @@ export function canCreateAdminInvites(role) {
 
 // Coaches (and above) can upload videos for analysis
 export function canUploadVideos(role) {
-  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH].includes(role);
+  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.ASSISTANT_COACH].includes(role);
 }
 
 // Coaches (and above) can send a video to AI analysis
 export function canTriggerAI(role) {
-  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH].includes(role);
+  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.ASSISTANT_COACH].includes(role);
 }
 
 // Coaches (and above) can approve or reject AI-suggested findings
 export function canApproveFindings(role) {
-  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH].includes(role);
+  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.ASSISTANT_COACH].includes(role);
 }
 
 // All authenticated club members can view reports
 export function canViewReports(role) {
-  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.SWIMMER, ROLES.PARENT].includes(role);
+  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.ASSISTANT_COACH, ROLES.SWIMMER, ROLES.PARENT].includes(role);
 }
 
 // All authenticated club members can view a swimmer's profile page
 export function canViewSwimmerProfile(role) {
-  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.SWIMMER, ROLES.PARENT].includes(role);
+  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.ASSISTANT_COACH, ROLES.SWIMMER, ROLES.PARENT].includes(role);
 }
 
 // Coaches (and above) can upload reference assets for their club
 export function canUploadClubReferenceAsset(role) {
-  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH].includes(role);
+  return [ROLES.OWNER, ROLES.ADMIN, ROLES.COACH, ROLES.ASSISTANT_COACH].includes(role);
 }
 
 // Only owners can upload official/global model assets
@@ -77,6 +78,7 @@ export function getRoleLabel(role) {
     owner:   'Owner',
     admin:   'Admin',
     coach:   'Coach',
+    assistant_coach: 'Assistant Coach',
     swimmer: 'Swimmer',
     parent:  'Parent',
   };
