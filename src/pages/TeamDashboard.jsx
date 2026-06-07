@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -94,7 +95,7 @@ export default function TeamDashboard() {
   const { data: reports = [] } = useQuery({ queryKey: ['reports-dashboard', club?.id], queryFn: () => base44.entities.Report.filter({ club_id: club.id }, '-created_date', 50), enabled, staleTime: 2 * 60 * 1000 });
   const { data: findings = [] } = useQuery({ queryKey: ['findings-dashboard', club?.id], queryFn: () => base44.entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled, staleTime: 2 * 60 * 1000 });
   const { data: dragItems = [] } = useQuery({ queryKey: ['drag-dashboard', club?.id], queryFn: () => base44.entities.DragAnalysis.filter({ club_id: club.id }, '-created_date', 100), enabled, staleTime: 2 * 60 * 1000 });
-  const { data: aiJobs = [] } = useQuery({ queryKey: ['ai-jobs-dashboard', club?.id], queryFn: () => base44.entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 5), enabled, staleTime: 2 * 60 * 1000 });
+  const { data: aiJobs = [] } = useQuery({ queryKey: ['ai-jobs-dashboard', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 5), enabled, staleTime: 2 * 60 * 1000 });
 
   if (loading) return <div className="flex items-center justify-center py-32"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
   if (!club) return <NoClubDashboard />;

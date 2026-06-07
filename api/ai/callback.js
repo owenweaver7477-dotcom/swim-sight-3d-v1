@@ -3,9 +3,7 @@ import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } f
 function isReliableRealPose(payload) {
   return (
     payload.analysis_mode === 'real_pose' &&
-    payload.real_pose_detected === true &&
-    Number(payload.frame_count_processed || 0) > 0 &&
-    Number(payload.detected_keypoints_count || 0) > 0
+    payload.real_pose_detected === true
   );
 }
 
@@ -14,11 +12,27 @@ function normaliseSeverity(value) {
   return String(value).toLowerCase();
 }
 
+function normaliseArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').map(item => item.trim()).filter(Boolean);
+  return [];
+}
+
 function isCoachLockedReport(status) {
   return ['coach_approved', 'finalised', 'published', 'shared'].includes(status);
 }
 
 async function findJob(service, payload) {
+  if (payload.app_job_id && isUuid(payload.app_job_id)) {
+    const { data, error } = await service
+      .from('ai_processing_jobs')
+      .select('*')
+      .eq('id', payload.app_job_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  }
+
   if (payload.job_id && isUuid(payload.job_id)) {
     const { data, error } = await service
       .from('ai_processing_jobs')
@@ -85,36 +99,20 @@ export default async function handler(req, res) {
     if (!upload) return sendJson(res, 404, { error: 'VideoUpload not found' });
 
     const now = new Date().toISOString();
-    const callbackStatus = payload.status || 'completed';
-
-    if (callbackStatus === 'error') {
-      const message = payload.error_message || 'AI processing failed';
-      await service.from('video_uploads').update({
-        processing_status: 'error',
-        ai_error_message: message,
-      }).eq('id', upload.id);
-
-      if (job) {
-        await service.from('ai_processing_jobs').update({
-          status: 'error',
-          error_message: message,
-          callback_received: true,
-          callback_received_at: now,
-          completed_at: now,
-        }).eq('id', job.id);
-      }
-
-      return sendJson(res, 200, { success: true, status: 'error recorded' });
-    }
-
+    const callbackStatus = String(payload.status || 'completed').toLowerCase();
+    const callbackError = callbackStatus === 'error';
     const realPose = isReliableRealPose(payload);
-    const jobStatus = realPose ? 'completed' : 'unreliable_pose';
-    const videoStatus = realPose ? 'completed' : 'manual_review';
-    const reportStatus = realPose ? 'in_review' : 'draft';
-    const analysisMode = realPose ? 'real_pose' : 'manual_review';
+    const jobStatus = callbackError ? 'error' : realPose ? 'completed' : 'unreliable_pose';
+    const videoStatus = callbackError ? 'error' : realPose ? 'completed' : 'unreliable_pose';
+    const reportStatus = callbackError ? 'error' : 'in_review';
+    const analysisMode = realPose ? 'real_pose' : (payload.analysis_mode || (callbackError ? 'error' : 'manual_review'));
+    const fallbackNextAction = realPose ? null : 'manual_review_recommended';
+    const callbackMessage = callbackError
+      ? payload.error_message || 'AI processing failed. Manual coach review is required.'
+      : payload.error_message || 'Pose detection was not reliable enough for automated findings. Manual coach review is required.';
     const unreliableMessage = realPose
       ? null
-      : payload.error_message || 'Pose detection was not reliable enough for automated findings. Manual coach review is required.';
+      : callbackMessage;
 
     await service.from('video_uploads').update({
       processing_status: videoStatus,
@@ -124,15 +122,19 @@ export default async function handler(req, res) {
     if (job) {
       await service.from('ai_processing_jobs').update({
         status: jobStatus,
-        stage: realPose ? 'Completed - AI review ready' : 'Pose unreliable - manual review recommended',
+        stage: callbackError
+          ? 'error'
+          : realPose
+          ? 'completed'
+          : 'unreliable_pose',
         progress_percent: 100,
         pose_reliability: payload.pose_reliability || null,
-        quality_flags: Array.isArray(payload.quality_flags) ? payload.quality_flags : [],
-        recommended_next_action: payload.recommended_next_action || null,
+        quality_flags: normaliseArray(payload.quality_flags),
+        recommended_next_action: payload.recommended_next_action || fallbackNextAction,
         detection_ratio: payload.detection_ratio ?? null,
         frame_count_processed: payload.frame_count_processed ?? null,
         detected_keypoints_count: payload.detected_keypoints_count ?? null,
-        stage_history: Array.isArray(payload.stage_history) ? payload.stage_history : [],
+        stage_history: normaliseArray(payload.stage_history),
         error_message: unreliableMessage,
         callback_received: true,
         callback_received_at: now,
@@ -153,6 +155,7 @@ export default async function handler(req, res) {
       overall_score: realPose ? payload.overall_score ?? null : null,
       phase_breakdown: realPose && payload.phase_breakdown ? payload.phase_breakdown : {},
       technical_summary: realPose ? payload.technical_summary || null : unreliableMessage,
+      next_focus: realPose ? payload.next_focus || null : payload.recommended_next_action || fallbackNextAction,
       review_context: upload.review_context || {},
       created_by: upload.created_by,
     };
@@ -265,7 +268,13 @@ export default async function handler(req, res) {
     }
 
     let keyFramesCreated = 0;
-    if (Array.isArray(payload.key_frames) && payload.key_frames.length) {
+    const keyFrames = Array.isArray(payload.key_frames)
+      ? payload.key_frames
+      : Array.isArray(payload.key_moments)
+      ? payload.key_moments
+      : [];
+
+    if (keyFrames.length) {
       const { error: deleteFramesError } = await service
         .from('key_frames')
         .delete()
@@ -274,7 +283,7 @@ export default async function handler(req, res) {
 
       if (deleteFramesError) throw deleteFramesError;
 
-      const keyFrameRows = payload.key_frames
+      const keyFrameRows = keyFrames
         .filter((frame) => frame.timestamp != null || frame.timestamp_seconds != null)
         .map((frame) => ({
           club_id: upload.club_id,
@@ -299,6 +308,7 @@ export default async function handler(req, res) {
       real_pose_detected: realPose,
       findings_created: findingsCreated,
       key_frames_created: keyFramesCreated,
+      manual_review_required: !realPose,
     });
   } catch (error) {
     return handleApiError(res, error);

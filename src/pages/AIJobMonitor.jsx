@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
+import functions from '@/lib/data/functions';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { format } from 'date-fns';
 
 const STATUS_CONFIG = {
   queued:              { label: 'Queued',            color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
+  running:             { label: 'Running',           color: 'text-primary bg-primary/10 border-primary/20' },
   downloading_video:   { label: 'Downloading',       color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   extracting_frames:   { label: 'Extracting Frames', color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   running_pose_detection: { label: 'Pose Detection', color: 'text-primary bg-primary/10 border-primary/20' },
@@ -41,14 +43,21 @@ const FILTERS = [
   { key: 'error',          label: 'Error' },
 ];
 
-const RUNNING_STATUSES = ['downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
+const RUNNING_STATUSES = ['running','downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
+
+function asQualityFlags(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').map(flag => flag.trim()).filter(Boolean);
+  return [];
+}
 
 function JobRow({ job, swimmers, videos, onRetry, retrying }) {
   const [expanded, setExpanded] = useState(false);
-  const swimmer = swimmers.find(s => s.id === job.swimmer_id);
   const video   = videos.find(v => v.id === job.video_upload_id);
+  const swimmer = swimmers.find(s => s.id === (job.swimmer_id || video?.swimmer_id));
   const cfg = STATUS_CONFIG[job.status] || { label: job.status, color: 'text-muted-foreground bg-secondary border-border' };
   const relCfg = job.pose_reliability ? RELIABILITY_CONFIG[job.pose_reliability] : null;
+  const qualityFlags = asQualityFlags(job.quality_flags);
 
   const timedOut = isTimedOut(job);
   const canRetry = job.status === 'error' || job.status === 'unreliable_pose';
@@ -92,7 +101,7 @@ function JobRow({ job, swimmers, videos, onRetry, retrying }) {
       {expanded && (
         <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[10px]">
-            <div><span className="text-muted-foreground">Job ID</span><div className="font-mono text-foreground truncate">{job.job_id || '—'}</div></div>
+            <div><span className="text-muted-foreground">Job ID</span><div className="font-mono text-foreground truncate">{job.id || '—'}</div></div>
             <div><span className="text-muted-foreground">Server Job ID</span><div className="font-mono text-foreground truncate">{job.server_job_id || '—'}</div></div>
             <div><span className="text-muted-foreground">Pose Reliability</span>
               <div className={relCfg?.color || 'text-muted-foreground'}>{relCfg?.label || '—'}</div>
@@ -104,15 +113,14 @@ function JobRow({ job, swimmers, videos, onRetry, retrying }) {
             <div><span className="text-muted-foreground">Callback Received</span><div className={job.callback_received ? 'text-green-400' : 'text-muted-foreground'}>{job.callback_received ? 'Yes' : 'No'}</div></div>
             <div><span className="text-muted-foreground">Retry Count</span><div className="text-foreground">{job.retry_count ?? 0}</div></div>
             {job.completed_at && <div><span className="text-muted-foreground">Completed</span><div className="text-foreground">{format(new Date(job.completed_at), 'dd MMM, HH:mm')}</div></div>}
-            {job.failed_at && <div><span className="text-muted-foreground">Failed At</span><div className="text-red-400">{format(new Date(job.failed_at), 'dd MMM, HH:mm')}</div></div>}
             {job.processing_duration_seconds && <div><span className="text-muted-foreground">Duration</span><div className="text-foreground">{job.processing_duration_seconds.toFixed(1)}s</div></div>}
           </div>
 
-          {job.quality_flags && (
+          {qualityFlags.length > 0 && (
             <div>
               <div className="text-[10px] text-muted-foreground mb-1">Quality Flags</div>
               <div className="flex flex-wrap gap-1">
-                {job.quality_flags.split(',').map(f => f.trim()).filter(Boolean).map(f => (
+                {qualityFlags.map(f => (
                   <span key={f} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/20 text-amber-400 border border-amber-700/30">{f}</span>
                 ))}
               </div>
@@ -164,7 +172,7 @@ export default function AIJobMonitor() {
 
   const { data: jobs = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['ai-jobs', club?.id],
-    queryFn: () => base44.entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100),
+    queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100),
     enabled: !!club?.id && isAdmin,
     staleTime: 30 * 1000,
     refetchInterval: 30 * 1000,
@@ -172,14 +180,14 @@ export default function AIJobMonitor() {
 
   const { data: swimmers = [] } = useQuery({
     queryKey: ['swimmers', club?.id],
-    queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }),
+    queryFn: () => entities.Swimmer.filter({ club_id: club.id }),
     enabled: !!club?.id,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: videos = [] } = useQuery({
     queryKey: ['videos-jobs', club?.id],
-    queryFn: () => base44.entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100),
+    queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100),
     enabled: !!club?.id,
     staleTime: 2 * 60 * 1000,
   });
@@ -188,8 +196,8 @@ export default function AIJobMonitor() {
     setResetting(true);
     setResetResult(null);
     try {
-      const res = await base44.functions.invoke('resetTimedOutAIJobs', {});
-      setResetResult(res.data?.message || 'Done.');
+      const res = await functions.resetTimedOutAIJobs({ club_id: club.id });
+      setResetResult(`${res.data?.reset_count ?? 0} timed-out job${res.data?.reset_count === 1 ? '' : 's'} reset.`);
       queryClient.invalidateQueries({ queryKey: ['ai-jobs', club?.id] });
       queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
     } finally {
@@ -200,11 +208,7 @@ export default function AIJobMonitor() {
   const handleRetry = async (job) => {
     setRetrying(job.id);
     try {
-      await base44.functions.invoke('triggerPoseAnalysis', {
-        video_upload_id: job.video_upload_id,
-        club_id: job.club_id,
-        swimmer_id: job.swimmer_id,
-      });
+      await functions.triggerPoseAnalysis(job.video_upload_id);
       queryClient.invalidateQueries({ queryKey: ['ai-jobs', club?.id] });
     } finally {
       setRetrying(null);

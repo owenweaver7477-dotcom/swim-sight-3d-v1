@@ -53,7 +53,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
   const { data: linkedReports = [] } = useQuery({
     queryKey: ['ai-report-for-video', upload.id],
-    queryFn: () => entities.Report.filter({ video_upload_id: upload.id, source: 'ai' }),
+    queryFn: () => entities.Report.filter({ video_upload_id: upload.id }),
     enabled: !!upload.id,
     staleTime: 30 * 1000,
   });
@@ -77,10 +77,16 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     setAiLoading(true);
     setAiMessage('');
     setAiError('');
-    window.setTimeout(() => {
+    try {
+      const res = await functions.triggerPoseAnalysis(upload.id);
+      const nextStatus = res.data?.processing_status || 'processing_ai';
+      onAIStatusChange?.(upload.id, nextStatus);
+      setAiMessage('AI Review queued. The report will appear when the secure callback returns.');
+    } catch (err) {
+      setAiError(err?.message || 'Could not start AI Review. Manual review remains available.');
+    } finally {
       setAiLoading(false);
-      setAiError('AI Review connection is being migrated next. Manual review remains available.');
-    }, 250);
+    }
   };
 
   const loadSignedUrl = async () => {
@@ -106,7 +112,9 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   };
 
   const uploadDate = upload.created_date ? format(new Date(upload.created_date), 'dd MMM yyyy') : '-';
-  const isUnreliable = (status === 'completed' && linkedReport?.analysis_mode === 'placeholder' && !linkedReport?.real_pose_detected)
+  const isUnreliable = status === 'unreliable_pose'
+    || status === 'manual_review'
+    || (status === 'completed' && linkedReport?.analysis_mode === 'placeholder' && !linkedReport?.real_pose_detected)
     || jobStatus === 'unreliable_pose';
   const isTimedOut = jobStatus === 'error' && job?.stage === 'timed_out' && status === 'uploaded';
 
@@ -118,6 +126,14 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-600" />
             <span>AI processing timed out. Retry with a shorter clip later, or continue with manual review.</span>
           </div>
+          {canTriggerAI && (
+            <Button size="sm" variant="outline"
+              className="w-full h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
+              onClick={handleTriggerAI} disabled={aiLoading}>
+              {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1" />}
+              {aiLoading ? 'Sending...' : 'Retry AI Review'}
+            </Button>
+          )}
           <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => onStartReview(upload)}>
             <Play className="w-3 h-3 mr-1" /> Continue Manual Review
           </Button>
@@ -131,7 +147,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           className="w-full h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
           onClick={handleTriggerAI} disabled={aiLoading}>
           {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Checking...' : 'AI Review Migration Next'}
+          {aiLoading ? 'Sending...' : 'Retry AI Review'}
         </Button>
       );
     }
@@ -139,10 +155,24 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     if (isUnreliable) {
       return (
         <div className="space-y-1.5">
-          <Button size="sm" className="w-full h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-            onClick={() => navigate(`/ai-review?report_id=${linkedReport?.id}`)}>
-            <FileText className="w-3 h-3 mr-1.5" /> Open Manual Review
-          </Button>
+          {linkedReport ? (
+            <Button size="sm" className="w-full h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+              onClick={() => navigate(`/ai-review?report_id=${linkedReport.id}`)}>
+              <FileText className="w-3 h-3 mr-1.5" /> Open Manual Review
+            </Button>
+          ) : (
+            <Button size="sm" className="w-full h-8 text-xs" variant="outline" onClick={() => onStartReview(upload)}>
+              <Play className="w-3 h-3 mr-1.5" /> Continue Manual Review
+            </Button>
+          )}
+          {canTriggerAI && (
+            <Button size="sm" variant="outline"
+              className="w-full h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
+              onClick={handleTriggerAI} disabled={aiLoading}>
+              {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1" />}
+              {aiLoading ? 'Sending...' : 'Retry AI Review'}
+            </Button>
+          )}
         </div>
       );
     }
@@ -185,7 +215,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
           onClick={handleTriggerAI} disabled={aiLoading}>
           {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Brain className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Checking...' : 'Send to AI Analysis'}
+          {aiLoading ? 'Sending...' : 'Send for AI Review'}
         </Button>
       );
     }
@@ -386,6 +416,7 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
       old.map(u => u.id === uploadId ? { ...u, processing_status: newStatus } : u)
     );
     setTimeout(() => queryClient.invalidateQueries({ queryKey: ['video-uploads', clubId, swimmerId] }), 3000);
+    queryClient.invalidateQueries({ queryKey: ['ai-jobs-active', clubId] });
   };
 
   if (isLoading) {

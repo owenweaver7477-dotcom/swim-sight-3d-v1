@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import functions from '@/lib/data/functions';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
@@ -173,7 +174,7 @@ export default function SupportingAnglesPanel({ report, video, canEdit }) {
   }, {});
 
   const handleRetryAI = async (videoUploadId) => {
-    const res = await base44.functions.invoke('triggerPoseAnalysis', { video_upload_id: videoUploadId });
+    const res = await functions.triggerPoseAnalysis(videoUploadId);
     if (!res.data?.success) throw new Error(res.data?.error || 'Unexpected error');
     queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
   };

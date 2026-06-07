@@ -57,7 +57,10 @@ export const functions = {
     return patchJson(`/api/clubs/invites/${inviteId}/revoke`, {});
   },
 
-  triggerPoseAnalysis(payload) {
+  triggerPoseAnalysis(videoUploadIdOrPayload) {
+    const payload = typeof videoUploadIdOrPayload === 'string'
+      ? { video_upload_id: videoUploadIdOrPayload }
+      : videoUploadIdOrPayload;
     return postJson('/api/ai/trigger', payload);
   },
 

@@ -11,6 +11,7 @@ import {
 } from '../_lib/server.js';
 
 const ACTIVE_JOB_STATUSES = ['queued', 'running'];
+const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -38,6 +39,12 @@ export default async function handler(req, res) {
 
     await requireClubRole(service, upload.club_id, user.id, COACH_ROLES);
 
+    if (!upload.stroke_type) {
+      return sendJson(res, 400, {
+        error: 'stroke_type is missing from this video. Configure the review before sending it for AI analysis.',
+      });
+    }
+
     const { data: activeJobs, error: activeError } = await service
       .from('ai_processing_jobs')
       .select('id,status,server_job_id')
@@ -55,7 +62,7 @@ export default async function handler(req, res) {
     const { data: signed, error: signError } = await service
       .storage
       .from(upload.file_bucket)
-      .createSignedUrl(upload.file_path, 60 * 60);
+      .createSignedUrl(upload.file_path, PYTHON_SIGNED_URL_TTL_SECONDS);
 
     if (signError) throw signError;
 
@@ -84,6 +91,7 @@ export default async function handler(req, res) {
     const callbackUrl = `${getPublicAppUrl(req)}/api/ai/callback`;
     const payload = {
       job_id: job.id,
+      app_job_id: job.id,
       video_upload_id: upload.id,
       club_id: upload.club_id,
       swimmer_id: upload.swimmer_id,
@@ -131,7 +139,7 @@ export default async function handler(req, res) {
       .update({
         status: 'running',
         server_job_id: serverJobId,
-        stage: 'Python server accepted job',
+        stage: 'downloading_video',
         progress_percent: 5,
         started_at: new Date().toISOString(),
       })
@@ -149,7 +157,10 @@ export default async function handler(req, res) {
     return sendJson(res, 200, {
       success: true,
       job: updatedJob,
+      server_job_id: serverJobId,
       video_upload_id: upload.id,
+      processing_status: 'processing_ai',
+      stage: updatedJob.stage,
     });
   } catch (error) {
     if (job?.id || upload?.id) {

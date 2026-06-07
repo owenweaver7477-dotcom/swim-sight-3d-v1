@@ -48,6 +48,10 @@
 - Added Base44-like Supabase entity/function adapter scaffolds for incremental page migration.
 - Added Vercel API route scaffolds for signed video URLs, AI trigger/callback, shared reports, soft report delete, and timed-out job reset.
 - Replaced active Base44 auth flow with Supabase Auth in `AuthContext`, auth pages, protected route consumers, and shared shell logout/user display.
+- Migrated club workspace creation, active club context, invite-code joining, and invite management to Supabase-backed Vercel API routes.
+- Migrated swimmers and squads to the Supabase adapter for the V1 club-scoped roster workflow.
+- Migrated private video upload and signed video preview to Supabase Storage and Vercel API signed URL generation.
+- Migrated the AI trigger, callback, and timed-out job reset engine to Vercel API routes backed by Supabase. Real-pose callbacks create pending AI findings; weak, placeholder, or error callbacks create no fake findings and leave the report in a manual-review path.
 
 ## Build Diagnosis
 
@@ -77,6 +81,7 @@
 - Private videos must never be exposed through public report endpoints.
 - AI callback handling must be idempotent and must not create fake findings for weak or placeholder pose results.
 - The Render AI callback must send `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>` for the new callback route to accept results.
+- AI Review pages still need their full Supabase migration before the coach approval/finalise/share workflow is complete outside Base44.
 - Advanced features should remain deferred until the core V1 coach workflow is stable.
 - Existing dependency audit warnings are present in the exported app and were not addressed during baseline safety.
 - Local auth UI route testing was performed without a real `.env`, so register/login against Supabase must be repeated after `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured.
