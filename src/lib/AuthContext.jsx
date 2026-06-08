@@ -2,6 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { getSupabaseBrowserConfigError, getSupabaseClient, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
 
 const AuthContext = createContext();
+const GOOGLE_AUTH_DISABLED_MESSAGE = 'Google login is not enabled yet. Please use email and password.';
+
+function isGoogleAuthEnabled() {
+  return import.meta.env.VITE_ENABLE_GOOGLE_AUTH === 'true';
+}
 
 function getAppOrigin() {
   const configuredBaseUrl = import.meta.env.VITE_APP_BASE_URL;
@@ -52,6 +57,29 @@ function mergeUserProfile(authUser, profile) {
   };
 }
 
+function getReadableAuthError(error) {
+  const message = error?.message || '';
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('unsupported provider')) {
+    return GOOGLE_AUTH_DISABLED_MESSAGE;
+  }
+
+  if (lowerMessage.includes('email not confirmed')) {
+    return 'Please confirm your email before logging in.';
+  }
+
+  if (lowerMessage.includes('invalid login credentials')) {
+    return 'Invalid email or password.';
+  }
+
+  if (lowerMessage.includes('missing vite_supabase')) {
+    return message;
+  }
+
+  return message || 'Authentication failed. Please try again.';
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -88,7 +116,20 @@ export const AuthProvider = ({ children }) => {
       .select('*')
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      if (insertError.code === '23505') {
+        const { data: racedProfile, error: racedSelectError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        if (!racedSelectError && racedProfile) return racedProfile;
+      }
+
+      throw new Error('Signed in, but profile setup failed. Please contact support if this continues.');
+    }
+
     return createdProfile;
   }, []);
 
@@ -145,7 +186,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setAuthError({
         type: 'auth_error',
-        message: error.message || 'Unable to check authentication status',
+        message: getReadableAuthError(error) || 'Unable to check authentication status',
       });
       setAuthChecked(true);
       return null;
@@ -190,7 +231,7 @@ export const AuthProvider = ({ children }) => {
             console.error('Supabase auth state update failed:', error);
             setAuthError({
               type: 'auth_error',
-              message: error.message || 'Unable to update authentication state',
+              message: getReadableAuthError(error) || 'Unable to update authentication state',
             });
           })
           .finally(() => {
@@ -217,10 +258,17 @@ export const AuthProvider = ({ children }) => {
     setAuthError(null);
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) throw new Error(getReadableAuthError(error));
 
     await applySession(data.session);
     setAuthChecked(true);
+    if (import.meta.env.DEV) {
+      console.info('[supabase-login]', {
+        success: true,
+        sessionExists: Boolean(data.session),
+        userExists: Boolean(data.user),
+      });
+    }
     return data;
   }, [applySession]);
 
@@ -237,13 +285,17 @@ export const AuthProvider = ({ children }) => {
       },
     });
 
-    if (error) throw error;
+    if (error) throw new Error(getReadableAuthError(error));
     if (data.session) await applySession(data.session);
     setAuthChecked(true);
     return data;
   }, [applySession]);
 
   const loginWithGoogle = useCallback(async (redirectTo = '/club-onboarding') => {
+    if (!isGoogleAuthEnabled()) {
+      throw new Error(GOOGLE_AUTH_DISABLED_MESSAGE);
+    }
+
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -252,7 +304,7 @@ export const AuthProvider = ({ children }) => {
       },
     });
 
-    if (error) throw error;
+    if (error) throw new Error(getReadableAuthError(error));
     return data;
   }, []);
 
@@ -262,7 +314,7 @@ export const AuthProvider = ({ children }) => {
       redirectTo: `${getAppOrigin()}/reset-password`,
     });
 
-    if (error) throw error;
+    if (error) throw new Error(getReadableAuthError(error));
     return data;
   }, []);
 
@@ -270,7 +322,7 @@ export const AuthProvider = ({ children }) => {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.updateUser({ password: newPassword });
 
-    if (error) throw error;
+    if (error) throw new Error(getReadableAuthError(error));
     return data;
   }, []);
 
@@ -332,6 +384,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     loginWithGoogle,
+    isGoogleAuthEnabled: isGoogleAuthEnabled(),
     resetPasswordRequest,
     resetPassword,
     updateProfile,

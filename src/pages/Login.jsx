@@ -7,23 +7,38 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { useAuth } from "@/lib/AuthContext";
+import { loadUserClubs } from "@/lib/useClubContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, authError } = useAuth();
+  const { login, loginWithGoogle, isGoogleAuthEnabled, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const visibleError = error || (authError?.type === 'config_error' ? authError.message : '');
+  const visibleError = error || authError?.message || '';
+
+  const getPostLoginPath = async (authResult) => {
+    const userId = authResult?.user?.id || authResult?.session?.user?.id;
+    if (!userId) return "/dashboard";
+
+    try {
+      const clubs = await loadUserClubs(userId);
+      return clubs.length > 0 ? "/dashboard" : "/club-onboarding";
+    } catch (err) {
+      console.warn("Unable to load club memberships after login:", err);
+      return "/dashboard";
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/dashboard", { replace: true });
+      const result = await login(email, password);
+      const nextPath = await getPostLoginPath(result);
+      navigate(nextPath, { replace: true });
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {
@@ -54,23 +69,28 @@ export default function Login() {
         </>
       }
     >
-      <Button
-        variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
-        onClick={handleGoogle}
-      >
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continue with Google
-      </Button>
+      {isGoogleAuthEnabled && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 text-sm font-medium mb-6"
+            onClick={handleGoogle}
+          >
+            <GoogleIcon className="w-5 h-5 mr-2" />
+            Continue with Google
+          </Button>
 
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
-        </div>
-      </div>
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-3 text-muted-foreground">or</span>
+            </div>
+          </div>
+        </>
+      )}
 
       {visibleError && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
