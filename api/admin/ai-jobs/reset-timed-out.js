@@ -32,17 +32,18 @@ export default async function handler(req, res) {
 
     for (const job of jobs) {
       await service.from('ai_processing_jobs').update({
-        status: 'error',
+        status: 'timed_out',
         stage: 'timed_out',
         progress_percent: 100,
         error_message: 'AI server did not return a callback before timeout.',
         recommended_next_action: 'manual_review_recommended',
+        quality_flags: ['callback_timeout'],
         completed_at: now,
       }).eq('id', job.id);
 
       await service.from('video_uploads').update({
-        processing_status: 'uploaded',
-        ai_error_message: 'AI processing timed out. Video has been reset for retry.',
+        processing_status: 'manual_review',
+        ai_error_message: 'AI processing timed out. Retry AI Review or continue with manual coach review.',
       }).eq('id', job.video_upload_id);
 
       details.push({ job_id: job.id, video_upload_id: job.video_upload_id, previous_status: job.status });

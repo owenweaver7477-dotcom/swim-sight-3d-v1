@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
@@ -7,12 +8,13 @@ import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import {
   Activity, Loader2, RefreshCw, AlertTriangle, CheckCircle2,
-  Clock, XCircle, RotateCcw, ChevronDown, ChevronRight, ShieldAlert
+  Clock, XCircle, RotateCcw, ChevronDown, ChevronRight, ShieldAlert, FileText, Film
 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STATUS_CONFIG = {
   queued:              { label: 'Queued',            color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
+  accepted:            { label: 'Accepted',          color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   running:             { label: 'Running',           color: 'text-primary bg-primary/10 border-primary/20' },
   downloading_video:   { label: 'Downloading',       color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   extracting_frames:   { label: 'Extracting Frames', color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
@@ -22,10 +24,12 @@ const STATUS_CONFIG = {
   callback_sending:    { label: 'Callback',          color: 'text-yellow-400 bg-yellow-900/20 border-yellow-700/30' },
   completed:           { label: 'Completed',         color: 'text-green-400 bg-green-900/20 border-green-700/30' },
   unreliable_pose:     { label: 'Unreliable Pose',   color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  manual_review_recommended: { label: 'Manual Review', color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  timed_out:           { label: 'Timed Out',         color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   error:               { label: 'Error',             color: 'text-red-400 bg-red-900/20 border-red-700/30' },
 };
 
-const isTimedOut = (job) => job.status === 'error' && job.stage === 'timed_out';
+const isTimedOut = (job) => job.status === 'timed_out' || (job.status === 'error' && job.stage === 'timed_out');
 
 const RELIABILITY_CONFIG = {
   reliable: { label: 'Reliable', color: 'text-green-400' },
@@ -43,7 +47,7 @@ const FILTERS = [
   { key: 'error',          label: 'Error' },
 ];
 
-const RUNNING_STATUSES = ['running','downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
+const RUNNING_STATUSES = ['queued','accepted','running','downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
 
 function asQualityFlags(value) {
   if (Array.isArray(value)) return value;
@@ -52,6 +56,7 @@ function asQualityFlags(value) {
 }
 
 function JobRow({ job, swimmers, videos, onRetry, retrying }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const video   = videos.find(v => v.id === job.video_upload_id);
   const swimmer = swimmers.find(s => s.id === (job.swimmer_id || video?.swimmer_id));
@@ -60,7 +65,7 @@ function JobRow({ job, swimmers, videos, onRetry, retrying }) {
   const qualityFlags = asQualityFlags(job.quality_flags);
 
   const timedOut = isTimedOut(job);
-  const canRetry = job.status === 'error' || job.status === 'unreliable_pose';
+  const canRetry = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'].includes(job.status);
 
   return (
     <div className={`rounded-xl bg-card border overflow-hidden ${timedOut ? 'border-amber-500/40' : 'border-border'}`}>
@@ -139,20 +144,32 @@ function JobRow({ job, swimmers, videos, onRetry, retrying }) {
             </div>
           )}
 
-          {canRetry && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={() => onRetry(job)}
-              disabled={retrying === job.id}
-            >
-              {retrying === job.id
-                ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Retrying…</>
-                : <><RotateCcw className="w-3 h-3 mr-1" />Retry Analysis</>
-              }
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {canRetry && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => onRetry(job)}
+                disabled={retrying === job.id}
+              >
+                {retrying === job.id
+                  ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Retrying…</>
+                  : <><RotateCcw className="w-3 h-3 mr-1" />Retry AI Review</>
+                }
+              </Button>
+            )}
+            {video?.id && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/analyse')}>
+                <Film className="w-3 h-3 mr-1" /> Open Video Library
+              </Button>
+            )}
+            {job.report_id && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate(`/ai-review?report_id=${job.report_id}`)}>
+                <FileText className="w-3 h-3 mr-1" /> Open Report
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -228,6 +245,8 @@ export default function AIJobMonitor() {
   const filteredJobs = jobs.filter(j => {
     if (filter === 'all') return true;
     if (filter === 'running') return RUNNING_STATUSES.includes(j.status);
+    if (filter === 'unreliable_pose') return ['unreliable_pose', 'manual_review_recommended'].includes(j.status);
+    if (filter === 'error') return ['error', 'timed_out'].includes(j.status);
     return j.status === filter;
   });
 
@@ -236,9 +255,9 @@ export default function AIJobMonitor() {
     all: jobs.length,
     queued: jobs.filter(j => j.status === 'queued').length,
     running: jobs.filter(j => RUNNING_STATUSES.includes(j.status)).length,
-    unreliable_pose: jobs.filter(j => j.status === 'unreliable_pose').length,
+    unreliable_pose: jobs.filter(j => ['unreliable_pose', 'manual_review_recommended'].includes(j.status)).length,
     completed: jobs.filter(j => j.status === 'completed').length,
-    error: jobs.filter(j => j.status === 'error').length,
+    error: jobs.filter(j => ['error', 'timed_out'].includes(j.status)).length,
   };
 
   return (

@@ -1,9 +1,31 @@
 import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../_lib/server.js';
 
-function isReliableRealPose(payload) {
+const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.35;
+const FINDING_RELIABILITY_VALUES = ['reliable', 'partial'];
+const PROGRESS_STATUSES = [
+  'accepted',
+  'downloading_video',
+  'extracting_frames',
+  'running_pose_detection',
+  'analysing_stroke',
+  'generating_outputs',
+  'callback_sending',
+  'running',
+  'queued',
+];
+
+function hasQualityForAiFindings(payload) {
+  const findings = Array.isArray(payload.findings) ? payload.findings : [];
+  const detectionRatio = Number(payload.detection_ratio);
+  const poseReliability = String(payload.pose_reliability || '').toLowerCase();
+
   return (
     payload.analysis_mode === 'real_pose' &&
-    payload.real_pose_detected === true
+    payload.real_pose_detected === true &&
+    FINDING_RELIABILITY_VALUES.includes(poseReliability) &&
+    Number.isFinite(detectionRatio) &&
+    detectionRatio >= MIN_DETECTION_RATIO_FOR_AI_FINDINGS &&
+    findings.length > 0
   );
 }
 
@@ -16,6 +38,45 @@ function normaliseArray(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') return value.split(',').map(item => item.trim()).filter(Boolean);
   return [];
+}
+
+function appendStageHistory(existing, entry) {
+  const history = normaliseArray(existing);
+  return [...history, entry].slice(-50);
+}
+
+function buildQualityFlags(payload, callbackError, qualityPass) {
+  const flags = new Set(normaliseArray(payload.quality_flags));
+  const findings = Array.isArray(payload.findings) ? payload.findings : [];
+  const detectionRatio = Number(payload.detection_ratio);
+  const detectedKeypoints = Number(payload.detected_keypoints_count);
+
+  if (callbackError) flags.add('processing_error');
+  if (!qualityPass && payload.analysis_mode === 'real_pose') flags.add('too_few_keypoints');
+  if (Number.isFinite(detectionRatio) && detectionRatio < MIN_DETECTION_RATIO_FOR_AI_FINDINGS) flags.add('low_visibility');
+  if (Number.isFinite(detectedKeypoints) && detectedKeypoints < 8) flags.add('low_keypoint_count');
+  if (!findings.length && !callbackError) flags.add('too_few_keypoints');
+
+  return Array.from(flags);
+}
+
+function safeCallbackSummary(payload, qualityPass) {
+  return {
+    status: payload.status || null,
+    analysis_mode: payload.analysis_mode || null,
+    real_pose_detected: payload.real_pose_detected === true,
+    quality_gate_passed: qualityPass,
+    findings_count: Array.isArray(payload.findings) ? payload.findings.length : 0,
+    key_frames_count: Array.isArray(payload.key_frames)
+      ? payload.key_frames.length
+      : Array.isArray(payload.key_moments)
+      ? payload.key_moments.length
+      : 0,
+    detection_ratio: payload.detection_ratio ?? null,
+    pose_reliability: payload.pose_reliability || null,
+    recommended_next_action: payload.recommended_next_action || null,
+    error_message: payload.error_message || null,
+  };
 }
 
 function isCoachLockedReport(status) {
@@ -101,18 +162,59 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     const callbackStatus = String(payload.status || 'completed').toLowerCase();
     const callbackError = callbackStatus === 'error';
-    const realPose = isReliableRealPose(payload);
-    const jobStatus = callbackError ? 'error' : realPose ? 'completed' : 'unreliable_pose';
-    const videoStatus = callbackError ? 'error' : realPose ? 'completed' : 'unreliable_pose';
+    const progressOnly = PROGRESS_STATUSES.includes(callbackStatus) && callbackStatus !== 'completed' && callbackStatus !== 'error';
+    const qualityPass = hasQualityForAiFindings(payload);
+    const realPose = qualityPass;
+    const qualityFlags = buildQualityFlags(payload, callbackError, qualityPass);
+    const jobStatus = callbackError
+      ? 'error'
+      : qualityPass
+      ? 'completed'
+      : 'manual_review_recommended';
+    const videoStatus = callbackError ? 'error' : qualityPass ? 'completed' : 'manual_review';
     const reportStatus = callbackError ? 'error' : 'in_review';
-    const analysisMode = realPose ? 'real_pose' : (payload.analysis_mode || (callbackError ? 'error' : 'manual_review'));
-    const fallbackNextAction = realPose ? null : 'manual_review_recommended';
+    const analysisMode = qualityPass ? 'real_pose' : (payload.analysis_mode || (callbackError ? 'error' : 'manual_review'));
+    const fallbackNextAction = qualityPass ? 'real_pose_review_ready' : 'manual_review_recommended';
     const callbackMessage = callbackError
       ? payload.error_message || 'AI processing failed. Manual coach review is required.'
-      : payload.error_message || 'Pose detection was not reliable enough for automated findings. Manual coach review is required.';
-    const unreliableMessage = realPose
+      : payload.error_message || 'Pose evidence was not reliable enough for draft AI findings. Manual coach review is recommended.';
+    const unreliableMessage = qualityPass
       ? null
       : callbackMessage;
+
+    if (progressOnly && job) {
+      await service.from('ai_processing_jobs').update({
+        status: callbackStatus === 'running' ? 'running' : callbackStatus,
+        stage: payload.stage || callbackStatus,
+        progress_percent: payload.progress_percent ?? job.progress_percent ?? 0,
+        pose_reliability: payload.pose_reliability || job.pose_reliability || null,
+        quality_flags: qualityFlags,
+        recommended_next_action: payload.recommended_next_action || job.recommended_next_action || null,
+        detection_ratio: payload.detection_ratio ?? job.detection_ratio ?? null,
+        frame_count_processed: payload.frame_count_processed ?? job.frame_count_processed ?? null,
+        detected_keypoints_count: payload.detected_keypoints_count ?? job.detected_keypoints_count ?? null,
+        stage_history: appendStageHistory(job.stage_history, {
+          stage: payload.stage || callbackStatus,
+          progress_percent: payload.progress_percent ?? null,
+          at: now,
+        }),
+        analysis_mode: payload.analysis_mode || job.analysis_mode || null,
+        video_duration_seconds: payload.video_duration_seconds ?? job.video_duration_seconds ?? null,
+        video_fps: payload.video_fps ?? job.video_fps ?? null,
+      }).eq('id', job.id);
+
+      await service.from('video_uploads').update({
+        processing_status: 'processing_ai',
+        ai_error_message: null,
+      }).eq('id', upload.id);
+
+      return sendJson(res, 200, {
+        success: true,
+        progress_only: true,
+        job_id: job.id,
+        status: callbackStatus,
+      });
+    }
 
     await service.from('video_uploads').update({
       processing_status: videoStatus,
@@ -124,21 +226,29 @@ export default async function handler(req, res) {
         status: jobStatus,
         stage: callbackError
           ? 'error'
-          : realPose
+          : qualityPass
           ? 'completed'
-          : 'unreliable_pose',
+          : 'manual_review_recommended',
         progress_percent: 100,
         pose_reliability: payload.pose_reliability || null,
-        quality_flags: normaliseArray(payload.quality_flags),
+        quality_flags: qualityFlags,
         recommended_next_action: payload.recommended_next_action || fallbackNextAction,
         detection_ratio: payload.detection_ratio ?? null,
         frame_count_processed: payload.frame_count_processed ?? null,
         detected_keypoints_count: payload.detected_keypoints_count ?? null,
-        stage_history: normaliseArray(payload.stage_history),
+        stage_history: appendStageHistory(payload.stage_history || job.stage_history, {
+          stage: callbackError ? 'error' : qualityPass ? 'completed' : 'manual_review_recommended',
+          at: now,
+        }),
         error_message: unreliableMessage,
         callback_received: true,
         callback_received_at: now,
         completed_at: now,
+        processing_duration_seconds: payload.processing_duration_seconds ?? null,
+        analysis_mode: analysisMode,
+        video_duration_seconds: payload.video_duration_seconds ?? null,
+        video_fps: payload.video_fps ?? null,
+        callback_summary: safeCallbackSummary(payload, qualityPass),
       }).eq('id', job.id);
     }
 
@@ -151,11 +261,11 @@ export default async function handler(req, res) {
       stroke_type: upload.stroke_type,
       analysis_type: upload.analysis_type,
       analysis_mode: analysisMode,
-      real_pose_detected: realPose,
-      overall_score: realPose ? payload.overall_score ?? null : null,
-      phase_breakdown: realPose && payload.phase_breakdown ? payload.phase_breakdown : {},
-      technical_summary: realPose ? payload.technical_summary || null : unreliableMessage,
-      next_focus: realPose ? payload.next_focus || null : payload.recommended_next_action || fallbackNextAction,
+      real_pose_detected: qualityPass,
+      overall_score: qualityPass ? payload.overall_score ?? null : null,
+      phase_breakdown: qualityPass && payload.phase_breakdown ? payload.phase_breakdown : {},
+      technical_summary: qualityPass ? payload.technical_summary || null : unreliableMessage,
+      next_focus: qualityPass ? payload.next_focus || null : payload.recommended_next_action || fallbackNextAction,
       review_context: upload.review_context || {},
       created_by: upload.created_by,
     };
@@ -165,11 +275,13 @@ export default async function handler(req, res) {
       .select('*')
       .eq('video_upload_id', upload.id)
       .eq('is_deleted', false)
-      .limit(1);
+      .order('created_at', { ascending: false });
 
     if (reportLookupError) throw reportLookupError;
 
-    const existingReport = existingReports?.[0];
+    const existingReport = (existingReports || []).find((report) => job?.id && report.ai_processing_job_id === job.id)
+      || (existingReports || []).find((report) => !isCoachLockedReport(report.status))
+      || null;
     if (existingReport && isCoachLockedReport(existingReport.status)) {
       return sendJson(res, 200, {
         success: true,
@@ -206,7 +318,7 @@ export default async function handler(req, res) {
     if (job) await service.from('ai_processing_jobs').update({ report_id: report.id }).eq('id', job.id);
 
     let findingsCreated = 0;
-    if (!realPose) {
+    if (!qualityPass) {
       const { error: deletePendingAiError } = await service
         .from('findings')
         .delete()
@@ -217,7 +329,7 @@ export default async function handler(req, res) {
       if (deletePendingAiError) throw deletePendingAiError;
     }
 
-    if (realPose && Array.isArray(payload.findings)) {
+    if (qualityPass && Array.isArray(payload.findings)) {
       const { data: existingAiFindings, error: existingFindingsError } = await service
         .from('findings')
         .select('id,approval_status')
@@ -305,10 +417,12 @@ export default async function handler(req, res) {
       success: true,
       report_id: report.id,
       analysis_mode: analysisMode,
-      real_pose_detected: realPose,
+      real_pose_detected: qualityPass,
       findings_created: findingsCreated,
       key_frames_created: keyFramesCreated,
-      manual_review_required: !realPose,
+      quality_gate_passed: qualityPass,
+      quality_flags: qualityFlags,
+      manual_review_required: !qualityPass,
     });
   } catch (error) {
     return handleApiError(res, error);

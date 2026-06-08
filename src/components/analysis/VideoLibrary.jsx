@@ -27,9 +27,15 @@ const QUALITY_FLAG_LABELS = {
   screen_recording_possible: 'Possible screen recording detected',
   low_visibility: 'Low visibility conditions',
   too_few_keypoints: 'Too few pose keypoints detected',
+  low_keypoint_count: 'Low keypoint count',
   swimmer_partially_obscured: 'Swimmer partially obscured',
   unstable_camera: 'Unstable camera movement',
   underwater_distortion: 'Underwater optical distortion',
+  poor_angle: 'Camera angle limited pose evidence',
+  short_clip: 'Clip may be too short',
+  processing_error: 'Processing error',
+  signed_url_expired: 'Secure video link expired',
+  callback_timeout: 'Callback timed out',
 };
 
 function asQualityFlags(value) {
@@ -115,8 +121,9 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const isUnreliable = status === 'unreliable_pose'
     || status === 'manual_review'
     || (status === 'completed' && linkedReport?.analysis_mode === 'placeholder' && !linkedReport?.real_pose_detected)
-    || jobStatus === 'unreliable_pose';
-  const isTimedOut = jobStatus === 'error' && job?.stage === 'timed_out' && status === 'uploaded';
+    || jobStatus === 'unreliable_pose'
+    || jobStatus === 'manual_review_recommended';
+  const isTimedOut = jobStatus === 'timed_out' || (jobStatus === 'error' && job?.stage === 'timed_out');
 
   const renderPrimaryAction = () => {
     if (isTimedOut) {
@@ -124,7 +131,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <div className="space-y-1.5">
           <div className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-800">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-600" />
-            <span>AI processing timed out. Retry with a shorter clip later, or continue with manual review.</span>
+            <span>AI processing timed out. Retry AI Review with this private video, or continue with manual review.</span>
           </div>
           {canTriggerAI && (
             <Button size="sm" variant="outline"
@@ -203,7 +210,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           {isStuck && (
             <div className="flex items-center gap-1.5 text-[10px] text-yellow-500">
               <AlertCircle className="w-3 h-3 flex-shrink-0" />
-              Still processing after 10+ minutes. AI retry wiring comes next.
+              Still processing after 10+ minutes. An owner/admin can reset timed-out jobs in AI Job Monitor.
             </div>
           )}
         </div>

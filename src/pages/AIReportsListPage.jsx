@@ -14,15 +14,32 @@ import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import { format } from 'date-fns';
 
 // ── Reliability label ──────────────────────────────────────────────────────────
-function ReliabilityLabel({ report }) {
+const PROCESSING_JOB_STATUSES = [
+  'queued',
+  'accepted',
+  'running',
+  'downloading_video',
+  'extracting_frames',
+  'running_pose_detection',
+  'analysing_stroke',
+  'generating_outputs',
+  'callback_sending',
+];
+
+function ReliabilityLabel({ report, job }) {
+  if (PROCESSING_JOB_STATUSES.includes(job?.status)) {
+    return <span className="text-[10px] font-medium text-blue-700">AI processing in progress</span>;
+  }
+  if (['error', 'timed_out'].includes(job?.status) || report.analysis_mode === 'error') {
+    return <span className="text-[10px] font-medium text-red-600">Processing failed — retry or complete manual review</span>;
+  }
   if (report.analysis_mode === 'real_pose' && report.real_pose_detected) {
     return <span className="text-[10px] font-medium text-green-700">Reliable pose-assisted review — coach approval required</span>;
   }
-  if (report.pose_reliability === 'partial') return <span className="text-[10px] font-medium text-amber-700">Partial pose evidence — use alongside manual review</span>;
-  if (report.analysis_mode === 'error') {
-    return <span className="text-[10px] font-medium text-red-600">Processing failed — retry or complete manual review</span>;
+  if (job?.pose_reliability === 'partial') {
+    return <span className="text-[10px] font-medium text-amber-700">Partial pose evidence — use alongside manual review</span>;
   }
-  if (report.real_pose_detected === false) {
+  if (report.real_pose_detected === false || job?.status === 'manual_review_recommended') {
     return <span className="text-[10px] font-medium text-amber-700">Pose unreliable — manual review recommended</span>;
   }
   return <span className="text-[10px] font-medium text-amber-600">Partial evidence</span>;
@@ -60,7 +77,7 @@ function DeleteModal({ report, onConfirm, onCancel, isDeleting }) {
 }
 
 // ── Report row ─────────────────────────────────────────────────────────────────
-function ReportRow({ report, swimmer, video, findings, onDelete, canDelete }) {
+function ReportRow({ report, swimmer, video, job, findings, onDelete, canDelete }) {
   const navigate = useNavigate();
   const [showDelete, setShowDelete] = useState(false);
 
@@ -94,7 +111,7 @@ function ReportRow({ report, swimmer, video, findings, onDelete, canDelete }) {
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <CoachStatusLabel report={report} pending={pending} approved={approved} />
             <span className="text-slate-200 text-[10px]">·</span>
-            <ReliabilityLabel report={report} />
+            <ReliabilityLabel report={report} job={job} />
             {(report.ai_completed_at || report.created_date) && (
               <>
                 <span className="text-slate-200 text-[10px]">·</span>
@@ -164,10 +181,14 @@ export default function AIReportsListPage() {
 
   const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled: !!club?.id, staleTime: 5 * 60 * 1000 });
   const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
+  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
   const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
 
   const swimmerMap = Object.fromEntries(swimmers.map(s => [s.id, s]));
   const videoMap   = Object.fromEntries(videos.map(v => [v.id, v]));
+  const latestJobForReport = (report) => jobs.find(job => job.report_id === report.id)
+    || jobs.find(job => job.video_upload_id === report.video_upload_id)
+    || null;
   const findingsByReport = allFindings.reduce((acc, f) => {
     if (!acc[f.report_id]) acc[f.report_id] = [];
     acc[f.report_id].push(f);
@@ -182,15 +203,18 @@ export default function AIReportsListPage() {
     || r.analysis_mode === 'placeholder'
     || r.analysis_mode === 'manual_review'
     || r.real_pose_detected === false;
+  const isProcessingReport = (r) => PROCESSING_JOB_STATUSES.includes(latestJobForReport(r)?.status);
   const needsReview   = reports.filter(r => !finalisedStatuses.includes(r.status) && (findingsByReport[r.id] || []).some(f => f.approval_status === 'pending'));
-  const processing    = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && isManualReviewReport(r));
-  const inReview      = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && !processing.includes(r));
+  const processing    = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && isProcessingReport(r));
+  const manualReview  = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && !processing.includes(r) && isManualReviewReport(r));
+  const inReview      = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && !processing.includes(r) && !manualReview.includes(r));
   const finalised     = reports.filter(r => finalisedStatuses.includes(r.status));
 
   const rowProps = (r) => ({
     report: r,
     swimmer: swimmerMap[r.swimmer_id],
     video: videoMap[r.video_upload_id],
+    job: latestJobForReport(r),
     findings: findingsByReport[r.id] || [],
     canDelete,
     onDelete: (id) => deleteReport.mutate(id),
@@ -238,8 +262,12 @@ export default function AIReportsListPage() {
             {needsReview.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
           </QueueSection>
 
-          <QueueSection title="Manual Review Recommended" count={processing.length}>
+          <QueueSection title="Processing" count={processing.length}>
             {processing.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+          </QueueSection>
+
+          <QueueSection title="Manual Review Recommended" count={manualReview.length}>
+            {manualReview.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
           </QueueSection>
 
           <QueueSection title="In Review" count={inReview.length}>

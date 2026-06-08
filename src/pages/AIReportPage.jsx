@@ -62,6 +62,18 @@ const REVIEW_STATUS_CONFIG = {
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 
+function asQualityFlags(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').map(flag => flag.trim()).filter(Boolean);
+  return [];
+}
+
+function formatDetectionRatio(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 'Not provided';
+  return `${Math.round(numeric * 100)}%`;
+}
+
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -401,10 +413,51 @@ export default function AIReportPage() {
           {/* Real pose evidence panel — coach internal only */}
           <PoseEvidencePanel report={report} />
           {aiJob && (
-            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[10px] text-muted-foreground">
-              <span className="font-semibold text-foreground">AI job:</span> {aiJob.status}
-              {aiJob.stage && <span> · {aiJob.stage}</span>}
-              {aiJob.pose_reliability && <span> · reliability: {aiJob.pose_reliability}</span>}
+            <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold text-foreground">AI Review status</div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    AI-assisted evidence supports coach review. Coach approval is required before sharing.
+                  </p>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border">
+                  {aiJob.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
+                <div>
+                  <span className="text-muted-foreground">Stage</span>
+                  <div className="font-medium text-foreground">{aiJob.stage || 'Complete'}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Pose reliability</span>
+                  <div className="font-medium text-foreground">{aiJob.pose_reliability || 'Not provided'}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Detection ratio</span>
+                  <div className="font-medium text-foreground">{formatDetectionRatio(aiJob.detection_ratio)}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Frames processed</span>
+                  <div className="font-medium text-foreground">{aiJob.frame_count_processed ?? 'Not provided'}</div>
+                </div>
+              </div>
+              {asQualityFlags(aiJob.quality_flags).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {asQualityFlags(aiJob.quality_flags).map(flag => (
+                    <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
+                      {flag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {aiJob.recommended_next_action && (
+                <div className="text-[10px] text-muted-foreground">
+                  <span className="font-semibold text-foreground">Recommended next action: </span>
+                  {aiJob.recommended_next_action}
+                </div>
+              )}
             </div>
           )}
 

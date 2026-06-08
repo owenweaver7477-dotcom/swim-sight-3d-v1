@@ -10,7 +10,19 @@ import {
   sendJson,
 } from '../_lib/server.js';
 
-const ACTIVE_JOB_STATUSES = ['queued', 'running'];
+const ACTIVE_JOB_STATUSES = [
+  'queued',
+  'accepted',
+  'running',
+  'downloading_video',
+  'extracting_frames',
+  'running_pose_detection',
+  'analysing_stroke',
+  'generating_outputs',
+  'callback_sending',
+];
+const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'];
+const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
 
 export default async function handler(req, res) {
@@ -45,13 +57,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: activeJobs, error: activeError } = await service
+    const { data: existingJobs, error: activeError } = await service
       .from('ai_processing_jobs')
-      .select('id,status,server_job_id')
+      .select('id,status,server_job_id,retry_count,created_at')
       .eq('video_upload_id', upload.id)
-      .in('status', ACTIVE_JOB_STATUSES);
+      .order('created_at', { ascending: false });
 
     if (activeError) throw activeError;
+    const activeJobs = (existingJobs || []).filter((existingJob) => ACTIVE_JOB_STATUSES.includes(existingJob.status));
     if (activeJobs?.length) {
       return sendJson(res, 409, {
         error: 'An AI analysis job is already in progress for this video.',
@@ -59,12 +72,33 @@ export default async function handler(req, res) {
       });
     }
 
+    if (!RETRYABLE_VIDEO_STATUSES.includes(upload.processing_status || 'uploaded')) {
+      return sendJson(res, 409, {
+        error: 'This video is not in a retryable state. Refresh the video library before trying again.',
+        processing_status: upload.processing_status,
+      });
+    }
+
+    const latestJob = existingJobs?.[0] || null;
+    if (latestJob && !RETRYABLE_JOB_STATUSES.includes(latestJob.status) && upload.processing_status !== 'uploaded') {
+      return sendJson(res, 409, {
+        error: 'The latest AI job is not retryable yet. Wait for it to finish or reset timed-out jobs.',
+        job: latestJob,
+      });
+    }
+
+    const retryCount = Math.max(0, ...((existingJobs || []).map((existingJob) => existingJob.retry_count || 0))) + (existingJobs?.length ? 1 : 0);
+
     const { data: signed, error: signError } = await service
       .storage
       .from(upload.file_bucket)
       .createSignedUrl(upload.file_path, PYTHON_SIGNED_URL_TTL_SECONDS);
 
-    if (signError) throw signError;
+    if (signError) {
+      const error = new Error(`Could not create secure video URL for AI processing: ${signError.message}`);
+      error.qualityFlags = ['signed_url_expired'];
+      throw error;
+    }
 
     const { data: createdJob, error: createJobError } = await service
       .from('ai_processing_jobs')
@@ -72,8 +106,11 @@ export default async function handler(req, res) {
         club_id: upload.club_id,
         video_upload_id: upload.id,
         status: 'queued',
-        stage: 'Queued for pose-assisted review',
+        stage: 'queued',
         progress_percent: 0,
+        stage_history: [{ stage: 'queued', at: new Date().toISOString() }],
+        recommended_next_action: null,
+        retry_count: retryCount,
         created_by: user.id,
       })
       .select('*')
@@ -137,10 +174,14 @@ export default async function handler(req, res) {
     const { data: updatedJob, error: updateJobError } = await service
       .from('ai_processing_jobs')
       .update({
-        status: 'running',
+        status: 'accepted',
         server_job_id: serverJobId,
-        stage: 'downloading_video',
+        stage: 'accepted',
         progress_percent: 5,
+        stage_history: [
+          ...(Array.isArray(job.stage_history) ? job.stage_history : []),
+          { stage: 'accepted', at: new Date().toISOString(), server_job_id: serverJobId },
+        ],
         started_at: new Date().toISOString(),
       })
       .eq('id', job.id)
@@ -161,6 +202,7 @@ export default async function handler(req, res) {
       video_upload_id: upload.id,
       processing_status: 'processing_ai',
       stage: updatedJob.stage,
+      retry_count: updatedJob.retry_count,
     });
   } catch (error) {
     if (job?.id || upload?.id) {
@@ -169,6 +211,9 @@ export default async function handler(req, res) {
         if (job?.id) {
           await service.from('ai_processing_jobs').update({
             status: 'error',
+            stage: error.qualityFlags?.includes('signed_url_expired') ? 'signed_url_expired' : 'error',
+            quality_flags: error.qualityFlags || ['processing_error'],
+            recommended_next_action: 'manual_review_recommended',
             error_message: error.message,
             completed_at: new Date().toISOString(),
           }).eq('id', job.id);

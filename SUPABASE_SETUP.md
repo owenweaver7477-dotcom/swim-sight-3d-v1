@@ -49,12 +49,14 @@ Apply in order:
 1. `supabase/migrations/001_v1_core_schema.sql`
 2. `supabase/migrations/002_v1_swimmer_profile_fields.sql`
 3. `supabase/migrations/003_v1_private_video_storage_policies.sql`
+4. `supabase/migrations/004_v1_ai_job_reliability.sql`
 
 Confirm that:
 
 - RLS is enabled on all public V1 tables.
 - Storage policies exist for `private-videos`.
 - Helper functions such as `public.has_club_role` are present.
+- `ai_processing_jobs` has the V1 reliability columns and granular statuses before testing AI Review callbacks.
 
 ## 4. Storage
 
