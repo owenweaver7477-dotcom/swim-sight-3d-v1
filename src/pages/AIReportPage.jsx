@@ -74,6 +74,89 @@ function formatDetectionRatio(value) {
   return `${Math.round(numeric * 100)}%`;
 }
 
+function qualityGateMeta(report, job) {
+  const summary = job?.callback_summary || {};
+  if (summary.quality_gate_passed === true || (report?.analysis_mode === 'real_pose' && report?.real_pose_detected)) {
+    return {
+      label: 'Coach-grade evidence',
+      className: 'bg-green-50 text-green-700 border-green-200',
+      detail: 'Pose evidence passed the current Swim Sight quality gate. Findings are still draft until coach-approved.',
+    };
+  }
+  if (job?.status === 'error' || report?.analysis_mode === 'error') {
+    return {
+      label: 'Processing failed',
+      className: 'bg-red-50 text-red-700 border-red-200',
+      detail: 'No AI findings should be used. Complete a manual coach review or retry with clearer footage.',
+    };
+  }
+  return {
+    label: 'Manual review required',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    detail: 'Evidence did not meet the coach-grade threshold for draft AI findings. Add only verified coach observations.',
+  };
+}
+
+function HydrodynamicReviewPanel({ report, findings }) {
+  const approved = findings.filter(f => f.approval_status === 'approved');
+  const dragKeywords = /\b(drag|resistance|body line|streamline|hip|head lift|wide kick|knee width|frontal area|breakout)\b/i;
+  const relevant = approved.filter(f => dragKeywords.test([
+    f.finding_name,
+    f.coach_sees,
+    f.why_it_matters,
+    f.cue,
+    f.next_focus,
+    f.phase,
+  ].filter(Boolean).join(' ')));
+  const highestSeverity = relevant.some(f => f.severity === 'high' || f.severity === 'critical')
+    ? 'High attention'
+    : relevant.some(f => f.severity === 'medium')
+    ? 'Moderate attention'
+    : relevant.length
+    ? 'Monitor'
+    : 'Not assessed';
+
+  return (
+    <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-bold text-foreground uppercase tracking-wider">Hydrodynamic Risk Review</div>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Coach-reviewed resistance cues only. This is not a measured drag coefficient.
+          </p>
+        </div>
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+          highestSeverity === 'High attention' ? 'bg-red-50 text-red-700 border-red-200'
+            : highestSeverity === 'Moderate attention' ? 'bg-amber-50 text-amber-700 border-amber-200'
+            : highestSeverity === 'Monitor' ? 'bg-green-50 text-green-700 border-green-200'
+            : 'bg-slate-50 text-slate-500 border-slate-200'
+        }`}>
+          {highestSeverity}
+        </span>
+      </div>
+      {relevant.length > 0 ? (
+        <div className="space-y-1.5">
+          {relevant.slice(0, 3).map(finding => (
+            <div key={finding.id} className="text-[10px] text-muted-foreground flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
+              <span>{finding.finding_name || finding.coach_sees}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
+          Drag risk has not been assessed in this report. Add a coach finding about body line, streamline, head position, hip position, or kick width if it is visible in the video.
+        </div>
+      )}
+      {report?.analysis_mode !== 'real_pose' && (
+        <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+          AI-derived drag estimates require reliable pose evidence. This report should use coach-observed hydrodynamic notes only.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -105,7 +188,8 @@ export default function AIReportPage() {
     queryKey: ['ai-report', reportId],
     queryFn: () => entities.Report.filter({ id: reportId }),
     enabled: !!reportId,
-    staleTime: 60 * 1000,
+    staleTime: 15 * 1000,
+    refetchInterval: 15 * 1000,
   });
   const report = reportArr[0];
 
@@ -113,7 +197,8 @@ export default function AIReportPage() {
     queryKey: ['ai-findings', reportId],
     queryFn: () => entities.Finding.filter({ report_id: reportId }, '-created_date', 50),
     enabled: !!reportId,
-    staleTime: 60 * 1000,
+    staleTime: 15 * 1000,
+    refetchInterval: 15 * 1000,
   });
 
   const { data: keyFrames = [] } = useQuery({
@@ -143,9 +228,11 @@ export default function AIReportPage() {
     queryKey: ['ai-job-for-report', report?.ai_processing_job_id],
     queryFn: () => entities.AIProcessingJob.filter({ id: report.ai_processing_job_id }),
     enabled: !!report?.ai_processing_job_id,
-    staleTime: 60 * 1000,
+    staleTime: 10 * 1000,
+    refetchInterval: 10 * 1000,
   });
   const aiJob = jobArr[0] || null;
+  const qualityMeta = qualityGateMeta(report, aiJob);
 
   const dragAnalysisItems = [];
   const annotations = [];
@@ -421,14 +508,21 @@ export default function AIReportPage() {
                     AI-assisted evidence supports coach review. Coach approval is required before sharing.
                   </p>
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border">
-                  {aiJob.status}
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${qualityMeta.className}`}>
+                  {qualityMeta.label}
                 </span>
+              </div>
+              <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
+                {qualityMeta.detail}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
                 <div>
                   <span className="text-muted-foreground">Stage</span>
                   <div className="font-medium text-foreground">{aiJob.stage || 'Complete'}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Job status</span>
+                  <div className="font-medium text-foreground">{aiJob.status}</div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Pose reliability</span>
@@ -443,6 +537,22 @@ export default function AIReportPage() {
                   <div className="font-medium text-foreground">{aiJob.frame_count_processed ?? 'Not provided'}</div>
                 </div>
               </div>
+              {aiJob.callback_summary && (
+                <div className="grid grid-cols-3 gap-2 text-[10px]">
+                  <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+                    <span className="text-muted-foreground">Returned</span>
+                    <div className="font-semibold text-foreground">{aiJob.callback_summary.findings_count ?? 0}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+                    <span className="text-muted-foreground">Accepted</span>
+                    <div className="font-semibold text-foreground">{aiJob.callback_summary.actionable_findings_count ?? (report.real_pose_detected ? findings.filter(f => f.source === 'ai').length : 0)}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+                    <span className="text-muted-foreground">Filtered</span>
+                    <div className="font-semibold text-foreground">{aiJob.callback_summary.filtered_findings_count ?? 0}</div>
+                  </div>
+                </div>
+              )}
               {asQualityFlags(aiJob.quality_flags).length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {asQualityFlags(aiJob.quality_flags).map(flag => (
@@ -468,6 +578,8 @@ export default function AIReportPage() {
               AI suggestions require coach review before being shared with swimmers or parents. Approve findings below to include them in the final coach report.
             </p>
           </div>
+
+          <HydrodynamicReviewPanel report={report} findings={findings} />
 
           {/* Coach summary / next focus */}
           <div className="p-4 rounded-xl bg-card border border-border space-y-3">

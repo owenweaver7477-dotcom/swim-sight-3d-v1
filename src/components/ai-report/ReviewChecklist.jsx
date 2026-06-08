@@ -31,11 +31,11 @@ export default function ReviewChecklist({ report, video, findings, dragItems = [
 
   const ITEMS = [
     { done: !!video,                  label: 'Source video reviewed' },
-    { done: aiFindings.length > 0,   label: 'AI suggestions present' },
-    { done: aiSuggestionsReviewed,   label: 'All AI findings approved / rejected' },
+    { done: aiFindings.length > 0 || report?.real_pose_detected === false, label: 'AI evidence classified' },
+    { done: aiFindings.length === 0 || aiSuggestionsReviewed, label: 'All AI findings approved / rejected' },
     { done: hasManualFinding,         label: 'Manual finding added (if needed)' },
     { done: hasAnnotation,            label: 'Annotation added (if needed)' },
-    { done: hasDragItem,              label: 'Drag-risk item reviewed (if relevant)' },
+    { done: hasDragItem,              label: 'Hydrodynamic risk reviewed (if relevant)' },
     { done: hasDrill,                 label: 'Drill assigned to a finding' },
     { done: hasStandard,              label: 'Technical standard linked' },
     { done: hasSummary,               label: 'Coach technical summary written' },

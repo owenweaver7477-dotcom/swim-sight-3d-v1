@@ -20,6 +20,15 @@ export function SeverityBadge({ severity }) {
   return <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${c.bg} ${c.text}`}>{c.label}</span>;
 }
 
+function confidenceMeta(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const score = numeric > 1 ? numeric / 100 : numeric;
+  if (score >= 0.8) return { label: 'High evidence', cls: 'text-green-700 bg-green-50 border-green-200' };
+  if (score >= 0.65) return { label: 'Moderate evidence', cls: 'text-amber-700 bg-amber-50 border-amber-200' };
+  return { label: 'Low evidence', cls: 'text-orange-700 bg-orange-50 border-orange-200' };
+}
+
 export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCue, onUpdateNote, onUpdateStandard, canEdit = true, onLoad3D, strokeType, clubId }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(true);
@@ -33,6 +42,8 @@ export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCu
   const isPending = finding.approval_status === 'pending';
   const isApproved = finding.approval_status === 'approved';
   const isRejected = finding.approval_status === 'rejected';
+  const isAiFinding = finding.source === 'ai';
+  const evidence = confidenceMeta(finding.confidence_score);
 
   const handleSaveCue = async () => {
     setSavingCue(true);
@@ -83,8 +94,8 @@ export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCu
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
           {finding.confidence_score != null && (
-            <span className="text-[10px] text-muted-foreground hidden sm:block">
-              {Math.round(finding.confidence_score * 100)}% confidence
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border hidden sm:block ${evidence?.cls || 'text-muted-foreground border-border'}`}>
+              {Math.round((finding.confidence_score > 1 ? finding.confidence_score / 100 : finding.confidence_score) * 100)}% · {evidence?.label || 'AI evidence'}
             </span>
           )}
           {expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
@@ -103,14 +114,20 @@ export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCu
               </div>
             )}
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Brain className="w-3 h-3 text-primary" /> AI Suggested
+              <Brain className="w-3 h-3 text-primary" /> {isAiFinding ? 'AI draft — verify on video' : 'Coach finding'}
             </span>
             {finding.confidence_score != null && (
-              <span className="text-[10px] text-muted-foreground sm:hidden">
-                {Math.round(finding.confidence_score * 100)}% confidence
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border sm:hidden ${evidence?.cls || 'text-muted-foreground border-border'}`}>
+                {Math.round((finding.confidence_score > 1 ? finding.confidence_score / 100 : finding.confidence_score) * 100)}% · {evidence?.label || 'AI evidence'}
               </span>
             )}
           </div>
+
+          {isAiFinding && isPending && (
+            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
+              Treat this as a draft observation. Approve only after the source video confirms the timing, phase, and coaching cue.
+            </div>
+          )}
 
           {/* AI Observation */}
           {finding.coach_sees && (() => {

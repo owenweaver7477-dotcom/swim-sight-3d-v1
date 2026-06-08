@@ -1,7 +1,11 @@
 import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../_lib/server.js';
 
-const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.35;
-const FINDING_RELIABILITY_VALUES = ['reliable', 'partial'];
+const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.55;
+const MIN_KEYPOINTS_FOR_AI_FINDINGS = 12;
+const MIN_FRAMES_FOR_AI_FINDINGS = 8;
+const MIN_CONFIDENCE_FOR_AI_FINDING = 0.55;
+const MAX_AI_FINDINGS_PER_REPORT = 5;
+const FINDING_RELIABILITY_VALUES = ['reliable'];
 const PROGRESS_STATUSES = [
   'accepted',
   'downloading_video',
@@ -14,19 +18,81 @@ const PROGRESS_STATUSES = [
   'queued',
 ];
 
-function hasQualityForAiFindings(payload) {
-  const findings = Array.isArray(payload.findings) ? payload.findings : [];
-  const detectionRatio = Number(payload.detection_ratio);
-  const poseReliability = String(payload.pose_reliability || '').toLowerCase();
+function normaliseConfidence(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return numeric > 1 ? numeric / 100 : numeric;
+}
+
+function hasSubstantiveText(value, minLength = 16) {
+  if (!value) return false;
+  const text = String(value).trim();
+  if (text.length < minLength) return false;
+  return !/\b(placeholder|demo|test finding|unknown|n\/a)\b/i.test(text);
+}
+
+function findingObservation(finding) {
+  return finding.finding_description
+    || finding.coach_sees
+    || finding.finding_title
+    || finding.finding_name
+    || finding.observation
+    || '';
+}
+
+function findingCue(finding) {
+  return finding.recommended_correction
+    || finding.cue
+    || finding.correction_cue
+    || finding.next_focus
+    || '';
+}
+
+function isActionableFinding(finding) {
+  const observation = findingObservation(finding);
+  const cue = findingCue(finding);
+  const confidence = normaliseConfidence(finding.confidence_score ?? finding.ai_confidence);
 
   return (
+    hasSubstantiveText(observation, 18)
+    && hasSubstantiveText(cue, 8)
+    && (confidence == null || confidence >= MIN_CONFIDENCE_FOR_AI_FINDING)
+  );
+}
+
+function actionableFindings(payload) {
+  const findings = Array.isArray(payload.findings) ? payload.findings : [];
+  return findings.filter(isActionableFinding).slice(0, MAX_AI_FINDINGS_PER_REPORT);
+}
+
+function assessCallbackQuality(payload) {
+  const findings = Array.isArray(payload.findings) ? payload.findings : [];
+  const acceptedFindings = actionableFindings(payload);
+  const detectionRatio = Number(payload.detection_ratio);
+  const detectedKeypoints = Number(payload.detected_keypoints_count);
+  const framesProcessed = Number(payload.frame_count_processed);
+  const poseReliability = String(payload.pose_reliability || '').toLowerCase();
+
+  const passed = (
     payload.analysis_mode === 'real_pose' &&
     payload.real_pose_detected === true &&
     FINDING_RELIABILITY_VALUES.includes(poseReliability) &&
     Number.isFinite(detectionRatio) &&
     detectionRatio >= MIN_DETECTION_RATIO_FOR_AI_FINDINGS &&
-    findings.length > 0
+    (!Number.isFinite(detectedKeypoints) || detectedKeypoints >= MIN_KEYPOINTS_FOR_AI_FINDINGS) &&
+    (!Number.isFinite(framesProcessed) || framesProcessed >= MIN_FRAMES_FOR_AI_FINDINGS) &&
+    acceptedFindings.length > 0
   );
+
+  return {
+    passed,
+    acceptedFindings,
+    rejectedFindingCount: Math.max(0, findings.length - acceptedFindings.length),
+    detectionRatio,
+    detectedKeypoints,
+    framesProcessed,
+    poseReliability,
+  };
 }
 
 function normaliseSeverity(value) {
@@ -45,28 +111,36 @@ function appendStageHistory(existing, entry) {
   return [...history, entry].slice(-50);
 }
 
-function buildQualityFlags(payload, callbackError, qualityPass) {
+function buildQualityFlags(payload, callbackError, quality) {
   const flags = new Set(normaliseArray(payload.quality_flags));
   const findings = Array.isArray(payload.findings) ? payload.findings : [];
-  const detectionRatio = Number(payload.detection_ratio);
-  const detectedKeypoints = Number(payload.detected_keypoints_count);
+  const detectionRatio = quality.detectionRatio;
+  const detectedKeypoints = quality.detectedKeypoints;
+  const framesProcessed = quality.framesProcessed;
 
   if (callbackError) flags.add('processing_error');
-  if (!qualityPass && payload.analysis_mode === 'real_pose') flags.add('too_few_keypoints');
+  if (payload.analysis_mode !== 'real_pose' || payload.real_pose_detected !== true) flags.add('not_real_pose');
+  if (!FINDING_RELIABILITY_VALUES.includes(quality.poseReliability)) flags.add('pose_reliability_not_coach_grade');
   if (Number.isFinite(detectionRatio) && detectionRatio < MIN_DETECTION_RATIO_FOR_AI_FINDINGS) flags.add('low_visibility');
   if (Number.isFinite(detectedKeypoints) && detectedKeypoints < 8) flags.add('low_keypoint_count');
-  if (!findings.length && !callbackError) flags.add('too_few_keypoints');
+  if (Number.isFinite(detectedKeypoints) && detectedKeypoints < MIN_KEYPOINTS_FOR_AI_FINDINGS) flags.add('insufficient_keypoint_coverage');
+  if (Number.isFinite(framesProcessed) && framesProcessed < MIN_FRAMES_FOR_AI_FINDINGS) flags.add('too_few_frames_processed');
+  if (!findings.length && !callbackError) flags.add('no_ai_findings_returned');
+  if (findings.length && !quality.acceptedFindings.length) flags.add('no_actionable_findings');
+  if (quality.rejectedFindingCount > 0) flags.add('findings_filtered_by_quality_gate');
 
   return Array.from(flags);
 }
 
-function safeCallbackSummary(payload, qualityPass) {
+function safeCallbackSummary(payload, quality) {
   return {
     status: payload.status || null,
     analysis_mode: payload.analysis_mode || null,
     real_pose_detected: payload.real_pose_detected === true,
-    quality_gate_passed: qualityPass,
+    quality_gate_passed: quality.passed,
     findings_count: Array.isArray(payload.findings) ? payload.findings.length : 0,
+    actionable_findings_count: quality.acceptedFindings.length,
+    filtered_findings_count: quality.rejectedFindingCount,
     key_frames_count: Array.isArray(payload.key_frames)
       ? payload.key_frames.length
       : Array.isArray(payload.key_moments)
@@ -163,9 +237,10 @@ export default async function handler(req, res) {
     const callbackStatus = String(payload.status || 'completed').toLowerCase();
     const callbackError = callbackStatus === 'error';
     const progressOnly = PROGRESS_STATUSES.includes(callbackStatus) && callbackStatus !== 'completed' && callbackStatus !== 'error';
-    const qualityPass = hasQualityForAiFindings(payload);
+    const quality = assessCallbackQuality(payload);
+    const qualityPass = quality.passed;
     const realPose = qualityPass;
-    const qualityFlags = buildQualityFlags(payload, callbackError, qualityPass);
+    const qualityFlags = buildQualityFlags(payload, callbackError, quality);
     const jobStatus = callbackError
       ? 'error'
       : qualityPass
@@ -177,7 +252,7 @@ export default async function handler(req, res) {
     const fallbackNextAction = qualityPass ? 'real_pose_review_ready' : 'manual_review_recommended';
     const callbackMessage = callbackError
       ? payload.error_message || 'AI processing failed. Manual coach review is required.'
-      : payload.error_message || 'Pose evidence was not reliable enough for draft AI findings. Manual coach review is recommended.';
+      : payload.error_message || "The video did not pass Swim Sight's coach-grade AI quality gate. Manual coach review is recommended.";
     const unreliableMessage = qualityPass
       ? null
       : callbackMessage;
@@ -248,7 +323,7 @@ export default async function handler(req, res) {
         analysis_mode: analysisMode,
         video_duration_seconds: payload.video_duration_seconds ?? null,
         video_fps: payload.video_fps ?? null,
-        callback_summary: safeCallbackSummary(payload, qualityPass),
+        callback_summary: safeCallbackSummary(payload, quality),
       }).eq('id', job.id);
     }
 
@@ -329,7 +404,7 @@ export default async function handler(req, res) {
       if (deletePendingAiError) throw deletePendingAiError;
     }
 
-    if (qualityPass && Array.isArray(payload.findings)) {
+    if (qualityPass && quality.acceptedFindings.length) {
       const { data: existingAiFindings, error: existingFindingsError } = await service
         .from('findings')
         .select('id,approval_status')
@@ -352,7 +427,7 @@ export default async function handler(req, res) {
 
         if (deletePendingError) throw deletePendingError;
 
-        const rows = payload.findings.map((finding) => ({
+        const rows = quality.acceptedFindings.map((finding) => ({
           club_id: upload.club_id,
           report_id: report.id,
           swimmer_id: upload.swimmer_id,
@@ -362,12 +437,12 @@ export default async function handler(req, res) {
           severity: normaliseSeverity(finding.severity),
           stroke_phase: finding.stroke_phase || finding.phase || null,
           timestamp_seconds: finding.timestamp_seconds ?? finding.timestamp_start ?? null,
-          observation: finding.finding_description || finding.coach_sees || finding.finding_title || finding.finding_name || 'AI draft finding',
+          observation: findingObservation(finding),
           why_it_matters: finding.why_it_matters || null,
-          correction_cue: finding.recommended_correction || finding.cue || null,
+          correction_cue: findingCue(finding),
           drill: finding.recommended_drill || finding.drill || null,
           next_focus: finding.next_focus || null,
-          ai_confidence: finding.confidence_score ?? null,
+          ai_confidence: normaliseConfidence(finding.confidence_score ?? finding.ai_confidence),
           raw_ai_payload: finding,
         }));
 

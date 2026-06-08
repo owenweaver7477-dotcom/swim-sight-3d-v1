@@ -29,6 +29,7 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
   const rc = video || {};
   const hasReviewContext = !!(rc.review_goal || rc.primary_focus || rc.coach_question || rc.session_type);
   const approvedFindings = findings.filter(f => f.approval_status === 'approved' && f.included_in_report);
+  const pendingFindings = findings.filter(f => f.approval_status === 'pending');
 
   const analysisModeLabelOk = !!report.analysis_mode;
   const hasCoachSummary = !!(report.coach_summary || report.technical_summary);
@@ -36,6 +37,7 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
   const checks = [
     { ok: !!swimmer,                         label: 'Swimmer selected' },
     { ok: !!video?.stroke_type,              label: 'Stroke type selected' },
+    { ok: pendingFindings.length === 0,      label: `All draft AI findings reviewed (${pendingFindings.length} pending)` },
     { ok: approvedFindings.length > 0,       label: `At least one approved finding (${approvedFindings.length} found) or coach confirms none are needed` },
     { ok: approvedFindings.length === 0 || approvedFindings.every(f => f.cue || f.next_focus), label: 'All included findings have a cue or next focus' },
     { ok: hasCoachSummary,                   label: 'Coach summary present' },
@@ -46,7 +48,9 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
   ];
 
   const failures = checks.filter(c => !c.ok);
+  const blockingFailures = checks.slice(0, 3).filter(c => !c.ok);
   const isIncomplete = failures.length > 0;
+  const isBlocked = blockingFailures.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onCancel}>
@@ -75,7 +79,11 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700 leading-relaxed">
-                <strong>This report may be incomplete.</strong> You can still finalise, but consider addressing the items above first.
+                <strong>{isBlocked ? 'This report cannot be finalised yet.' : 'This report may be incomplete.'}</strong>
+                {' '}
+                {isBlocked
+                  ? 'Resolve the required items above before sharing.'
+                  : 'You can still finalise, but consider addressing the warnings above first.'}
               </p>
             </div>
           </div>
@@ -121,9 +129,9 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
             size="sm"
             className="h-8 text-xs bg-green-700 hover:bg-green-600 text-white"
             onClick={onConfirm}
-            disabled={finalising}
+            disabled={finalising || isBlocked}
           >
-            {finalising ? 'Finalising…' : isIncomplete ? 'Finalise Anyway' : 'Finalise Report'}
+            {finalising ? 'Finalising…' : isBlocked ? 'Resolve Required Items' : isIncomplete ? 'Finalise with Warnings' : 'Finalise Report'}
           </Button>
         </div>
       </div>

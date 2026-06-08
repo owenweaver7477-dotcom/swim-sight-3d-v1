@@ -27,22 +27,23 @@ const PROCESSING_JOB_STATUSES = [
 ];
 
 function ReliabilityLabel({ report, job }) {
+  const summary = job?.callback_summary || {};
   if (PROCESSING_JOB_STATUSES.includes(job?.status)) {
     return <span className="text-[10px] font-medium text-blue-700">AI processing in progress</span>;
   }
   if (['error', 'timed_out'].includes(job?.status) || report.analysis_mode === 'error') {
     return <span className="text-[10px] font-medium text-red-600">Processing failed — retry or complete manual review</span>;
   }
-  if (report.analysis_mode === 'real_pose' && report.real_pose_detected) {
-    return <span className="text-[10px] font-medium text-green-700">Reliable pose-assisted review — coach approval required</span>;
+  if (summary.quality_gate_passed === true || (report.analysis_mode === 'real_pose' && report.real_pose_detected)) {
+    return <span className="text-[10px] font-medium text-green-700">Coach-grade pose evidence — approval required</span>;
   }
   if (job?.pose_reliability === 'partial') {
-    return <span className="text-[10px] font-medium text-amber-700">Partial pose evidence — use alongside manual review</span>;
+    return <span className="text-[10px] font-medium text-amber-700">Partial pose evidence — manual review first</span>;
   }
   if (report.real_pose_detected === false || job?.status === 'manual_review_recommended') {
-    return <span className="text-[10px] font-medium text-amber-700">Pose unreliable — manual review recommended</span>;
+    return <span className="text-[10px] font-medium text-amber-700">Quality gate failed — manual review recommended</span>;
   }
-  return <span className="text-[10px] font-medium text-amber-600">Partial evidence</span>;
+  return <span className="text-[10px] font-medium text-amber-600">Evidence requires coach verification</span>;
 }
 
 // ── Status label ───────────────────────────────────────────────────────────────
@@ -170,7 +171,9 @@ export default function AIReportsListPage() {
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ['ai-reports', club?.id],
     queryFn: () => entities.Report.filter({ club_id: club.id }, '-created_date', 50),
-    enabled: !!club?.id, staleTime: 2 * 60 * 1000,
+    enabled: !!club?.id,
+    staleTime: 15 * 1000,
+    refetchInterval: 15 * 1000,
   });
   const reports = allReports.filter(r => !r.is_deleted);
 
@@ -180,9 +183,9 @@ export default function AIReportsListPage() {
   });
 
   const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled: !!club?.id, staleTime: 5 * 60 * 1000 });
-  const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
-  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
-  const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 2 * 60 * 1000 });
+  const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 30 * 1000, refetchInterval: 20 * 1000 });
+  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 10 * 1000, refetchInterval: 10 * 1000 });
+  const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 15 * 1000, refetchInterval: 15 * 1000 });
 
   const swimmerMap = Object.fromEntries(swimmers.map(s => [s.id, s]));
   const videoMap   = Object.fromEntries(videos.map(v => [v.id, v]));
