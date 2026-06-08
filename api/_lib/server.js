@@ -94,10 +94,23 @@ export function normaliseAiServerUrl() {
 }
 
 export function getPublicAppUrl(req) {
-  if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL.replace(/\/$/, '');
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return `${proto}://${host}`;
+  const requestOrigin = `${proto}://${host}`.replace(/\/$/, '');
+  const configuredOrigin = (process.env.PUBLIC_APP_URL || '').replace(/\/$/, '');
+  if (!configuredOrigin) return requestOrigin;
+
+  try {
+    const configured = new URL(configuredOrigin);
+    const request = new URL(requestOrigin);
+    const configuredIsLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(configured.hostname);
+    const requestIsLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(request.hostname);
+    if (configuredIsLocal && !requestIsLocal) return requestOrigin;
+  } catch {
+    return requestOrigin;
+  }
+
+  return configuredOrigin;
 }
 
 export function isUuid(value) {
