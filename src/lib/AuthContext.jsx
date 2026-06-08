@@ -1,10 +1,30 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getSupabaseClient, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
+import { getSupabaseBrowserConfigError, getSupabaseClient, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
 
 const AuthContext = createContext();
 
 function getAppOrigin() {
-  return import.meta.env.VITE_APP_BASE_URL || window.location.origin;
+  const configuredBaseUrl = import.meta.env.VITE_APP_BASE_URL;
+  const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const normalisedConfiguredUrl = configuredBaseUrl?.replace(/\/$/, '');
+  const normalisedFallbackOrigin = fallbackOrigin.replace(/\/$/, '');
+
+  if (!normalisedConfiguredUrl) return normalisedFallbackOrigin;
+
+  try {
+    const configured = new URL(normalisedConfiguredUrl);
+    const current = normalisedFallbackOrigin ? new URL(normalisedFallbackOrigin) : null;
+    const configuredIsLocal = ['localhost', '127.0.0.1'].includes(configured.hostname);
+    const currentIsLocal = current ? ['localhost', '127.0.0.1'].includes(current.hostname) : false;
+
+    if (configuredIsLocal && current && !currentIsLocal) {
+      return normalisedFallbackOrigin;
+    }
+  } catch {
+    return normalisedFallbackOrigin || normalisedConfiguredUrl;
+  }
+
+  return normalisedConfiguredUrl;
 }
 
 function getFullName(authUser) {
@@ -95,10 +115,15 @@ export const AuthProvider = ({ children }) => {
     setAuthError(null);
 
     if (!hasSupabaseBrowserEnv()) {
+      const message = getSupabaseBrowserConfigError();
       setSession(null);
       setUser(null);
       setProfile(null);
       setIsAuthenticated(false);
+      setAuthError({
+        type: 'config_error',
+        message: message || 'Invalid Supabase client config.',
+      });
       setAuthChecked(true);
       setIsLoadingAuth(false);
       return null;
@@ -140,11 +165,16 @@ export const AuthProvider = ({ children }) => {
 
     async function initialiseAuth() {
       if (!hasSupabaseBrowserEnv()) {
+        const message = getSupabaseBrowserConfigError();
         if (!mounted) return;
         setSession(null);
         setUser(null);
         setProfile(null);
         setIsAuthenticated(false);
+        setAuthError({
+          type: 'config_error',
+          message: message || 'Invalid Supabase client config.',
+        });
         setAuthChecked(true);
         setIsLoadingAuth(false);
         setIsLoadingPublicSettings(false);

@@ -8,21 +8,29 @@ import AuthLayout from "@/components/AuthLayout";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function ForgotPassword() {
-  const { resetPasswordRequest } = useAuth();
+  const { resetPasswordRequest, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const visibleError = error || (authError?.type === 'config_error' ? authError.message : '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
+    let shouldShowSent = true;
     try {
       await resetPasswordRequest(email);
-    } catch {
+    } catch (err) {
+      if (err.message?.includes('VITE_SUPABASE_')) {
+        setError(err.message);
+        shouldShowSent = false;
+      }
       // Always show success regardless
     } finally {
       setLoading(false);
-      setSent(true);
+      if (shouldShowSent) setSent(true);
     }
   };
 
@@ -37,6 +45,11 @@ export default function ForgotPassword() {
         </Link>
       }
     >
+      {visibleError && (
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          {visibleError}
+        </div>
+      )}
       {sent ? (
         <p className="text-sm text-foreground text-center">
           If an account exists with that email, you'll receive a password reset link shortly.

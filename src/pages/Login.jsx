@@ -10,11 +10,12 @@ import { useAuth } from "@/lib/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const visibleError = error || (authError?.type === 'config_error' ? authError.message : '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -71,9 +72,9 @@ export default function Login() {
         </div>
       </div>
 
-      {error && (
+      {visibleError && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
+          {visibleError}
         </div>
       )}
 

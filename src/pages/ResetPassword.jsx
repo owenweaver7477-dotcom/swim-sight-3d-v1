@@ -9,12 +9,13 @@ import { useAuth } from "@/lib/AuthContext";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const { resetPassword, isAuthenticated, isLoadingAuth } = useAuth();
+  const { resetPassword, isAuthenticated, isLoadingAuth, authError } = useAuth();
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const visibleError = error || (authError?.type === 'config_error' ? authError.message : '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,9 +61,9 @@ export default function ResetPassword() {
       title="New password"
       subtitle="Enter your new password below"
     >
-      {error && (
+      {visibleError && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
+          {visibleError}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
