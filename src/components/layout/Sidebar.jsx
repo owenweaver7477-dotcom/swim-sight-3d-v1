@@ -5,10 +5,10 @@ import { useClubContext } from '@/lib/useClubContext';
 import { resetClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
 import {
-  LayoutDashboard, Users, FlaskConical, BookOpen,
+  LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, Waves, ChevronsUpDown, Check, Brain,
-  ShieldAlert, TrendingUp, Eye, FileText, Activity, ClipboardList
+  ShieldAlert, Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -21,9 +21,7 @@ const NAV_MAIN = [
 ];
 
 const NAV_TOOLS = [
-  { to: '/performance',     label: 'Performance Hub', icon: TrendingUp },
   { to: '/drill-library',   label: 'Drill Library',   icon: Dumbbell },
-  { to: '/reference-library', label: 'Reference Library', icon: BookOpen },
 ];
 
 const NAV_CLUB = [
@@ -32,12 +30,8 @@ const NAV_CLUB = [
 
 // Admin-only — all advanced/debug tools collapsed under single section
 const NAV_ADMIN = [
-  { to: '/coach-testing', label: 'Coach Testing',   icon: ClipboardList },
   { to: '/ai-jobs',       label: 'AI Job Monitor',  icon: Activity },
   { to: '/roadmap',       label: 'Roadmap',         icon: Map },
-  { to: '/report',        label: 'Reports (Legacy)', icon: FileText },
-  { to: '/coach-mode',    label: 'Coach Mode (Beta)', icon: Eye },
-  { to: '/drills',        label: 'Drills (Legacy)',  icon: Dumbbell },
 ];
 
 const ADMIN_ROLES = ['owner', 'admin'];

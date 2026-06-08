@@ -16,6 +16,7 @@ const entityTables = {
   Finding: 'findings',
   KeyFrame: 'key_frames',
   SharedReportLink: 'shared_report_links',
+  Drill: 'drills',
 };
 
 function normaliseOrder(order) {

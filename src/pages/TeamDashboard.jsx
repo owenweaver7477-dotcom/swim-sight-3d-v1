@@ -1,6 +1,5 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import entities from '@/lib/data/entities';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
@@ -8,7 +7,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import {
   Users, Waves, FileText, Video, Plus, ChevronRight,
   AlertCircle, Loader2, Brain, Upload, CheckCircle2,
-  TrendingUp, Zap, BarChart3, Target, Activity, ArrowRight
+  Dumbbell, ArrowRight
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -90,11 +89,10 @@ export default function TeamDashboard() {
   const navigate = useNavigate();
   const enabled = !!club?.id;
 
-  const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }), enabled, staleTime: 5 * 60 * 1000 });
-  const { data: videos = [] } = useQuery({ queryKey: ['videos', club?.id], queryFn: () => base44.entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 50), enabled, staleTime: 60 * 1000 });
-  const { data: reports = [] } = useQuery({ queryKey: ['reports-dashboard', club?.id], queryFn: () => base44.entities.Report.filter({ club_id: club.id }, '-created_date', 50), enabled, staleTime: 2 * 60 * 1000 });
-  const { data: findings = [] } = useQuery({ queryKey: ['findings-dashboard', club?.id], queryFn: () => base44.entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled, staleTime: 2 * 60 * 1000 });
-  const { data: dragItems = [] } = useQuery({ queryKey: ['drag-dashboard', club?.id], queryFn: () => base44.entities.DragAnalysis.filter({ club_id: club.id }, '-created_date', 100), enabled, staleTime: 2 * 60 * 1000 });
+  const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled, staleTime: 5 * 60 * 1000 });
+  const { data: videos = [] } = useQuery({ queryKey: ['videos', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 50), enabled, staleTime: 60 * 1000 });
+  const { data: reports = [] } = useQuery({ queryKey: ['reports-dashboard', club?.id], queryFn: () => entities.Report.filter({ club_id: club.id }, '-created_date', 50), enabled, staleTime: 2 * 60 * 1000 });
+  const { data: findings = [] } = useQuery({ queryKey: ['findings-dashboard', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled, staleTime: 2 * 60 * 1000 });
   const { data: aiJobs = [] } = useQuery({ queryKey: ['ai-jobs-dashboard', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 5), enabled, staleTime: 2 * 60 * 1000 });
 
   if (loading) return <div className="flex items-center justify-center py-32"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
@@ -105,14 +103,14 @@ export default function TeamDashboard() {
 
   const activeReports = reports.filter(r => !r.is_deleted);
   const aiReports = activeReports.filter(r => r.source === 'ai');
-  const awaitingReview = aiReports.filter(r => r.status !== 'published');
-  const publishedReports = activeReports.filter(r => r.status === 'published');
+  const finalStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
+  const awaitingReview = aiReports.filter(r => !finalStatuses.includes(r.status));
+  const publishedReports = activeReports.filter(r => finalStatuses.includes(r.status));
 
-  const processingVideos = videos.filter(v => v.processing_status === 'pending_ai' || v.processing_status === 'processing');
+  const processingVideos = videos.filter(v => ['pending_ai', 'queued_ai', 'processing', 'processing_ai'].includes(v.processing_status));
   const errorVideos = videos.filter(v => v.processing_status === 'error');
 
   const pendingAIFindings = findings.filter(f => f.source === 'ai' && f.approval_status === 'pending');
-  const highDragRisk = dragItems.filter(d => d.drag_risk_level === 'high' && d.approval_status === 'approved');
 
   const thirtyDaysAgo = subDays(new Date(), 30);
   const recentlyReviewedIds = new Set(publishedReports.filter(r => r.swimmer_id && new Date(r.updated_date || r.created_date) > thirtyDaysAgo).map(r => r.swimmer_id));
@@ -144,12 +142,6 @@ export default function TeamDashboard() {
       label: `${processingVideos.length} video${processingVideos.length > 1 ? 's' : ''} processing`,
       meta: 'AI analysis in progress',
       cta: 'Monitor', onClick: () => navigate('/analyse'),
-    },
-    highDragRisk.length > 0 && {
-      icon: Zap, iconColor: 'text-amber-500', urgent: true,
-      label: `${highDragRisk.length} high drag-risk observation${highDragRisk.length > 1 ? 's' : ''}`,
-      meta: 'Coach-approved items across the squad',
-      cta: 'Performance Hub', onClick: () => navigate('/performance'),
     },
     dueForReview.length > 0 && {
       icon: Users, iconColor: 'text-slate-500', urgent: false,
@@ -213,7 +205,7 @@ export default function TeamDashboard() {
                 { label: 'Upload Video', icon: Upload, to: '/analyse' },
                 { label: 'Add Swimmer', icon: Plus, to: '/swimmers' },
                 { label: 'AI Reviews', icon: Brain, to: '/ai-reviews' },
-                { label: 'Performance Hub', icon: BarChart3, to: '/performance' },
+                { label: 'Drill Library', icon: Dumbbell, to: '/drill-library' },
               ].map(a => {
                 const Icon = a.icon;
                 return (
@@ -289,7 +281,7 @@ export default function TeamDashboard() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Club Technical Focus</div>
-                <Link to="/performance" className="text-[10px] text-primary font-semibold hover:underline">Hub</Link>
+                <Link to="/drill-library" className="text-[10px] text-primary font-semibold hover:underline">Drills</Link>
               </div>
               <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
                 {topFaults.map(([name, count], i) => (
@@ -303,13 +295,13 @@ export default function TeamDashboard() {
             </div>
           )}
 
-          {/* Performance Hub CTA */}
-          <button onClick={() => navigate('/performance')}
+          {/* Drill Library CTA */}
+          <button onClick={() => navigate('/drill-library')}
             className="w-full flex items-center gap-3 px-4 py-4 bg-white rounded-xl border border-slate-200 hover:border-primary/30 hover:bg-primary/5 transition-colors text-left">
-            <TrendingUp className="w-5 h-5 text-primary flex-shrink-0" />
+            <Dumbbell className="w-5 h-5 text-primary flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-slate-800">Performance Hub</div>
-              <div className="text-[10px] text-slate-500">Trends, leaderboard, standards</div>
+              <div className="text-xs font-semibold text-slate-800">Drill Library</div>
+              <div className="text-[10px] text-slate-500">Corrective packs and coach cues</div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300" />
           </button>

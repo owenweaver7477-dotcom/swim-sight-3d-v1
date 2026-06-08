@@ -5,14 +5,15 @@
  */
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
+import { getDefaultDrillPacks, getDefaultDrills } from '@/lib/defaultDrills';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Search, X, Dumbbell, Tag, ChevronRight, Loader2,
-  BookOpen, Filter, Package, List, Building2, AlertTriangle
+  BookOpen, Filter, Package, List, Building2
 } from 'lucide-react';
 import DrillDetailModal from '@/components/drills/DrillDetailModal';
 import DrillPackModal from '@/components/drills/DrillPackModal';
@@ -50,139 +51,32 @@ const DIFF_COLORS = {
   Elite:        'bg-red-100 text-red-700',
 };
 
-// ── Drill Packs definition ────────────────────────────────────────────────────
-// Packs are matched to real drills via keyword matching on title/fault_tags/phase/stroke.
-// No fake data — if no drills match, the pack shows "No matching drills found."
+const DRILL_PACKS = getDefaultDrillPacks();
 
-const DRILL_PACKS = [
-  {
-    id: 'bk-kick',
-    title: 'Breaststroke Kick Mechanics',
-    stroke: 'Breaststroke',
-    phases: ['Kick Recovery', 'Kick Drive'],
-    faults: ['Wide knees', 'Early foot turn', 'Weak snap', 'Asymmetric kick'],
-    objective: 'Rebuild the breaststroke kick from foot position to explosive snap, addressing the most common breaststroke fault patterns.',
-    primaryCue: '"Heels to seat — feet out — snap and squeeze"',
-    bestFor: 'Beginners to intermediate. Essential for anyone with wide-knee habits or poor kick timing.',
-    equipment: 'Wall or kickboard',
-    diffRange: 'Beginner – Intermediate',
-    whenToUse: 'Early in a training block, or when kick timing is breaking down under fatigue. Use before pulling drills.',
-    whenNotToUse: 'Mid-race preparation phase when full-stroke integration is the focus.',
-    matchKeywords: ['breaststroke kick', 'knee', 'kick recovery', 'kick drive', 'heels', 'foot turn', 'piston'],
-  },
-  {
-    id: 'bk-timing',
-    title: 'Breaststroke Timing & Glide',
-    stroke: 'Breaststroke',
-    phases: ['Timing', 'Glide', 'Pull'],
-    faults: ['Over-glide', 'Rushed pull', 'Dropped hips', 'Poor timing'],
-    objective: 'Establish the pull-breathe-kick-glide rhythm and prevent early or late action errors that kill momentum.',
-    primaryCue: '"Pull, breathe, kick, glide — long and proud"',
-    bestFor: 'Intermediate swimmers. Effective for swimmers who rush the pull or kill glide momentum.',
-    equipment: 'None required',
-    diffRange: 'Intermediate',
-    whenToUse: 'After kick mechanics are solid. Works well as a warm-up or technique set before race-pace work.',
-    whenNotToUse: 'When kick mechanics are still broken — timing drills won\'t help if the kick is wrong.',
-    matchKeywords: ['breaststroke timing', 'glide', 'timing', 'breakout', 'pull timing'],
-  },
-  {
-    id: 'fr-catch',
-    title: 'Freestyle Catch & Pull',
-    stroke: 'Freestyle',
-    phases: ['Catch', 'Pull'],
-    faults: ['Dropped elbow', 'Weak catch', 'Pressing down on entry', 'Slipping water'],
-    objective: 'Build early vertical forearm (EVF) and high-elbow catch mechanics to maximise propulsion per stroke.',
-    primaryCue: '"Elbow high, fingertips down — reach over the barrel"',
-    bestFor: 'All levels. Most common freestyle weakness in club swimmers.',
-    equipment: 'Paddles optional',
-    diffRange: 'Intermediate – Advanced',
-    whenToUse: 'Any technique session. Especially effective at low-to-moderate intensity where feedback can be processed.',
-    whenNotToUse: 'High-intensity sprint sets where form breaks down under load.',
-    matchKeywords: ['freestyle catch', 'catch', 'pull', 'elbow', 'scull', 'forearm', 'freestyle'],
-  },
-  {
-    id: 'fr-body',
-    title: 'Freestyle Body Position',
-    stroke: 'Freestyle',
-    phases: ['Body Line', 'Breathing', 'Rotation'],
-    faults: ['Sinking hips', 'High head position', 'Unstable breathing', 'Over-rotation'],
-    objective: 'Establish horizontal body alignment, stable breathing mechanics, and controlled axial rotation.',
-    primaryCue: '"Head down, hips up — rotate to breathe, not to survive"',
-    bestFor: 'All levels. Foundational for distance swimmers and those struggling with oxygen debt.',
-    equipment: 'Fins optional',
-    diffRange: 'Beginner – Intermediate',
-    whenToUse: 'Start of every technique block. Use before catch and pull work.',
-    whenNotToUse: 'Not needed if body position is already strong — diagnose first.',
-    matchKeywords: ['freestyle body', 'body line', 'rotation', 'breathing', 'six-kick', 'one-goggle', 'hips'],
-  },
-  {
-    id: 'bk-entry',
-    title: 'Backstroke Rotation & Entry',
-    stroke: 'Backstroke',
-    phases: ['Entry', 'Rotation'],
-    faults: ['Crossover entry', 'Flat rotation', 'Poor entry angle', 'Early pull'],
-    objective: 'Correct shoulder-line entry and establish controlled axial rotation in backstroke.',
-    primaryCue: '"Little finger first — reach through the shoulder line"',
-    bestFor: 'All backstroke swimmers. Especially those crossing over on entry.',
-    equipment: 'Fins optional',
-    diffRange: 'Beginner – Intermediate',
-    whenToUse: 'Whenever crossover issues are identified. Good at start of backstroke blocks.',
-    whenNotToUse: 'During peak taper phase when stroke changes may cause anxiety.',
-    matchKeywords: ['backstroke entry', 'backstroke rotation', 'rotation', 'entry', 'shoulder', 'crossover', 'backstroke'],
-  },
-  {
-    id: 'fly-timing',
-    title: 'Butterfly Timing & Undulation',
-    stroke: 'Butterfly',
-    phases: ['Timing', 'Body Wave', 'Breathing'],
-    faults: ['Late second kick', 'Flat body wave', 'High breath', 'Early arm recovery'],
-    objective: 'Establish the two-kick butterfly rhythm, body undulation, and low breathing position.',
-    primaryCue: '"Kick as hands enter, kick as hands exit — wave not worm"',
-    bestFor: 'Intermediate to advanced. Not suitable for beginners who lack the kick timing.',
-    equipment: 'Fins recommended',
-    diffRange: 'Intermediate – Advanced',
-    whenToUse: 'Technique blocks at low-to-moderate intensity. Fins help groove the pattern before removing.',
-    whenNotToUse: 'Early in butterfly development before the kick is established.',
-    matchKeywords: ['butterfly timing', 'butterfly undulation', 'body dolphin', 'timing', 'butterfly', 'undulation', 'body wave'],
-  },
-  {
-    id: 'uw-breakout',
-    title: 'Underwater Breakout',
-    stroke: 'General',
-    phases: ['Underwater', 'Breakout'],
-    faults: ['Early breakout', 'Weak dolphin kicks', 'Loose streamline', 'Wide breakout angle'],
-    objective: 'Maximise underwater distance and velocity off every wall through locked streamline and powerful dolphin work.',
-    primaryCue: '"Squeeze the ears, lock the hands — kick from the hips"',
-    bestFor: 'All levels. Underwater mechanics are often undertrained — high ROI for competition swimmers.',
-    equipment: 'None',
-    diffRange: 'Intermediate – Elite',
-    whenToUse: 'Beginning of any race-prep block. Also useful as a turn-focused technique set.',
-    whenNotToUse: 'Recreational or learn-to-swim focus — not appropriate for beginners.',
-    matchKeywords: ['underwater', 'breakout', 'streamline', 'dolphin', 'dolphin kick'],
-  },
-  {
-    id: 'hip-stability',
-    title: 'Hip & Knee Stability',
-    stroke: 'General',
-    phases: ['General'],
-    faults: ['Knee collapse', 'Poor hip control', 'Unstable kick line', 'Adductor weakness'],
-    objective: 'Build dryland hip and knee stability to support breaststroke kick mechanics and overall water body control.',
-    primaryCue: '"Knees track over toes — squeeze from the hip, not the knee"',
-    bestFor: 'Any swimmer showing knee instability or breaststroke kick deviation. Great dryland activation.',
-    equipment: 'Mat, resistance band optional',
-    diffRange: 'Beginner – Intermediate',
-    whenToUse: 'Warm-up activation, dryland training days, or when breaststroke knee issues are flagged.',
-    whenNotToUse: 'Replaces water drills — it complements them.',
-    matchKeywords: ['hip', 'knee', 'dryland', 'stability', 'adductor', 'copenhagen', 'hip stability'],
-  },
-];
+function splitPackIds(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').map(item => item.trim()).filter(Boolean);
+  return [];
+}
+
+function mergeDrills(defaultDrills, databaseDrills) {
+  const byId = new Map();
+  defaultDrills.forEach(drill => byId.set(drill.id, drill));
+  databaseDrills.forEach(drill => {
+    if (drill?.id) byId.set(drill.id, { ...byId.get(drill.id), ...drill });
+  });
+  return Array.from(byId.values()).filter(drill => drill.is_active !== false);
+}
 
 // ── Match drills to a pack ────────────────────────────────────────────────────
 
 function matchDrillsToPack(pack, drills) {
   const keywords = pack.matchKeywords.map(k => k.toLowerCase());
   return drills.filter(d => {
-    const haystack = [d.title, d.fault_tags, d.phase, d.stroke, d.purpose, d.coaching_cues]
+    const packIds = splitPackIds(d.pack_ids);
+    if (packIds.includes(pack.id)) return true;
+
+    const haystack = [d.title, d.fault_tags, d.phase, d.stroke, d.purpose, d.coaching_cues, d.coaching_cue]
       .join(' ')
       .toLowerCase();
     return (
@@ -383,16 +277,21 @@ export default function DrillLibrary({
   const { data: drills = [], isLoading } = useQuery({
     queryKey: ['drills', club?.id],
     queryFn: async () => {
-      const shared = await base44.entities.Drill.filter({ visibility: 'shared_default', is_active: true }, 'stroke', 200);
-      const clubDrills = club?.id
-        ? await base44.entities.Drill.filter({ club_id: club.id, is_active: true }, 'stroke', 100)
-        : [];
-      return [...shared, ...clubDrills];
+      const defaults = getDefaultDrills();
+      try {
+        const shared = await entities.Drill.filter({ visibility: 'shared_default', is_active: true }, 'stroke', 200);
+        const clubDrills = club?.id
+          ? await entities.Drill.filter({ club_id: club.id, is_active: true }, 'stroke', 100)
+          : [];
+        return mergeDrills(defaults, [...shared, ...clubDrills]);
+      } catch (error) {
+        console.warn('[drill-library] Supabase drills unavailable; using bundled V1 default drills.', error?.message || error);
+        return defaults;
+      }
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const sharedDrills = drills.filter(d => d.visibility === 'shared_default' || !d.club_id);
   const clubOnlyDrills = drills.filter(d => d.club_id === club?.id);
 
   // Filtered drills (All Drills tab)
