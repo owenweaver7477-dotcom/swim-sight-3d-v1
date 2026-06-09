@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -136,18 +136,25 @@ export default function TechnicalStandards() {
 
   const { data: clubStandards = [], isLoading } = useQuery({
     queryKey: ['technical-standards', club?.id],
-    queryFn: () => base44.entities.TechnicalStandard.filter({ club_id: club.id }),
+    queryFn: async () => {
+      try {
+        return await entities.TechnicalStandard.filter({ club_id: club.id }, 'title', 250);
+      } catch (error) {
+        console.warn('[technical-standards] Supabase unavailable; using default standards only.', error?.message || error);
+        return [];
+      }
+    },
     enabled: !!club?.id,
     staleTime: 2 * 60 * 1000,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.TechnicalStandard.create(data),
+    mutationFn: (data) => entities.TechnicalStandard.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['technical-standards', club?.id] }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.TechnicalStandard.update(id, data),
+    mutationFn: ({ id, data }) => entities.TechnicalStandard.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['technical-standards', club?.id] }),
   });
 

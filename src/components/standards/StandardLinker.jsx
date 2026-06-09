@@ -5,7 +5,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { DEFAULT_STANDARDS } from './defaultStandards';
 import { BookMarked, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,13 @@ export default function StandardLinker({ clubId, value, onChange, label = 'Linke
 
   const { data: clubStandards = [] } = useQuery({
     queryKey: ['technical-standards', clubId],
-    queryFn: () => base44.entities.TechnicalStandard.filter({ club_id: clubId, is_active: true }),
+    queryFn: async () => {
+      try {
+        return await entities.TechnicalStandard.filter({ club_id: clubId, is_active: true }, 'title', 200);
+      } catch {
+        return [];
+      }
+    },
     enabled: !!clubId,
     staleTime: 5 * 60 * 1000,
   });

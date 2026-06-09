@@ -18,6 +18,9 @@ const entityTables = {
   SharedReportLink: 'shared_report_links',
   Drill: 'drills',
   VideoAnnotation: 'video_annotations',
+  TechnicalStandard: 'technical_standards',
+  ReferenceProfile: 'reference_profiles',
+  ReferenceAsset: 'reference_assets',
 };
 
 function normaliseOrder(order) {
@@ -252,6 +255,9 @@ function isClubScopedEntity(entityName) {
     'KeyFrame',
     'SharedReportLink',
     'VideoAnnotation',
+    'TechnicalStandard',
+    'ReferenceProfile',
+    'ReferenceAsset',
   ].includes(entityName);
 }
 
