@@ -38,10 +38,10 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, drag
               </div>
               <div>
                 <div className="text-xs font-semibold tracking-wider uppercase text-cyan-300 print:text-cyan-700">Swim Sight 3D</div>
-                <div className="text-[10px] text-slate-300 print:text-slate-500">Professional Video Analysis</div>
+                <div className="text-[10px] text-slate-300 print:text-slate-500">Coach-reviewed swim analysis</div>
               </div>
             </div>
-            <h1 className="text-2xl font-bold mb-1">{report.title || 'Technical Analysis Report'}</h1>
+            <h1 className="text-2xl font-bold mb-1">{report.title || 'Coach Technique Report'}</h1>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-400/30 print:bg-green-50 print:border-green-300">
             <CheckCircle2 className="w-4 h-4 text-green-400 print:text-green-600" />
@@ -211,7 +211,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, drag
       {/* Disclaimer */}
       <div className="mx-8 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200">
         <p className="text-[10px] text-slate-500 leading-relaxed text-center">
-          AI-assisted evidence supports coach review. Final report content is coach-approved. This report does not constitute a medical or clinical assessment.
+          This report is coach-reviewed and may include AI-assisted draft evidence approved by the coach. It includes approved findings only and does not include private video links, raw AI data, or internal coach notes.
         </p>
       </div>
 
@@ -224,7 +224,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, drag
             </div>
             <div>
               <div className="text-xs font-bold text-slate-700">Swim Sight 3D</div>
-              <div className="text-[10px] text-slate-500">Professional Video Analysis Platform</div>
+              <div className="text-[10px] text-slate-500">Coach-reviewed swimming analysis</div>
             </div>
           </div>
           {reportDate && (
@@ -334,7 +334,7 @@ export default function SharedReportPage() {
           dragItems={drag_items}
         />
         <div className="mt-6 text-center text-xs text-slate-500 print:hidden">
-          <div className="text-[10px] text-slate-500">Professional swimming technique analysis platform</div>
+          <div className="text-[10px] text-slate-500">Coach-reviewed swimming technique report</div>
         </div>
       </div>
     </div>

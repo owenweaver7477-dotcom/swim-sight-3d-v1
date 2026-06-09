@@ -69,7 +69,7 @@ function SetupDashboard({ club }) {
   ];
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
-      <PageHeader eyebrow={club.name} title="Getting Started" subtitle="Complete these steps to set up your workspace." />
+      <PageHeader eyebrow={club.name} title="Coach Setup" subtitle="Get the workspace ready for the first swimmer review." />
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {steps.map((s, i) => (
           <div key={i} className="flex items-center gap-4 px-5 py-4">
@@ -108,7 +108,13 @@ export default function TeamDashboard() {
   const publishedReports = activeReports.filter(r => finalStatuses.includes(r.status));
 
   const processingVideos = videos.filter(v => ['pending_ai', 'queued_ai', 'processing', 'processing_ai'].includes(v.processing_status));
+  const readyVideos = videos.filter(v => v.processing_status === 'uploaded');
   const errorVideos = videos.filter(v => v.processing_status === 'error');
+  const manualReviewReports = awaitingReview.filter(r =>
+    r.analysis_mode === 'manual_review'
+    || r.analysis_mode === 'error'
+    || r.real_pose_detected === false
+  );
 
   const pendingAIFindings = findings.filter(f => f.source === 'ai' && f.approval_status === 'pending');
 
@@ -137,6 +143,18 @@ export default function TeamDashboard() {
       meta: 'Retry or check video format',
       cta: 'Check Videos', onClick: () => navigate('/analyse'),
     },
+    readyVideos.length > 0 && {
+      icon: Video, iconColor: 'text-cyan-600', urgent: false,
+      label: `${readyVideos.length} uploaded video${readyVideos.length > 1 ? 's' : ''} ready for AI Review`,
+      meta: 'Preview the clip, confirm stroke/angle, then send for AI Review',
+      cta: 'Send to AI', onClick: () => navigate('/analyse'),
+    },
+    manualReviewReports.length > 0 && {
+      icon: AlertCircle, iconColor: 'text-orange-500', urgent: true,
+      label: `${manualReviewReports.length} report${manualReviewReports.length > 1 ? 's' : ''} need manual coach review`,
+      meta: 'AI evidence was weak, filtered, or unavailable',
+      cta: 'Review', onClick: () => navigate('/ai-reviews'),
+    },
     processingVideos.length > 0 && {
       icon: Loader2, iconColor: 'text-blue-500', urgent: false,
       label: `${processingVideos.length} video${processingVideos.length > 1 ? 's' : ''} processing`,
@@ -157,8 +175,9 @@ export default function TeamDashboard() {
     <div className="max-w-5xl mx-auto px-4 py-8 pb-20">
 
       <PageHeader
-        title="Dashboard"
-        subtitle={`${club.name} · today's review priorities and club status`}
+        eyebrow={club.name}
+        title="Coach Control Centre"
+        subtitle="What needs your attention today: uploads, AI reviews, manual checks, and recent coach reports."
         action={
           <Button size="sm" className="bg-primary text-white text-xs h-8" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
             <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Video
@@ -169,9 +188,9 @@ export default function TeamDashboard() {
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         <Stat label="Swimmers" value={swimmers.length} />
-        <Stat label="Videos" value={videos.length} />
-        <Stat label="AI Reports" value={aiReports.length} highlight={awaitingReview.length > 0} />
-        <Stat label="Finalised" value={publishedReports.length} />
+        <Stat label="Private Videos" value={videos.length} />
+        <Stat label="Need Review" value={awaitingReview.length} highlight={awaitingReview.length > 0} />
+        <Stat label="Finalised Reports" value={publishedReports.length} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -181,13 +200,13 @@ export default function TeamDashboard() {
 
           {/* Priorities */}
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Today's Priorities</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Today's Review Queue</div>
             {allClear ? (
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-green-200 bg-green-50">
                 <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                 <div>
                   <div className="text-xs font-semibold text-green-800">All clear</div>
-                  <div className="text-[10px] text-green-700">No pending reviews, failed videos, or high-risk items.</div>
+                  <div className="text-[10px] text-green-700">No AI reports are waiting for coach decisions right now.</div>
                 </div>
               </div>
             ) : (
@@ -247,6 +266,24 @@ export default function TeamDashboard() {
 
         {/* Right — club focus */}
         <div className="space-y-6">
+
+          {/* Coach workflow */}
+          <div className="p-4 rounded-xl bg-white border border-slate-200">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Coach Workflow</div>
+            <div className="space-y-2">
+              {[
+                ['1', 'Upload a 5-10 second swim clip'],
+                ['2', 'Send the private video for AI Review'],
+                ['3', 'Approve, edit, or reject draft findings'],
+                ['4', 'Finalise and share the coach-approved report'],
+              ].map(([num, label]) => (
+                <div key={num} className="flex items-center gap-2 text-[11px] text-slate-600">
+                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center flex-shrink-0">{num}</span>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* AI Review queue mini */}
           {awaitingReview.length > 0 && (

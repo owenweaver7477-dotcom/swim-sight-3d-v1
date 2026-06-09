@@ -84,10 +84,18 @@ export default function DrillDetailModal({ drill, onClose, onAssignDrill, assign
             </div>
           )}
 
-          {/* Instructions */}
+          {/* Setup */}
+          {drill.setup && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Setup</div>
+              <p className="text-xs text-slate-600 leading-relaxed">{drill.setup}</p>
+            </div>
+          )}
+
+          {/* Execution */}
           {drill.instructions && (
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Instructions</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Execution</div>
               <p className="text-xs text-slate-600 leading-relaxed">{drill.instructions}</p>
             </div>
           )}

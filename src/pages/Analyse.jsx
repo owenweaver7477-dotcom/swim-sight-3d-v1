@@ -342,7 +342,7 @@ export default function Analyse() {
   // When a video is chosen from the library, fetch a fresh signed URL for Step 3 playback
   const handleLibrarySelect = async (upload) => {
     setVideoUploadId(upload.id);
-    setUploadedFileUri(''); // never store raw URI in component state
+    setUploadedUrl('');
     setStroke(upload.stroke_type || 'Freestyle');
     setAngle(upload.camera_angle || 'Side');
     setSessionType(upload.analysis_type || 'Technique Review');
@@ -690,11 +690,20 @@ export default function Analyse() {
     <div className="max-w-2xl mx-auto px-4 py-10">
       <StepBar current={step} />
 
+      <div className="mb-6 p-4 rounded-xl bg-card border border-border">
+        <div className="text-[10px] uppercase tracking-wider text-primary font-bold mb-2">V1 Coach Flow</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+          <div><span className="font-semibold text-foreground">1. Select swimmer</span><br />Every private video is linked to a club swimmer.</div>
+          <div><span className="font-semibold text-foreground">2. Upload 5-10s clip</span><br />Side angle and above-water footage give the best pose evidence.</div>
+          <div><span className="font-semibold text-foreground">3. Coach approves</span><br />AI output is draft evidence; weak pose becomes manual review.</div>
+        </div>
+      </div>
+
       {/* STEP 0 — Select swimmer */}
       {step === 0 && (
         <div>
           <h2 className="text-lg font-bold text-foreground mb-1">Select Swimmer</h2>
-          <p className="text-xs text-muted-foreground mb-5">Choose who this analysis session is for.</p>
+          <p className="text-xs text-muted-foreground mb-5">Choose the swimmer before uploading. This keeps videos private, club-scoped, and attached to the right report.</p>
           <Input placeholder="Search swimmers..." value={swimmerSearch} onChange={e => setSwimmerSearch(e.target.value)} className="mb-3 bg-card" />
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {filteredSwimmers.map(s => {
@@ -731,8 +740,8 @@ export default function Analyse() {
               </div>
             )}
           </div>
-          <Button variant="outline" className="w-full mt-4 text-xs" onClick={() => setStep(1)}>
-            Skip — No swimmer (personal review)
+          <Button variant="outline" className="w-full mt-4 text-xs" onClick={() => navigate('/swimmers')}>
+            <Plus className="w-3 h-3 mr-1" /> Add a New Swimmer
           </Button>
         </div>
       )}
@@ -743,8 +752,11 @@ export default function Analyse() {
           <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4" onClick={() => setStep(0)}>
             <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
-          <h2 className="text-lg font-bold text-foreground mb-1">Upload Video</h2>
+          <h2 className="text-lg font-bold text-foreground mb-1">Upload Private Swim Clip</h2>
           {selectedSwimmer && <div className="text-xs text-muted-foreground mb-4">Swimmer: <span className="text-primary font-medium">{selectedSwimmer.name}</span></div>}
+          <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-[11px] text-muted-foreground leading-relaxed">
+            Use a short 5-10 second clip where the swimmer is clearly visible. Side angle is preferred. Avoid screen recordings where possible; underwater distortion can reduce pose reliability. If AI evidence is weak, the report will move to manual coach review.
+          </div>
 
           {/* Session mode selector */}
           <div className="mb-5">
@@ -811,7 +823,7 @@ export default function Analyse() {
                 <Upload className="w-10 h-10 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium mb-1">Drag & drop or click to select</div>
-                  <div className="text-xs text-muted-foreground">MP4, MOV, WebM · Max {MAX_SIZE_MB} MB</div>
+                  <div className="text-xs text-muted-foreground">MP4, MOV, WebM · Max {MAX_SIZE_MB} MB · 5-10 seconds recommended</div>
                 </div>
               </div>
             )}
@@ -845,10 +857,10 @@ export default function Analyse() {
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/30 space-y-2">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-primary flex-shrink-0" />
-                  <div className="text-sm font-semibold text-foreground">Video uploaded — next step: AI Pose Analysis</div>
+                  <div className="text-sm font-semibold text-foreground">Video uploaded — ready for AI Review</div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Scroll down to the <strong>Uploaded Videos — Send to AI</strong> section and click <strong>Send to AI Analysis</strong> on your video card.
+                  Preview the clip below, then use the <strong>Uploaded Videos — Send to AI</strong> section to send it for AI Review. The Python server only receives a short-lived signed video URL.
                 </p>
                 <Button
                   size="sm"
@@ -877,7 +889,7 @@ export default function Analyse() {
             {uploadStatus === 'done' && (
               <Button className="flex-1 bg-primary text-primary-foreground" onClick={() => setStep(2)}>Continue to Configure →</Button>
             )}
-            <Button variant="outline" className="text-xs" onClick={() => setStep(2)}>Skip Upload</Button>
+            <Button variant="outline" className="text-xs" onClick={() => videoLibraryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Use Existing Video</Button>
           </div>
         </div>
       )}
@@ -914,7 +926,7 @@ export default function Analyse() {
             <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
           <h2 className="text-lg font-bold text-foreground mb-1">Configure Review</h2>
-          <p className="text-xs text-muted-foreground mb-5">Select stroke, angle, and session type before starting analysis.</p>
+          <p className="text-xs text-muted-foreground mb-5">Confirm the stroke, camera angle, and review type before opening manual review or sending the uploaded video for AI Review.</p>
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-muted-foreground">Stroke</Label>
