@@ -12,7 +12,9 @@ function sanitizeFinding(finding) {
     why_it_matters: finding.why_it_matters,
     correction_cue: cue,
     cue,
-    drill: finding.drill,
+    drill: finding.linked_drill_title || finding.drill,
+    linked_drill_title: finding.linked_drill_title || finding.drill || null,
+    linked_drill_summary: finding.linked_drill_summary || null,
     next_focus: finding.next_focus,
   };
 }
@@ -58,7 +60,7 @@ export default async function handler(req, res) {
       service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
       service
         .from('findings')
-        .select('severity,stroke_phase,observation,why_it_matters,correction_cue,drill,next_focus,approval_status')
+        .select('severity,stroke_phase,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,next_focus,approval_status')
         .eq('report_id', report.id)
         .eq('approval_status', 'approved')
         .order('created_at', { ascending: true }),

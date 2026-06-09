@@ -26,6 +26,8 @@ import ReviewChecklist from '@/components/ai-report/ReviewChecklist';
 import FinaliseQualityGate from '@/components/ai-report/FinaliseQualityGate';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import CoachReviewAssistantCard from '@/components/ai-report/CoachReviewAssistantCard';
+import { getDefaultDrills } from '@/lib/defaultDrills';
+import { drillSummary } from '@/lib/drillMatching';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -175,8 +177,13 @@ export default function AIReportPage() {
   const [coachSummary, setCoachSummary] = useState('');
   const [nextFocus, setNextFocus] = useState('');
   const [manualObservation, setManualObservation] = useState('');
+  const [manualPhase, setManualPhase] = useState('');
+  const [manualSeverity, setManualSeverity] = useState('medium');
+  const [manualWhy, setManualWhy] = useState('');
   const [manualCue, setManualCue] = useState('');
+  const [manualDrill, setManualDrill] = useState('');
   const [manualNextFocus, setManualNextFocus] = useState('');
+  const [manualCoachNotes, setManualCoachNotes] = useState('');
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -234,6 +241,34 @@ export default function AIReportPage() {
   const aiJob = jobArr[0] || null;
   const qualityMeta = qualityGateMeta(report, aiJob);
 
+  const { data: sharedLinks = [] } = useQuery({
+    queryKey: ['shared-links', report?.id],
+    queryFn: () => entities.SharedReportLink.filter({ report_id: report.id }, '-created_date', 10),
+    enabled: !!report?.id,
+    staleTime: 60 * 1000,
+  });
+
+  const { data: drillOptions = [] } = useQuery({
+    queryKey: ['report-drill-options', club?.id],
+    queryFn: async () => {
+      const defaults = getDefaultDrills();
+      try {
+        const shared = await entities.Drill.filter({ visibility: 'shared_default', is_active: true }, 'stroke', 250);
+        const clubDrills = club?.id
+          ? await entities.Drill.filter({ club_id: club.id, is_active: true }, 'stroke', 100)
+          : [];
+        const byId = new Map(defaults.map(drill => [drill.id, drill]));
+        [...shared, ...clubDrills].forEach(drill => {
+          if (drill?.id) byId.set(drill.id, { ...byId.get(drill.id), ...drill });
+        });
+        return Array.from(byId.values()).filter(drill => drill.is_active !== false);
+      } catch {
+        return defaults;
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const dragAnalysisItems = [];
   const annotations = [];
 
@@ -257,6 +292,16 @@ export default function AIReportPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
+  const assignDrill = useMutation({
+    mutationFn: ({ finding, drill }) => entities.Finding.update(finding.id, {
+      drill: drill.title,
+      linked_drill_id: drill.id,
+      linked_drill_title: drill.title,
+      linked_drill_summary: drillSummary(drill),
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
+  });
+
   const updateReportSummary = useMutation({
     mutationFn: () => entities.Report.update(reportId, {
       coach_summary: coachSummary,
@@ -273,16 +318,25 @@ export default function AIReportPage() {
       video_upload_id: report.video_upload_id,
       source: 'coach',
       approval_status: 'approved',
-      severity: 'medium',
+      severity: manualSeverity,
+      stroke_phase: manualPhase || null,
       observation: manualObservation,
+      why_it_matters: manualWhy || null,
       correction_cue: manualCue,
+      drill: manualDrill || null,
       next_focus: manualNextFocus,
+      coach_notes: manualCoachNotes || null,
       created_by: user?.id,
     }),
     onSuccess: () => {
       setManualObservation('');
+      setManualPhase('');
+      setManualSeverity('medium');
+      setManualWhy('');
       setManualCue('');
+      setManualDrill('');
       setManualNextFocus('');
+      setManualCoachNotes('');
       queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
     },
   });
@@ -437,8 +491,7 @@ export default function AIReportPage() {
             report={report}
             video={video}
             findings={findings}
-            dragItems={dragAnalysisItems}
-            annotations={annotations}
+            sharedLinks={sharedLinks}
           />
 
           {/* Prominent CTA based on step */}
@@ -582,7 +635,7 @@ export default function AIReportPage() {
           <HydrodynamicReviewPanel report={report} findings={findings} />
 
           {/* Coach summary / next focus */}
-          <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+          <div id="section-summary" className="p-4 rounded-xl bg-card border border-border space-y-3">
             <div>
               <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Summary</div>
               <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -739,23 +792,59 @@ export default function AIReportPage() {
                   Pose evidence was unreliable or unavailable. Add real coach observations here; no AI findings are fabricated.
                 </div>
               )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  value={manualPhase}
+                  onChange={e => setManualPhase(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                  placeholder="Phase, e.g. Catch, Kick, Breathing"
+                />
+                <select
+                  value={manualSeverity}
+                  onChange={e => setManualSeverity(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
               <Textarea
                 value={manualObservation}
                 onChange={e => setManualObservation(e.target.value)}
                 className="text-xs min-h-[64px]"
-                placeholder="What did the coach observe?"
+                placeholder="Observation — what did the coach verify on video?"
+              />
+              <Textarea
+                value={manualWhy}
+                onChange={e => setManualWhy(e.target.value)}
+                className="text-xs min-h-[48px]"
+                placeholder="Why does it matter?"
               />
               <Textarea
                 value={manualCue}
                 onChange={e => setManualCue(e.target.value)}
                 className="text-xs min-h-[48px]"
-                placeholder="Correction cue or drill..."
+                placeholder="Correction cue..."
+              />
+              <Textarea
+                value={manualDrill}
+                onChange={e => setManualDrill(e.target.value)}
+                className="text-xs min-h-[40px]"
+                placeholder="Drill recommendation..."
               />
               <Textarea
                 value={manualNextFocus}
                 onChange={e => setManualNextFocus(e.target.value)}
                 className="text-xs min-h-[48px]"
                 placeholder="Next focus..."
+              />
+              <Textarea
+                value={manualCoachNotes}
+                onChange={e => setManualCoachNotes(e.target.value)}
+                className="text-xs min-h-[40px]"
+                placeholder="Private coach notes — not shown on shared reports..."
               />
               <Button
                 size="sm"
@@ -796,6 +885,8 @@ export default function AIReportPage() {
                     onReject={(finding) => rejectFinding.mutate(finding)}
                     onUpdateCue={(finding, cue) => updateCue.mutateAsync({ finding, cue })}
                     onUpdateNote={(finding, note) => updateNote.mutateAsync({ finding, note })}
+                    onAssignDrill={(finding, drill) => assignDrill.mutateAsync({ finding, drill })}
+                    drillOptions={drillOptions}
                     clubId={report?.club_id}
                   />
                 ))}
@@ -980,7 +1071,15 @@ export default function AIReportPage() {
         {/* ── RIGHT STICKY PANEL — desktop only ── */}
         <div className="hidden lg:block w-80 flex-shrink-0 space-y-4 sticky top-6">
           {/* Coach Review Assistant — above the 3D viewer */}
-          <CoachReviewAssistantCard video={video} report={report} />
+          <CoachReviewAssistantCard
+            video={video}
+            report={report}
+            findings={findings}
+            sharedLinks={sharedLinks}
+            onScrollToFindings={() => scrollTo('section-ai-findings')}
+            onScrollToSummary={() => scrollTo('section-summary')}
+            onScrollToShare={() => scrollTo('section-share')}
+          />
         </div>
 
       </div>

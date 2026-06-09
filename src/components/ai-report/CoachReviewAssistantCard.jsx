@@ -4,7 +4,7 @@
  * These are coach guidance only — not AI findings, not auto-created content.
  */
 import React, { useState } from 'react';
-import { ClipboardList, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { ClipboardList, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Circle, Share2 } from 'lucide-react';
 
 // ── Stroke-specific review checklists ─────────────────────────────────────────
 const STROKE_FOCUS_CHECKLIST = {
@@ -104,7 +104,7 @@ const OUTPUT_LABEL = {
   squad_feedback: 'Squad feedback',
 };
 
-export default function CoachReviewAssistantCard({ video, report }) {
+export default function CoachReviewAssistantCard({ video, report, findings = [], sharedLinks = [], onScrollToFindings, onScrollToSummary, onScrollToShare }) {
   const [checklistOpen, setChecklistOpen] = useState(true);
 
   const isUnreliable = report?.analysis_mode === 'error' ||
@@ -112,15 +112,67 @@ export default function CoachReviewAssistantCard({ video, report }) {
     (report?.real_pose_detected === false && report?.analysis_mode !== 'real_pose');
 
   const stroke = video?.stroke_type || 'Freestyle';
-  const focus = video?.primary_focus || 'general';
-  const reviewGoal = video?.review_goal;
-  const sessionType = video?.session_type;
-  const reportDepth = video?.report_depth;
-  const coachQuestion = video?.coach_question;
-  const injuryNote = video?.injury_or_limitations_note;
-  const desiredOutput = video?.desired_output;
+  const reportContext = report?.review_context || {};
+  const focus = video?.primary_focus || reportContext.primary_focus || 'general';
+  const reviewGoal = video?.review_goal || reportContext.review_goal;
+  const sessionType = video?.session_type || reportContext.session_type;
+  const reportDepth = video?.report_depth || reportContext.report_depth;
+  const coachQuestion = video?.coach_question || reportContext.coach_question;
+  const injuryNote = video?.injury_or_limitations_note || reportContext.injury_or_limitations_note;
+  const desiredOutput = video?.desired_output || reportContext.desired_output;
+  const strokeFocus = video?.stroke_focus || reportContext.stroke_focus;
+  const specificConcern = video?.specific_concern || reportContext.specific_concern;
+  const raceTrainingContext = video?.race_training_context || reportContext.race_training_context;
 
-  const hasContext = !!(reviewGoal || sessionType || focus !== 'general' || coachQuestion);
+  const pendingCount = findings.filter(f => f.approval_status === 'pending').length;
+  const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
+  const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
+  const manualCount = findings.filter(f => f.source === 'coach' || f.source === 'manual').length;
+  const aiCount = findings.filter(f => f.source === 'ai').length;
+  const hasSummary = Boolean(report?.coach_summary || report?.technical_summary);
+  const hasNextFocus = Boolean(report?.next_focus);
+  const isFinalised = ['coach_approved', 'finalised', 'published', 'shared'].includes(report?.status);
+  const hasShareLink = sharedLinks.some(link => link.status === 'active');
+
+  const steps = [
+    { done: Boolean(video), label: 'Video preview checked' },
+    { done: Boolean(report?.analysis_mode), label: 'AI reliability reviewed' },
+    { done: aiCount === 0 || pendingCount === 0, label: 'All AI findings approved or rejected' },
+    { done: approvedCount > 0 || manualCount > 0, label: 'Coach-approved finding added' },
+    { done: findings.some(f => f.drill || f.linked_drill_title), label: 'Drill linked or intentionally skipped' },
+    { done: hasSummary, label: 'Coach summary written' },
+    { done: hasNextFocus, label: 'Next focus written' },
+    { done: isFinalised, label: 'Report finalised' },
+    { done: hasShareLink, label: 'Shared link created if needed' },
+  ];
+  const completeSteps = steps.filter(step => step.done).length;
+
+  let suggestedNextStep = 'Review pending AI findings';
+  let nextAction = onScrollToFindings;
+  if (pendingCount > 0) {
+    suggestedNextStep = 'Review pending AI findings';
+    nextAction = onScrollToFindings;
+  } else if (approvedCount === 0 && manualCount === 0) {
+    suggestedNextStep = 'Add a manual coach finding';
+    nextAction = onScrollToFindings;
+  } else if (!findings.some(f => f.drill || f.linked_drill_title)) {
+    suggestedNextStep = 'Link a drill to a finding';
+    nextAction = onScrollToFindings;
+  } else if (!hasSummary || !hasNextFocus) {
+    suggestedNextStep = 'Write summary and next focus';
+    nextAction = onScrollToSummary;
+  } else if (!isFinalised) {
+    suggestedNextStep = 'Finalise coach report';
+    nextAction = onScrollToShare;
+  } else if (!hasShareLink) {
+    suggestedNextStep = 'Create shared report link';
+    nextAction = onScrollToShare;
+  } else {
+    suggestedNextStep = 'Report is ready to share';
+    nextAction = onScrollToShare;
+  }
+
+  const hasContext = !!(reviewGoal || sessionType || focus !== 'general' || coachQuestion || strokeFocus || specificConcern || raceTrainingContext);
 
   const strokeChecklist = STROKE_FOCUS_CHECKLIST[stroke]?.[focus] || STROKE_FOCUS_CHECKLIST['Freestyle']?.general || [];
   const standards = FOCUS_STANDARDS[focus] || FOCUS_STANDARDS.general;
@@ -163,6 +215,18 @@ export default function CoachReviewAssistantCard({ video, report }) {
                 <span className="text-[11px] font-semibold text-primary">{FOCUS_LABEL[focus] || focus}</span>
               </div>
             )}
+            {strokeFocus && (
+              <div>
+                <span className="text-[10px] text-slate-500">Stroke focus: </span>
+                <span className="text-[11px] text-slate-700">{strokeFocus}</span>
+              </div>
+            )}
+            {raceTrainingContext && (
+              <div>
+                <span className="text-[10px] text-slate-500">Context: </span>
+                <span className="text-[11px] text-slate-700">{raceTrainingContext}</span>
+              </div>
+            )}
             {reportDepth && (
               <div>
                 <span className="text-[10px] text-slate-500">Depth: </span>
@@ -181,6 +245,12 @@ export default function CoachReviewAssistantCard({ video, report }) {
                 <div className="text-[11px] text-blue-800 leading-relaxed">{coachQuestion}</div>
               </div>
             )}
+            {specificConcern && (
+              <div className="p-2 bg-slate-50 border border-slate-100 rounded-lg">
+                <div className="text-[10px] font-semibold text-slate-700 mb-0.5">Specific concern</div>
+                <div className="text-[11px] text-slate-700 leading-relaxed">{specificConcern}</div>
+              </div>
+            )}
             {injuryNote && (
               <div className="p-2 bg-amber-50 border border-amber-100 rounded-lg">
                 <div className="text-[10px] font-semibold text-amber-700 mb-0.5">Injury / limitations</div>
@@ -189,6 +259,57 @@ export default function CoachReviewAssistantCard({ video, report }) {
             )}
           </div>
         )}
+
+        <div className="px-4 py-3 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Assistant Status</div>
+              <div className="text-[11px] text-slate-600 mt-0.5">{completeSteps}/{steps.length} review steps complete</div>
+            </div>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+              isUnreliable ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'
+            }`}>
+              {isUnreliable ? 'Manual review' : 'AI evidence ready'}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5 text-center">
+            {[
+              ['Pending', pendingCount],
+              ['Approved', approvedCount],
+              ['Rejected', rejectedCount],
+              ['Manual', manualCount],
+            ].map(([label, value]) => (
+              <div key={label} className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <div className="text-sm font-bold text-slate-900">{value}</div>
+                <div className="text-[9px] text-slate-500">{label}</div>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={nextAction}
+            className="w-full text-left p-2.5 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
+          >
+            <div className="text-[10px] font-semibold text-primary uppercase tracking-wider">Suggested next step</div>
+            <div className="text-xs font-semibold text-slate-800 mt-0.5">{suggestedNextStep}</div>
+          </button>
+          <div className="space-y-1.5">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-2">
+                {step.done
+                  ? <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0 mt-0.5" />
+                  : <Circle className="w-3 h-3 text-slate-300 flex-shrink-0 mt-0.5" />
+                }
+                <span className={`text-[10px] leading-relaxed ${step.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{step.label}</span>
+              </div>
+            ))}
+          </div>
+          {hasShareLink && (
+            <div className="flex items-center gap-1.5 text-[10px] text-green-700 bg-green-50 border border-green-100 rounded-lg px-2.5 py-1.5">
+              <Share2 className="w-3 h-3" /> Public-safe shared link is active.
+            </div>
+          )}
+        </div>
 
         {/* Unreliable pose — manual review guidance */}
         {isUnreliable && (

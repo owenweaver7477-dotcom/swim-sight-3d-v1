@@ -186,6 +186,9 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, drag
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 mb-0.5">Recommended Drill</div>
                         <p className="text-sm text-slate-800 leading-relaxed">{finding.drill}</p>
+                        {finding.linked_drill_summary && (
+                          <p className="text-xs text-slate-600 leading-relaxed mt-1">{finding.linked_drill_summary}</p>
+                        )}
                       </div>
                     </div>
                   )}

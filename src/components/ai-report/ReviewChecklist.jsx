@@ -13,33 +13,31 @@ function Item({ done, label }) {
   );
 }
 
-export default function ReviewChecklist({ report, video, findings, dragItems = [], annotations = [] }) {
+export default function ReviewChecklist({ report, video, findings, sharedLinks = [] }) {
   const [open, setOpen] = useState(true);
 
   const approvedFindings = findings.filter(f => f.approval_status === 'approved');
   const pendingFindings  = findings.filter(f => f.approval_status === 'pending');
   const aiFindings       = findings.filter(f => f.source === 'ai');
   // "AI suggestions reviewed" = all AI findings have been actioned (none left pending)
-  const aiSuggestionsReviewed = aiFindings.length > 0 && pendingFindings.filter(f => f.source === 'ai').length === 0;
-  const hasManualFinding = findings.some(f => f.source === 'coach');
-  const hasAnnotation    = annotations.length > 0;
-  const hasDragItem      = dragItems.some(d => d.approval_status === 'approved');
-  const hasDrill         = approvedFindings.some(f => f.drill);
-  const hasStandard      = approvedFindings.some(f => f.linked_standard_id);
-  const hasSummary       = !!(report?.coach_summary || report?.technical_summary);
+  const aiSuggestionsReviewed = aiFindings.length === 0 || pendingFindings.filter(f => f.source === 'ai').length === 0;
+  const hasFinding = approvedFindings.length > 0 || findings.some(f => f.source === 'coach' || f.source === 'manual');
+  const hasDrill = approvedFindings.some(f => f.drill || f.linked_drill_title);
+  const hasSummary = !!(report?.coach_summary || report?.technical_summary);
+  const hasNextFocus = !!report?.next_focus;
   const isFinalised      = ['coach_approved', 'finalised', 'published', 'shared'].includes(report?.status);
+  const hasShareLink = sharedLinks.some(link => link.status === 'active');
 
   const ITEMS = [
-    { done: !!video,                  label: 'Source video reviewed' },
-    { done: aiFindings.length > 0 || report?.real_pose_detected === false, label: 'AI evidence classified' },
-    { done: aiFindings.length === 0 || aiSuggestionsReviewed, label: 'All AI findings approved / rejected' },
-    { done: hasManualFinding,         label: 'Manual finding added (if needed)' },
-    { done: hasAnnotation,            label: 'Annotation added (if needed)' },
-    { done: hasDragItem,              label: 'Hydrodynamic risk reviewed (if relevant)' },
-    { done: hasDrill,                 label: 'Drill assigned to a finding' },
-    { done: hasStandard,              label: 'Technical standard linked' },
-    { done: hasSummary,               label: 'Coach technical summary written' },
-    { done: isFinalised,              label: 'Report finalised' },
+    { done: !!video, label: 'Video preview checked' },
+    { done: !!report?.analysis_mode, label: 'AI reliability reviewed' },
+    { done: aiSuggestionsReviewed, label: 'All AI findings approved / rejected' },
+    { done: hasFinding, label: 'Approved coach finding or intentional no-finding review' },
+    { done: hasDrill, label: 'Drill linked or intentionally skipped' },
+    { done: hasSummary, label: 'Coach summary written' },
+    { done: hasNextFocus, label: 'Next focus written' },
+    { done: isFinalised, label: 'Report finalised' },
+    { done: hasShareLink, label: 'Shared link created if needed' },
   ];
 
   const doneCount = ITEMS.filter(i => i.done).length;

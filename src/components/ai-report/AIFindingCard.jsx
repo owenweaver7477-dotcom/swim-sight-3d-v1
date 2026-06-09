@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StandardLinker from '@/components/standards/StandardLinker';
+import { suggestDrillsForFinding } from '@/lib/drillMatching';
 
 const SEVERITY_CONFIG = {
   low:      { bg: 'bg-green-900/30',  text: 'text-green-400',  label: 'Low' },
@@ -29,7 +30,20 @@ function confidenceMeta(value) {
   return { label: 'Low evidence', cls: 'text-orange-700 bg-orange-50 border-orange-200' };
 }
 
-export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCue, onUpdateNote, onUpdateStandard, canEdit = true, onLoad3D, strokeType, clubId }) {
+export default function AIFindingCard({
+  finding,
+  onApprove,
+  onReject,
+  onUpdateCue,
+  onUpdateNote,
+  onUpdateStandard,
+  onAssignDrill,
+  drillOptions = [],
+  canEdit = true,
+  onLoad3D,
+  strokeType,
+  clubId,
+}) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(true);
   const [editingCue, setEditingCue] = useState(false);
@@ -44,6 +58,8 @@ export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCu
   const isRejected = finding.approval_status === 'rejected';
   const isAiFinding = finding.source === 'ai';
   const evidence = confidenceMeta(finding.confidence_score);
+  const suggestedDrills = suggestDrillsForFinding(drillOptions, finding, strokeType, 4);
+  const assignedDrillTitle = finding.linked_drill_title || finding.drill;
 
   const handleSaveCue = async () => {
     setSavingCue(true);
@@ -159,10 +175,53 @@ export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCu
           )}
 
           {/* Recommended drill */}
-          {finding.drill && (
+          {assignedDrillTitle && (
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Recommended Drill</div>
-              <p className="text-xs text-muted-foreground leading-relaxed">{finding.drill}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{assignedDrillTitle}</p>
+              {finding.linked_drill_summary && (
+                <p className="text-[10px] text-muted-foreground/80 leading-relaxed mt-1">{finding.linked_drill_summary}</p>
+              )}
+            </div>
+          )}
+
+          {canEdit && !isRejected && onAssignDrill && suggestedDrills.length > 0 && (
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 space-y-2">
+              <div className="text-[10px] uppercase tracking-wider text-blue-700 font-bold">
+                Drill Recommendations
+              </div>
+              <div className="space-y-1.5">
+                {suggestedDrills.map(drill => {
+                  const isAssigned = finding.linked_drill_id === drill.id || assignedDrillTitle === drill.title;
+                  return (
+                    <button
+                      key={drill.id}
+                      type="button"
+                      onClick={() => onAssignDrill(finding, drill)}
+                      className={`w-full text-left p-2 rounded-lg border transition-colors ${
+                        isAssigned
+                          ? 'bg-green-50 border-green-200 text-green-800'
+                          : 'bg-white border-blue-100 text-slate-700 hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-[11px] font-semibold">{drill.title}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">
+                            {drill.purpose || drill.coaching_cue || drill.coaching_cues}
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-semibold flex-shrink-0">
+                          {isAssigned ? 'Assigned' : 'Assign'}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-blue-700/70">
+                Suggestions come from the Swim Sight drill library and are not AI-generated drills.
+              </p>
             </div>
           )}
 
@@ -297,17 +356,19 @@ export default function AIFindingCard({ finding, onApprove, onReject, onUpdateCu
           )}
 
           {/* Load 3D Reference — only for non-rejected findings */}
-          {onLoad3D && !isRejected && (
+          {(onLoad3D || !isRejected) && (
             <div className="pt-1 space-y-1">
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() => onLoad3D(finding)}
-                >
-                  <Box className="w-3 h-3 mr-1.5" /> Load 3D Reference
-                </Button>
+                {onLoad3D && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                    onClick={() => onLoad3D(finding)}
+                  >
+                    <Box className="w-3 h-3 mr-1.5" /> Load 3D Reference
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"

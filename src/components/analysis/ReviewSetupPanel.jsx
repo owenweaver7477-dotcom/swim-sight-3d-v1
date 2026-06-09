@@ -4,10 +4,11 @@
  * Saves review_context fields to the VideoUpload record.
  * Non-blocking — coach can skip or return later.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import entities from '@/lib/data/entities';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { ClipboardList, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 
 const SESSION_TYPE_OPTIONS = [
@@ -41,6 +42,19 @@ const OUTPUT_OPTIONS = [
   { value: 'squad_feedback', label: 'Squad feedback' },
 ];
 
+const REVIEW_MODE_OPTIONS = [
+  { value: 'ai_review', label: 'AI Review' },
+  { value: 'manual_review', label: 'Manual review only' },
+];
+
+const SWIMMER_LEVEL_OPTIONS = [
+  { value: 'junior', label: 'Junior' },
+  { value: 'age_group', label: 'Age group' },
+  { value: 'competitive', label: 'Competitive' },
+  { value: 'elite', label: 'Elite' },
+  { value: 'masters', label: 'Masters' },
+];
+
 function ChipGroup({ options, value, onChange }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -62,7 +76,7 @@ function ChipGroup({ options, value, onChange }) {
   );
 }
 
-export default function ReviewSetupPanel({ videoUploadId, initialContext = {} }) {
+export default function ReviewSetupPanel({ videoUploadId, initialContext = {}, value, onChange, stroke, cameraAngle }) {
   const [open, setOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -71,14 +85,35 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
     review_goal: initialContext.review_goal || '',
     session_type: initialContext.session_type || '',
     primary_focus: initialContext.primary_focus || '',
+    stroke_focus: initialContext.stroke_focus || '',
+    camera_angle_context: initialContext.camera_angle_context || '',
+    swimmer_level: initialContext.swimmer_level || '',
+    coach_notes_context: initialContext.coach_notes_context || '',
+    specific_concern: initialContext.specific_concern || '',
+    race_training_context: initialContext.race_training_context || '',
+    review_mode: initialContext.review_mode || 'ai_review',
     report_depth: initialContext.report_depth || 'full_report',
     coach_question: initialContext.coach_question || '',
     injury_or_limitations_note: initialContext.injury_or_limitations_note || '',
     desired_output: initialContext.desired_output || 'swimmer_report',
+    ...(value || {}),
   });
 
+  useEffect(() => {
+    if (value) setContext(prev => ({ ...prev, ...value }));
+  }, [value]);
+
+  const updateContext = (patch) => {
+    setContext(prev => {
+      const next = { ...prev, ...patch };
+      onChange?.(next);
+      return next;
+    });
+  };
+
   const hasAnyInput = !!(
-    context.review_goal || context.session_type || context.primary_focus || context.coach_question
+    context.review_goal || context.session_type || context.primary_focus || context.coach_question ||
+    context.stroke_focus || context.coach_notes_context || context.specific_concern || context.race_training_context
   );
 
   const handleSave = async () => {
@@ -88,6 +123,8 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
       await entities.VideoUpload.update(videoUploadId, {
         review_context: {
           ...context,
+          stroke_focus: context.stroke_focus || stroke || null,
+          camera_angle_context: context.camera_angle_context || cameraAngle || null,
           review_context_completed: hasAnyInput,
         },
       });
@@ -134,11 +171,32 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             </label>
             <Textarea
               value={context.review_goal}
-              onChange={e => setContext(p => ({ ...p, review_goal: e.target.value }))}
-              placeholder="e.g. Check if kick is narrowing after last session's drill focus…"
+              onChange={e => updateContext({ review_goal: e.target.value })}
+              placeholder="e.g. Check breaststroke kick timing, freestyle body-line, breakout and first 15m…"
               className="text-xs bg-slate-50 border-slate-200 resize-none"
               rows={2}
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Stroke focus</label>
+              <Input
+                value={context.stroke_focus || stroke || ''}
+                onChange={e => updateContext({ stroke_focus: e.target.value })}
+                placeholder="e.g. Pull timing, kick width, catch timing"
+                className="text-xs bg-slate-50 border-slate-200"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Camera angle note</label>
+              <Input
+                value={context.camera_angle_context || cameraAngle || ''}
+                onChange={e => updateContext({ camera_angle_context: e.target.value })}
+                placeholder="e.g. side angle, above water"
+                className="text-xs bg-slate-50 border-slate-200"
+              />
+            </div>
           </div>
 
           {/* Q2 — Session type */}
@@ -146,7 +204,12 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">
               Type of footage
             </label>
-            <ChipGroup options={SESSION_TYPE_OPTIONS} value={context.session_type} onChange={v => setContext(p => ({ ...p, session_type: v }))} />
+            <ChipGroup options={SESSION_TYPE_OPTIONS} value={context.session_type} onChange={v => updateContext({ session_type: v })} />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Swimmer level</label>
+            <ChipGroup options={SWIMMER_LEVEL_OPTIONS} value={context.swimmer_level} onChange={v => updateContext({ swimmer_level: v })} />
           </div>
 
           {/* Q3 — Primary focus */}
@@ -154,7 +217,12 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">
               Primary focus area
             </label>
-            <ChipGroup options={FOCUS_OPTIONS} value={context.primary_focus} onChange={v => setContext(p => ({ ...p, primary_focus: v }))} />
+            <ChipGroup options={FOCUS_OPTIONS} value={context.primary_focus} onChange={v => updateContext({ primary_focus: v })} />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Review path</label>
+            <ChipGroup options={REVIEW_MODE_OPTIONS} value={context.review_mode} onChange={v => updateContext({ review_mode: v || 'ai_review' })} />
           </div>
 
           {/* Q4 — Report depth */}
@@ -162,7 +230,7 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">
               Quick review or full report?
             </label>
-            <ChipGroup options={DEPTH_OPTIONS} value={context.report_depth} onChange={v => setContext(p => ({ ...p, report_depth: v }))} />
+            <ChipGroup options={DEPTH_OPTIONS} value={context.report_depth} onChange={v => updateContext({ report_depth: v })} />
           </div>
 
           {/* Q5 — Coach question */}
@@ -172,8 +240,41 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             </label>
             <Textarea
               value={context.coach_question}
-              onChange={e => setContext(p => ({ ...p, coach_question: e.target.value }))}
+              onChange={e => updateContext({ coach_question: e.target.value })}
               placeholder="e.g. Is her heel recovery getting higher? Is head position affecting body line?"
+              className="text-xs bg-slate-50 border-slate-200 resize-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Specific concern</label>
+            <Textarea
+              value={context.specific_concern}
+              onChange={e => updateContext({ specific_concern: e.target.value })}
+              placeholder="e.g. Timing breaks down under fatigue, knees drift wide, breath is late."
+              className="text-xs bg-slate-50 border-slate-200 resize-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Race / training context</label>
+            <Textarea
+              value={context.race_training_context}
+              onChange={e => updateContext({ race_training_context: e.target.value })}
+              placeholder="e.g. race pace 50m breaststroke, easy technique set, post-fatigue review."
+              className="text-xs bg-slate-50 border-slate-200 resize-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">Private coach notes / context</label>
+            <Textarea
+              value={context.coach_notes_context}
+              onChange={e => updateContext({ coach_notes_context: e.target.value })}
+              placeholder="Private context for the coach. This is not shown on the public shared report."
               className="text-xs bg-slate-50 border-slate-200 resize-none"
               rows={2}
             />
@@ -186,7 +287,7 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             </label>
             <Textarea
               value={context.injury_or_limitations_note}
-              onChange={e => setContext(p => ({ ...p, injury_or_limitations_note: e.target.value }))}
+              onChange={e => updateContext({ injury_or_limitations_note: e.target.value })}
               placeholder="e.g. Left shoulder still recovering — avoid full pull load"
               className="text-xs bg-slate-50 border-slate-200 resize-none"
               rows={1}
@@ -198,7 +299,7 @@ export default function ReviewSetupPanel({ videoUploadId, initialContext = {} })
             <label className="text-[11px] font-semibold text-slate-700 mb-1.5 block">
               Who is the report for?
             </label>
-            <ChipGroup options={OUTPUT_OPTIONS} value={context.desired_output} onChange={v => setContext(p => ({ ...p, desired_output: v }))} />
+            <ChipGroup options={OUTPUT_OPTIONS} value={context.desired_output} onChange={v => updateContext({ desired_output: v })} />
           </div>
 
           {/* Save */}

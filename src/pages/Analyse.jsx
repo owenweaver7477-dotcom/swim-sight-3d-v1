@@ -124,6 +124,22 @@ export default function Analyse() {
   const [sessionType, setSessionType] = useState('Technique Review');
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewNotes, setReviewNotes] = useState('');
+  const [reviewContext, setReviewContext] = useState({
+    review_goal: '',
+    stroke_focus: '',
+    camera_angle_context: '',
+    swimmer_level: '',
+    coach_notes_context: '',
+    specific_concern: '',
+    race_training_context: '',
+    session_type: '',
+    primary_focus: '',
+    report_depth: 'full_report',
+    coach_question: '',
+    injury_or_limitations_note: '',
+    desired_output: 'swimmer_report',
+    review_mode: 'ai_review',
+  });
 
   // Step 3 — Analyse
   const videoRef = useRef();
@@ -190,6 +206,12 @@ export default function Analyse() {
           stroke_type: stroke,
           camera_angle: angle,
           analysis_type: sessionType,
+          review_context: {
+            ...reviewContext,
+            stroke_focus: reviewContext.stroke_focus || stroke,
+            camera_angle_context: reviewContext.camera_angle_context || angle,
+            pre_session_notes: reviewNotes || null,
+          },
         });
         queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
       }
@@ -318,8 +340,20 @@ export default function Analyse() {
           analysis_type: sessionType || 'Technique Review',
           camera_angle: angle,
           review_context: {
+            ...reviewContext,
             session_mode: sessionMode,
             review_title: reviewTitle || null,
+            stroke_focus: reviewContext.stroke_focus || stroke,
+            camera_angle_context: reviewContext.camera_angle_context || angle,
+            pre_session_notes: reviewNotes || null,
+            review_context_completed: Boolean(
+              reviewContext.review_goal ||
+              reviewContext.stroke_focus ||
+              reviewContext.coach_question ||
+              reviewContext.specific_concern ||
+              reviewContext.race_training_context ||
+              reviewContext.coach_notes_context
+            ),
           },
         },
       });
@@ -346,6 +380,9 @@ export default function Analyse() {
     setStroke(upload.stroke_type || 'Freestyle');
     setAngle(upload.camera_angle || 'Side');
     setSessionType(upload.analysis_type || 'Technique Review');
+    if (upload.review_context) {
+      setReviewContext(prev => ({ ...prev, ...upload.review_context }));
+    }
     // Fetch signed URL so Step 3 has video ready
     try {
       const res = await functions.getSignedVideoUrl(upload.id);
@@ -847,7 +884,13 @@ export default function Analyse() {
                 <CheckCircle2 className="w-4 h-4" /> Uploaded securely. Video ready for review.
               </div>
               {/* Review Setup Panel — appears after successful upload */}
-              <ReviewSetupPanel videoUploadId={videoUploadId} />
+              <ReviewSetupPanel
+                videoUploadId={videoUploadId}
+                value={reviewContext}
+                onChange={setReviewContext}
+                stroke={stroke}
+                cameraAngle={angle}
+              />
               {uploadedUrl && (
                 <div className="rounded-lg overflow-hidden bg-black" style={{ aspectRatio: '16/9' }}>
                   <video src={uploadedUrl} controls className="w-full h-full object-contain" />
@@ -928,6 +971,13 @@ export default function Analyse() {
           <h2 className="text-lg font-bold text-foreground mb-1">Configure Review</h2>
           <p className="text-xs text-muted-foreground mb-5">Confirm the stroke, camera angle, and review type before opening manual review or sending the uploaded video for AI Review.</p>
           <div className="space-y-4">
+            <ReviewSetupPanel
+              videoUploadId={videoUploadId}
+              value={reviewContext}
+              onChange={setReviewContext}
+              stroke={stroke}
+              cameraAngle={angle}
+            />
             <div>
               <Label className="text-xs text-muted-foreground">Stroke</Label>
               <Select value={stroke} onValueChange={setStroke}>

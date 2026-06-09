@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, AlertTriangle, X, ClipboardCheck, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -25,6 +25,7 @@ function GateItem({ ok, label }) {
 }
 
 export default function FinaliseQualityGate({ report, swimmer, video, findings, onConfirm, onCancel, finalising }) {
+  const [confirmNoFindings, setConfirmNoFindings] = useState(false);
   // review context from video
   const rc = video || {};
   const hasReviewContext = !!(rc.review_goal || rc.primary_focus || rc.coach_question || rc.session_type);
@@ -33,22 +34,28 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
 
   const analysisModeLabelOk = !!report.analysis_mode;
   const hasCoachSummary = !!(report.coach_summary || report.technical_summary);
+  const hasNextFocus = !!report.next_focus;
+  const hasFindingOrConfirmedNone = approvedFindings.length > 0 || confirmNoFindings;
+  const publicSafeDrills = approvedFindings.every(f => !f.drill || typeof f.drill === 'string');
 
   const checks = [
     { ok: !!swimmer,                         label: 'Swimmer selected' },
     { ok: !!video?.stroke_type,              label: 'Stroke type selected' },
     { ok: pendingFindings.length === 0,      label: `All draft AI findings reviewed (${pendingFindings.length} pending)` },
-    { ok: approvedFindings.length > 0,       label: `At least one approved finding (${approvedFindings.length} found) or coach confirms none are needed` },
+    { ok: hasFindingOrConfirmedNone,         label: `At least one approved finding (${approvedFindings.length} found) or coach confirms none are needed` },
     { ok: approvedFindings.length === 0 || approvedFindings.every(f => f.cue || f.next_focus), label: 'All included findings have a cue or next focus' },
     { ok: hasCoachSummary,                   label: 'Coach summary present' },
+    { ok: hasNextFocus,                      label: 'Next focus present' },
+    { ok: publicSafeDrills,                  label: 'Selected drills are public-safe' },
     {
       ok: analysisModeLabelOk,
       label: `AI result labelled (${report.analysis_mode || 'not set'})`,
     },
+    { ok: true,                              label: 'Public disclaimer is included on shared report' },
   ];
 
   const failures = checks.filter(c => !c.ok);
-  const blockingFailures = checks.slice(0, 3).filter(c => !c.ok);
+  const blockingFailures = checks.slice(0, 4).filter(c => !c.ok);
   const isIncomplete = failures.length > 0;
   const isBlocked = blockingFailures.length > 0;
 
@@ -73,6 +80,20 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
         <div className="space-y-2 mb-5">
           {checks.map((c, i) => <GateItem key={i} ok={c.ok} label={c.label} />)}
         </div>
+
+        {approvedFindings.length === 0 && (
+          <label className="mb-4 flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmNoFindings}
+              onChange={e => setConfirmNoFindings(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span className="text-xs text-slate-700 leading-relaxed">
+              I have reviewed the video and intentionally want to finalise this report with no approved findings.
+            </span>
+          </label>
+        )}
 
         {isIncomplete && (
           <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
