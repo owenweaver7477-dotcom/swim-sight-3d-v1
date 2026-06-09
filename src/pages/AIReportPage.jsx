@@ -1012,6 +1012,7 @@ export default function AIReportPage() {
             <ShareReportSection
               report={report}
               reportId={reportId}
+              swimmer={swimmer}
               canEdit={canEdit}
               isCoachApproved={isReportFinalised}
               findings={findings}

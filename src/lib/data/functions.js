@@ -72,6 +72,10 @@ export const functions = {
     return postJson(`/api/reports/${reportId}/share-link`, {});
   },
 
+  logReportDelivery(reportId, payload) {
+    return postJson(`/api/reports/${reportId}/delivery-log`, payload);
+  },
+
   async disableSharedReportLink(linkId) {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`/api/shared-report-links/${linkId}/disable`, {

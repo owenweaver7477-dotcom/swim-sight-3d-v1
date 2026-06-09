@@ -21,6 +21,7 @@ const entityTables = {
   TechnicalStandard: 'technical_standards',
   ReferenceProfile: 'reference_profiles',
   ReferenceAsset: 'reference_assets',
+  NotificationLog: 'notification_logs',
 };
 
 function normaliseOrder(order) {
@@ -258,6 +259,7 @@ function isClubScopedEntity(entityName) {
     'TechnicalStandard',
     'ReferenceProfile',
     'ReferenceAsset',
+    'NotificationLog',
   ].includes(entityName);
 }
 
