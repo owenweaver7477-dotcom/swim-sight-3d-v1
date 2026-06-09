@@ -41,10 +41,16 @@ export default function InstallAppPrompt() {
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold text-slate-900">Install Swim Sight 3D</div>
           <p className="text-xs text-slate-600 leading-relaxed mt-0.5">
-            On iPhone or iPad, tap Share, then Add to Home Screen for Sunday coach testing.
+            Install Swim Sight 3D: tap Share, then Add to Home Screen.
           </p>
         </div>
-        <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={dismiss}>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 flex-shrink-0"
+          onClick={dismiss}
+          aria-label="Dismiss install prompt"
+        >
           <X className="w-4 h-4" />
         </Button>
       </div>

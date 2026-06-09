@@ -2,6 +2,7 @@
   "name": "Swim Sight 3D",
   "short_name": "Swim Sight",
   "description": "Professional swim coaching analysis platform.",
+  "id": "/",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

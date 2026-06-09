@@ -28,8 +28,8 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar />
-      {/* Offset content: desktop = ml-56, mobile = mt-14 */}
-      <main className="flex-1 min-w-0 pt-14 lg:pt-0 lg:ml-56">
+      {/* Offset content: desktop = ml-56, mobile = top bar plus iOS safe area */}
+      <main className="flex-1 min-w-0 pt-[calc(3.5rem+env(safe-area-inset-top))] lg:pt-0 lg:ml-56">
         {/* Notification bell — top right corner on desktop */}
         <div className="hidden lg:flex fixed top-3 right-4 z-30">
           <NotificationPanel />

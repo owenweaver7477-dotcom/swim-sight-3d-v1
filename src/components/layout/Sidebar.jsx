@@ -260,14 +260,18 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-[#0B1F33] border-b border-[#1E4A6A] flex items-center px-4 justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#0B1F33] border-b border-[#1E4A6A] flex items-center px-4 justify-between">
         <Link to="/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#0077B6] flex items-center justify-center">
             <Waves className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="font-bold text-sm text-white">Swim Sight 3D</span>
         </Link>
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#8BA5B8]">
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2 text-[#8BA5B8]"
+          aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
@@ -279,7 +283,7 @@ export default function Sidebar() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="lg:hidden fixed top-14 left-0 bottom-0 w-64 z-50 bg-[#0B1F33] border-r border-[#1E4A6A] overflow-y-auto">
+        <div className="lg:hidden fixed top-[calc(3.5rem+env(safe-area-inset-top))] left-0 bottom-0 w-64 z-50 bg-[#0B1F33] border-r border-[#1E4A6A] overflow-y-auto">
           <SidebarContent />
         </div>
       )}
