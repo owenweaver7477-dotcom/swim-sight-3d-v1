@@ -9,11 +9,11 @@ import { useAuth } from '@/lib/AuthContext';
 
 const FEATURES = [
   { icon: Video,     title: 'Video Review Workspace',            desc: 'Upload swim footage, step frame by frame, tag stroke phases, and build coach findings from any angle.' },
-  { icon: Brain,     title: 'AI-Assisted Pose Analysis',         desc: 'AI identifies technical faults and suggests corrections. Every finding requires coach approval before it reaches a swimmer.' },
+  { icon: Brain,     title: 'AI-Assisted Pose Analysis',         desc: 'AI can surface draft evidence from strong video. Every finding requires coach approval before it reaches a swimmer.' },
   { icon: Camera,    title: 'Multi-Angle Upload Workflow',        desc: 'Organise underwater side, above-water, front, rear, and deck angles per analysis session. Primary angle drives AI processing.' },
-  { icon: Pencil,    title: 'Coach Annotation & Drag-Risk Tools', desc: 'Draw body lines, angle markers, and flow overlays directly on video. Estimate hydrodynamic resistance areas with drag-risk visualisation.' },
+  { icon: Pencil,    title: 'Coach Annotation Tools',             desc: 'Draw body lines, angle markers, and coach notes directly on paused video frames for clearer technical feedback.' },
   { icon: BookOpen,  title: 'Drill Library & Technical Focus',    desc: 'Match findings to targeted drills by stroke, phase, and fault tag. Assign next-focus areas with every report.' },
-  { icon: BarChart3, title: 'Swimmer Progress Analytics',         desc: 'Track technique scores, fault frequency trends, and phase-by-phase improvement over time across your squad.' },
+  { icon: BarChart3, title: 'Swimmer Progress Analytics',         desc: 'Track finalised reports, repeated focus areas, and score trends only when enough real coach-reviewed data exists.' },
   { icon: FileText,  title: 'Professional PDF & Shared Reports',  desc: 'Generate coach-approved reports with findings, cues, drills, and annotations. Download as PDF or send a private share link.' },
 ];
 
@@ -63,7 +63,7 @@ export default function Home() {
             Coach-led video analysis, technical reporting, and swim performance tracking for modern clubs.
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mb-10 leading-relaxed">
-            Upload footage, run AI pose analysis, review findings as the coach, and deliver professional reports to swimmers and parents — all inside a private club workspace.
+            Upload footage, use AI-assisted review where video evidence is strong enough, approve findings as the coach, and deliver professional reports to swimmers and parents — all inside a private club workspace.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link to="/login">
@@ -109,7 +109,7 @@ export default function Home() {
             <div>
               <div className="text-sm font-semibold text-amber-900 mb-1.5">AI supports the coach — it does not replace the coach.</div>
               <p className="text-xs text-amber-800 leading-relaxed">
-                Pose-assisted findings, drag-risk overlays, scores, and report content require coach review before being shared. No AI output is shown to a swimmer or parent without explicit coach approval.
+                Pose-assisted findings, scores, and report content require coach review before being shared. No AI output is shown to a swimmer or parent without explicit coach approval.
               </p>
             </div>
           </div>

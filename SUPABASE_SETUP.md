@@ -2,6 +2,20 @@
 
 This project uses Supabase for V1 auth, database, storage, and RLS. Do not put real secrets in this file.
 
+## Before Sunday Test
+
+Run this checklist before handing the app to a coach:
+
+1. Run all migrations through `011_v1_club_profile_squad_polish.sql`.
+2. Confirm `notification_logs` exists.
+3. Confirm `video_annotations` exists.
+4. Confirm `clubs` has `initials`, `location`, `primary_color`, and `accent_color`.
+5. Confirm `squads` has `level`, `training_focus`, `lead_coach_name`, `is_active`, and `archived_at`.
+6. Confirm the `private-videos` bucket exists and is private.
+7. Confirm Vercel has `SUPABASE_SERVICE_ROLE_KEY`, `AI_WEBHOOK_SECRET`, `AI_SERVER_URL`, and `PUBLIC_APP_URL`.
+8. Confirm Render has the same `AI_WEBHOOK_SECRET` value as Vercel.
+9. Confirm the Python callback sends `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>`.
+
 ## 1. Create Project
 
 1. Create a new Supabase project.

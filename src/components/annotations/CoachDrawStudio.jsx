@@ -93,7 +93,7 @@ export default function CoachDrawStudio({
           <PencilLine className="w-3.5 h-3.5 mr-1.5" /> Coach Draw
         </Button>
         <div className="text-[10px] text-muted-foreground">
-          Supports mouse, touch, Apple Pencil, and stylus pointer input where the browser supports it.
+          Pause the video, choose Coach Draw, then mark the frame. Supports mouse, touch, Apple Pencil, and stylus pointer input where the browser supports it.
         </div>
       </div>
 
