@@ -49,7 +49,7 @@ export default function SessionModeSelector({ value, onChange }) {
           Recommended for clearer AI-assisted review. Upload side, front/rear, underwater, and above-water angles when available.
         </p>
         <div className="mt-2 inline-flex items-center gap-1 text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
-          <span>SwimPro-ready workflow</span>
+          <span>Export-friendly upload workflow</span>
         </div>
       </button>
     </div>

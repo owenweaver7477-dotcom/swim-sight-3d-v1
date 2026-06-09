@@ -75,19 +75,19 @@ export default function MultiAngleUploader({
 
   return (
     <div className="space-y-4">
-      {/* SwimPro-ready badge */}
+      {/* Exported footage compatibility badge */}
       <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
         <Layers className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-foreground">SwimPro-ready upload workflow</span>
+            <span className="text-xs font-semibold text-foreground">Export-compatible upload workflow</span>
             <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full font-medium">
               Compatible with exported SwimPro footage
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-            Upload exported SwimPro camera recordings as individual angles below. Swim Sight 3D can organise
-            multi-camera footage for coach review and pose-assisted analysis.{' '}
+            Upload footage exported from SwimPro or any standard camera system as individual angles below.
+            Swim Sight 3D can organise coach-uploaded multi-camera footage for coach review and pose-assisted analysis.{' '}
             <span className="text-foreground/70">Direct camera control is not currently built.</span>
           </p>
         </div>

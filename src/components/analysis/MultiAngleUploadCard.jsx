@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 const DEVICE_OPTIONS = [
-  { value: 'swimpro', label: 'SwimPro' },
+  { value: 'swimpro', label: 'SwimPro export' },
   { value: 'gopro', label: 'GoPro' },
   { value: 'iphone', label: 'iPhone / iPad' },
   { value: 'generic_camera', label: 'Generic Camera' },
@@ -21,6 +21,13 @@ const QUALITY_OPTIONS = [
   { value: 'usable', label: 'Usable — Some blur or shaky, swimmer visible' },
   { value: 'poor', label: 'Poor — Very blurry or obstructed' },
 ];
+
+function captureSourceFromDevice(device) {
+  if (device === 'swimpro') return 'swimpro_export';
+  if (device === 'iphone') return 'phone_tablet';
+  if (device === 'generic_camera' || device === 'gopro') return 'standard_camera';
+  return device ? 'other' : undefined;
+}
 
 function formatBytes(b) {
   return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`;
@@ -91,6 +98,7 @@ export default function MultiAngleUploadCard({
           analysis_session_id: sessionId || null,
           camera_angle: angleKey,
           capture_device: device || undefined,
+          capture_source: captureSourceFromDevice(device),
           video_quality_rating: quality || undefined,
           sync_offset_seconds: syncOffset ? parseFloat(syncOffset) : undefined,
           is_primary_angle: isPrimary,
@@ -213,9 +221,8 @@ export default function MultiAngleUploadCard({
             {/* SwimPro tip */}
             {showSwimProTip && (
               <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20 text-[10px] text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">SwimPro footage: </span>
-                SwimPro systems can provide clear underwater multi-angle video well-suited for Swim Sight 3D.
-                Export or share the recorded videos from the SwimPro app, then upload each angle here.
+                <span className="font-semibold text-foreground">SwimPro export support: </span>
+                Upload video files you already have permission to export and use, then add each angle here.
                 <span className="block mt-1 text-[9px] text-muted-foreground/70">
                   Direct camera control is not currently built — exported video files only.
                 </span>

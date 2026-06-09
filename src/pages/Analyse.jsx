@@ -62,9 +62,8 @@ const ACCEPTED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m
 const MAX_SIZE_MB = 500;
 const CAPTURE_SOURCES = [
   { value: 'standard_camera', label: 'Standard camera' },
+  { value: 'phone_tablet', label: 'Phone/tablet' },
   { value: 'swimpro_export', label: 'SwimPro export' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'tablet', label: 'Tablet' },
   { value: 'other', label: 'Other' },
 ];
 function formatBytes(b) { return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`; }

@@ -747,7 +747,7 @@ export default function AIReportPage() {
           )}
 
           <div className="p-3 rounded-xl bg-secondary/40 border border-border text-[10px] text-muted-foreground">
-            Multi-angle review, drag risk, annotations, and 3D references are preserved for later migration phases and are intentionally hidden from this V1 Supabase report workflow.
+            Coach-created annotations are available for marked frames. Multi-angle review, drag risk, and 3D references remain limited while V1 coach review stays focused on verified video evidence.
           </div>
 
           {/* Score + summary */}

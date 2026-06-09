@@ -26,7 +26,7 @@ const ANGLE_LABELS = {
 };
 
 const DEVICE_LABELS = {
-  swimpro: 'SwimPro',
+  swimpro: 'SwimPro export',
   gopro: 'GoPro',
   iphone: 'iPhone/iPad',
   ipad: 'iPhone/iPad',
