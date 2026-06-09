@@ -5,6 +5,7 @@ import functions from '@/lib/data/functions';
 import { Loader2, AlertTriangle, CheckCircle2, Waves, Target, Dumbbell, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
 
 const SEVERITY_STYLES = {
   low:      { label: 'Low',      cls: 'text-sky-700 bg-sky-50 border-sky-200' },
@@ -23,7 +24,7 @@ function SeverityBadge({ severity }) {
 }
 
 // Clean public-facing report — no internal links, no debug info, no approval controls
-function PublicReportContent({ report, swimmer, club, video_meta, findings, dragItems = [] }) {
+function PublicReportContent({ report, swimmer, club, video_meta, findings, annotations = [], dragItems = [] }) {
   const reportDate = report.ai_completed_at || report.created_date;
 
   return (
@@ -208,6 +209,38 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, drag
         </div>
       )}
 
+      {annotations.length > 0 && (
+        <div className="px-8 py-6 border-t border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
+            <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
+            Coach-created annotations <span className="text-sm font-normal text-slate-500">({annotations.length})</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {annotations.map(annotation => (
+              <div key={annotation.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
+                <div
+                  className="bg-slate-950"
+                  style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+                  dangerouslySetInnerHTML={{
+                    __html: drawingToSvg(annotation.drawing_data, {
+                      width: annotation.canvas_width,
+                      height: annotation.canvas_height,
+                    }),
+                  }}
+                />
+                <div className="p-4">
+                  <div className="text-sm font-bold text-slate-900">{annotation.title || 'Coach-created annotation'}</div>
+                  <div className="text-[10px] font-mono text-blue-600 mt-0.5">
+                    Frame {annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+                  </div>
+                  {annotation.coach_note && <p className="text-sm text-slate-600 mt-2 leading-relaxed">{annotation.coach_note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Drag Risk Section — approved + included only, public-safe fields */}
       <DragRiskReportSection dragItems={dragItems} />
 
@@ -289,7 +322,7 @@ export default function SharedReportPage() {
     );
   }
 
-  const { report, swimmer, club, video_meta, findings, drag_items = [] } = data;
+  const { report, swimmer, club, video_meta, findings, annotations = [], drag_items = [] } = data;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -334,6 +367,7 @@ export default function SharedReportPage() {
           club={club}
           video_meta={video_meta}
           findings={findings}
+          annotations={annotations}
           dragItems={drag_items}
         />
         <div className="mt-6 text-center text-xs text-slate-500 print:hidden">

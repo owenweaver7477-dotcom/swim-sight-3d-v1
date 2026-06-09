@@ -28,6 +28,8 @@ import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import CoachReviewAssistantCard from '@/components/ai-report/CoachReviewAssistantCard';
 import { getDefaultDrills } from '@/lib/defaultDrills';
 import { drillSummary } from '@/lib/drillMatching';
+import CoachDrawStudio from '@/components/annotations/CoachDrawStudio';
+import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -215,6 +217,13 @@ export default function AIReportPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: videoAnnotations = [] } = useQuery({
+    queryKey: ['video-annotations', reportId, report?.video_upload_id],
+    queryFn: () => entities.VideoAnnotation.filter({ report_id: reportId }, 'timestamp_seconds', 100),
+    enabled: !!reportId && !!report?.video_upload_id,
+    staleTime: 30 * 1000,
+  });
+
   const { data: swimmerArr = [] } = useQuery({
     queryKey: ['swimmer-for-report', report?.swimmer_id],
     queryFn: () => entities.Swimmer.filter({ id: report.swimmer_id }),
@@ -300,6 +309,48 @@ export default function AIReportPage() {
       linked_drill_summary: drillSummary(drill),
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
+  });
+
+  const createAnnotation = useMutation({
+    mutationFn: ({
+      drawingData,
+      timestampSeconds,
+      videoFrameTimeLabel,
+      title,
+      coachNote,
+      includeInReport,
+      videoWidth,
+      videoHeight,
+    }) => entities.VideoAnnotation.create({
+      club_id: report.club_id,
+      report_id: report.id,
+      video_upload_id: report.video_upload_id,
+      swimmer_id: report.swimmer_id,
+      created_by: user?.id,
+      annotation_type: drawingData.shapes?.some(shape => shape.tool === 'body_line') ? 'body_line' : 'coach_draw',
+      timestamp_seconds: timestampSeconds,
+      video_frame_time_label: videoFrameTimeLabel,
+      canvas_width: drawingData.canvas_width,
+      canvas_height: drawingData.canvas_height,
+      video_width: videoWidth,
+      video_height: videoHeight,
+      drawing_data: drawingData,
+      title,
+      coach_note: coachNote || null,
+      include_in_report: includeInReport,
+      is_public: includeInReport,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['video-annotations', reportId, report?.video_upload_id] }),
+  });
+
+  const updateAnnotation = useMutation({
+    mutationFn: ({ annotation, patch }) => entities.VideoAnnotation.update(annotation.id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['video-annotations', reportId, report?.video_upload_id] }),
+  });
+
+  const deleteAnnotation = useMutation({
+    mutationFn: (annotation) => entities.VideoAnnotation.delete(annotation.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['video-annotations', reportId, report?.video_upload_id] }),
   });
 
   const updateReportSummary = useMutation({
@@ -674,24 +725,22 @@ export default function AIReportPage() {
           {video && (
             <div className="p-4 rounded-xl bg-card border border-border">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Source Video</div>
-              {signedVideoUrl ? (
-                <div className="rounded-lg overflow-hidden bg-black mb-3" style={{ aspectRatio: '16/9' }}>
-                  <video src={signedVideoUrl} controls className="w-full h-full object-contain" />
-                </div>
-              ) : signedVideoError ? (
-                <div className="mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
-                  {signedVideoError}
-                </div>
-              ) : (
-                <div className="mb-3 p-3 rounded-lg bg-secondary/50 border border-border text-xs text-muted-foreground">
-                  Loading private video preview...
-                </div>
-              )}
+              <CoachDrawStudio
+                signedVideoUrl={signedVideoUrl}
+                signedVideoError={signedVideoError}
+                video={video}
+                canEdit={canEdit && !isReportFinalised}
+                saving={createAnnotation.isPending}
+                onSaveAnnotation={(payload) => createAnnotation.mutateAsync(payload)}
+              />
               <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Film className="w-3.5 h-3.5" />{video.original_filename || 'Untitled'}</span>
                 {video.stroke_type && <span className="flex items-center gap-1.5 text-foreground font-medium"><Activity className="w-3.5 h-3.5" />{video.stroke_type}</span>}
                 {video.camera_angle && <span className="flex items-center gap-1.5"><Camera className="w-3.5 h-3.5" />{video.camera_angle}</span>}
                 {video.analysis_type && <span>{video.analysis_type}</span>}
+                {video.capture_source && (
+                  <span>{video.capture_source === 'swimpro_export' ? 'SwimPro-exported footage' : video.capture_source.replace(/_/g, ' ')}</span>
+                )}
                 {video.created_date && <span>Uploaded {format(new Date(video.created_date), 'dd MMM yyyy')}</span>}
               </div>
             </div>
@@ -775,6 +824,22 @@ export default function AIReportPage() {
             onScrollToShare={() => scrollTo('section-share')}
             onDownloadPDF={() => window.print()}
           />
+
+          <div id="section-annotations" className="p-4 rounded-xl bg-card border border-border space-y-3">
+            <div>
+              <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Annotations</div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Coach-created frame marks only. Include selected annotations in final/shared reports when they are public-safe.
+              </p>
+            </div>
+            <AnnotationTimeline
+              annotations={videoAnnotations}
+              findings={findings}
+              canEdit={canEdit && !isReportFinalised}
+              onUpdate={(annotation, patch) => updateAnnotation.mutateAsync({ annotation, patch })}
+              onDelete={(annotation) => deleteAnnotation.mutateAsync(annotation)}
+            />
+          </div>
 
           {canEdit && !isReportFinalised && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-3">
@@ -917,6 +982,7 @@ export default function AIReportPage() {
               swimmer={swimmer}
               video={video}
               approvedFindings={approvedFindings}
+              annotations={videoAnnotations.filter(annotation => annotation.include_in_report)}
             />
             {/* Hidden printable version for PDF export */}
             <div id="printable-report-area" className="hidden print:block print:absolute print:top-0 print:left-0 print:w-full print:h-full print:bg-white print:z-50">
@@ -930,7 +996,7 @@ export default function AIReportPage() {
                   camera_angle: video?.camera_angle,
                 }}
                 findings={approvedFindings}
-                annotations={video ? annotations.filter(a => a.is_included_in_report && a.video_upload_id === video.id) : []}
+                annotations={videoAnnotations.filter(annotation => annotation.include_in_report)}
                 dragItems={dragAnalysisItems.filter(d => d.approval_status === 'approved' && d.included_in_report)}
                 share_link={null}
                 showPrintButton={false}

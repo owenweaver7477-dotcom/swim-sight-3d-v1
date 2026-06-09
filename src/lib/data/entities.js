@@ -17,6 +17,7 @@ const entityTables = {
   KeyFrame: 'key_frames',
   SharedReportLink: 'shared_report_links',
   Drill: 'drills',
+  VideoAnnotation: 'video_annotations',
 };
 
 function normaliseOrder(order) {
@@ -250,6 +251,7 @@ function isClubScopedEntity(entityName) {
     'Finding',
     'KeyFrame',
     'SharedReportLink',
+    'VideoAnnotation',
   ].includes(entityName);
 }
 

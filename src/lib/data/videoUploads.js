@@ -63,6 +63,7 @@ export async function uploadPrivateVideo({ file, clubId, swimmer, userId, metada
       is_primary_angle: metadata.is_primary_angle ?? true,
       sync_offset_seconds: metadata.sync_offset_seconds ?? null,
       capture_device: metadata.capture_device || null,
+      capture_source: metadata.capture_source || null,
       video_quality_rating: metadata.video_quality_rating || null,
       review_context: metadata.review_context || {},
       created_by: userId || null,

@@ -1,9 +1,10 @@
 import React from 'react';
 import { SeverityBadge } from './AIFindingCard';
-import { CheckCircle2, Star, Activity, Target } from 'lucide-react';
+import { CheckCircle2, Star, Activity, Target, PencilLine } from 'lucide-react';
+import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
 
-export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings }) {
-  if (approvedFindings.length === 0) {
+export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings, annotations = [] }) {
+  if (approvedFindings.length === 0 && annotations.length === 0) {
     return (
       <div className="p-6 rounded-xl bg-card border border-dashed border-border text-center space-y-2">
         <CheckCircle2 className="w-8 h-8 text-muted-foreground mx-auto opacity-20" />
@@ -95,6 +96,38 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
             ))}
           </div>
         </div>
+
+        {annotations.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <PencilLine className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                Coach-created annotations ({annotations.length})
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {annotations.map(annotation => (
+                <div key={annotation.id} className="rounded-lg bg-card border border-border overflow-hidden">
+                  <div
+                    className="bg-slate-950"
+                    style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+                    dangerouslySetInnerHTML={{
+                      __html: drawingToSvg(annotation.drawing_data, {
+                        width: annotation.canvas_width,
+                        height: annotation.canvas_height,
+                      }),
+                    }}
+                  />
+                  <div className="p-2.5">
+                    <div className="text-xs font-semibold text-foreground">{annotation.title || 'Coach-created annotation'}</div>
+                    <div className="text-[10px] text-muted-foreground">Frame {annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}</div>
+                    {annotation.coach_note && <p className="text-[10px] text-muted-foreground mt-1">{annotation.coach_note}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

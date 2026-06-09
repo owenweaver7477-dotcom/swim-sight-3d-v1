@@ -60,6 +60,13 @@ const getPhases = (stroke) => STROKE_PHASES[stroke] || STROKE_PHASES['Freestyle'
 const SPEEDS = [0.25, 0.5, 1.0];
 const ACCEPTED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/mov'];
 const MAX_SIZE_MB = 500;
+const CAPTURE_SOURCES = [
+  { value: 'standard_camera', label: 'Standard camera' },
+  { value: 'swimpro_export', label: 'SwimPro export' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'tablet', label: 'Tablet' },
+  { value: 'other', label: 'Other' },
+];
 function formatBytes(b) { return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`; }
 
 // ─── Step indicators ──────────────────────────────────────────────────────────
@@ -114,6 +121,7 @@ export default function Analyse() {
   const [uploadStatus, setUploadStatus] = useState('idle');
   const [uploadedUrl, setUploadedUrl] = useState(''); // signed URL for playback
   const [videoUploadId, setVideoUploadId] = useState(null);
+  const [captureSource, setCaptureSource] = useState('standard_camera');
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadedVideoId, setUploadedVideoId] = useState(null); // tracks most recently uploaded video for CTA
   const videoLibraryRef = useRef();
@@ -206,6 +214,7 @@ export default function Analyse() {
           stroke_type: stroke,
           camera_angle: angle,
           analysis_type: sessionType,
+          capture_source: captureSource,
           review_context: {
             ...reviewContext,
             stroke_focus: reviewContext.stroke_focus || stroke,
@@ -339,6 +348,7 @@ export default function Analyse() {
           stroke_type: stroke,
           analysis_type: sessionType || 'Technique Review',
           camera_angle: angle,
+          capture_source: captureSource,
           review_context: {
             ...reviewContext,
             session_mode: sessionMode,
@@ -380,6 +390,7 @@ export default function Analyse() {
     setStroke(upload.stroke_type || 'Freestyle');
     setAngle(upload.camera_angle || 'Side');
     setSessionType(upload.analysis_type || 'Technique Review');
+    setCaptureSource(upload.capture_source || 'standard_camera');
     if (upload.review_context) {
       setReviewContext(prev => ({ ...prev, ...upload.review_context }));
     }
@@ -792,7 +803,24 @@ export default function Analyse() {
           <h2 className="text-lg font-bold text-foreground mb-1">Upload Private Swim Clip</h2>
           {selectedSwimmer && <div className="text-xs text-muted-foreground mb-4">Swimmer: <span className="text-primary font-medium">{selectedSwimmer.name}</span></div>}
           <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-[11px] text-muted-foreground leading-relaxed">
-            Use a short 5-10 second clip where the swimmer is clearly visible. Side angle is preferred. Avoid screen recordings where possible; underwater distortion can reduce pose reliability. If AI evidence is weak, the report will move to manual coach review.
+            Upload footage exported from SwimPro or any standard camera system. Use a short 5-10 second clip where the swimmer is clearly visible. Side angle is preferred. Avoid screen recordings where possible; underwater distortion can reduce pose reliability. If AI evidence is weak, the report will move to manual coach review.
+          </div>
+
+          <div className="mb-4">
+            <Label className="text-xs text-muted-foreground">Capture Source</Label>
+            <Select value={captureSource} onValueChange={setCaptureSource}>
+              <SelectTrigger className="bg-card border-border mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CAPTURE_SOURCES.map(source => (
+                  <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {captureSource === 'swimpro_export' && (
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                SwimPro export support means coaches can upload video files they already have permission to export and use.
+              </p>
+            )}
           </div>
 
           {/* Session mode selector */}
@@ -991,6 +1019,22 @@ export default function Analyse() {
                 <SelectTrigger className="bg-card border-border mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>{CAMERA_ANGLES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Capture Source</Label>
+              <Select value={captureSource} onValueChange={setCaptureSource}>
+                <SelectTrigger className="bg-card border-border mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CAPTURE_SOURCES.map(source => (
+                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {captureSource === 'swimpro_export' && (
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  Supports SwimPro-exported footage through coach-uploaded files as part of a standard export workflow.
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Analysis Type</Label>

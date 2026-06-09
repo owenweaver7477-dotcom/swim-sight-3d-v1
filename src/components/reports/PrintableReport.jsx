@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { CheckCircle2, Star, Target, Dumbbell, Waves, Download, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DragRiskReportSection from '@/components/drag/DragRiskReportSection';
+import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
 
 const SEVERITY_STYLES = {
   low:      { label: 'Low',      cls: 'text-sky-700 bg-sky-50 border-sky-200' },
@@ -235,21 +236,25 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
               <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
               Coach Annotations <span className="text-sm font-normal text-slate-500">({annotations.length})</span>
             </h2>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {annotations.map((a) => (
-                <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 print:break-inside-avoid">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0 mt-0.5 border border-white shadow-sm" style={{ backgroundColor: a.colour || '#00A6C8' }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-slate-900">{a.label || a.annotation_type}</span>
-                      {a.video_time_label && (
-                        <span className="text-[10px] font-mono text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">@ {a.video_time_label}</span>
-                      )}
-                      {a.stroke_phase && (
-                        <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{a.stroke_phase}</span>
-                      )}
+                <div key={a.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
+                  <div
+                    className="bg-slate-950"
+                    style={{ aspectRatio: `${a.canvas_width || 16}/${a.canvas_height || 9}` }}
+                    dangerouslySetInnerHTML={{
+                      __html: drawingToSvg(a.drawing_data, {
+                        width: a.canvas_width,
+                        height: a.canvas_height,
+                      }),
+                    }}
+                  />
+                  <div className="p-3">
+                    <div className="text-sm font-semibold text-slate-900">{a.title || 'Coach-created annotation'}</div>
+                    <div className="text-[10px] font-mono text-blue-600 mt-0.5">
+                      Frame {a.video_frame_time_label || formatTimestamp(a.timestamp_seconds)}
                     </div>
-                    {a.note && <p className="text-sm text-slate-600 mt-1 leading-relaxed">{a.note}</p>}
+                    {a.coach_note && <p className="text-sm text-slate-600 mt-1 leading-relaxed">{a.coach_note}</p>}
                   </div>
                 </div>
               ))}
