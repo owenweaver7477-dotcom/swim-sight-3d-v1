@@ -73,7 +73,7 @@ export const functions = {
   },
 
   logReportDelivery(reportId, payload) {
-    return postJson(`/api/reports/${reportId}/delivery-log`, payload);
+    return postJson(`/api/reports/${reportId}`, { action: 'log_delivery', ...payload });
   },
 
   async disableSharedReportLink(linkId) {
