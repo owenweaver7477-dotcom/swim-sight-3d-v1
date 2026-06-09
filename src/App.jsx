@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import InstallAppPrompt from '@/components/shared/InstallAppPrompt';
+import { Analytics } from '@vercel/analytics/react';
 
 import AppLayout from './components/layout/AppLayout';
 import Home from './pages/Home.jsx';
@@ -130,6 +131,7 @@ function App() {
           <InstallAppPrompt />
         </Router>
         <Toaster />
+        <Analytics />
       </QueryClientProvider>
     </AuthProvider>
   )
