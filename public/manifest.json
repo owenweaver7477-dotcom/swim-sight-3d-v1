@@ -1,0 +1,17 @@
+{
+  "name": "Swim Sight 3D",
+  "short_name": "Swim Sight",
+  "description": "Coach-reviewed swim video analysis and AI-assisted technique reports.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
