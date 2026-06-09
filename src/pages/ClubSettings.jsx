@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import PageHeader from '@/components/shared/PageHeader';
-import { Plus, ChevronDown, Settings, Waves, KeyRound, Pencil, Check, X, Map, RotateCcw, FlaskConical, ArrowRight, Activity } from 'lucide-react';
+import { Plus, ChevronDown, Settings, Waves, KeyRound, Pencil, Check, X, Map, RotateCcw, FlaskConical, ArrowRight, Activity, Archive } from 'lucide-react';
 import ClubInviteManager from '@/components/club/ClubInviteManager';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -67,11 +67,29 @@ function ClubEditCard({ club }) {
     setSaveError('');
 
     try {
+      const payload = {
+        name: name.trim(),
+        initials: initials.trim().toUpperCase() || null,
+        location: location.trim() || null,
+        primary_color: primaryColor,
+        accent_color: accentColor,
+      };
       const { error } = await supabase
         .from('clubs')
-        .update({ name: name.trim() })
+        .update(payload)
         .eq('id', club.id);
-      if (error) throw error;
+      if (error) {
+        if (error.message?.toLowerCase().includes('column')) {
+          const { error: fallbackError } = await supabase
+            .from('clubs')
+            .update({ name: name.trim() })
+            .eq('id', club.id);
+          if (fallbackError) throw fallbackError;
+          setSaveError('Club name saved. Run migration 011 to enable colours, initials and location.');
+        } else {
+          throw error;
+        }
+      }
       await refreshClubs();
       queryClient.invalidateQueries({ queryKey: ['club'] });
       setSaved(true);
@@ -167,7 +185,12 @@ function ClubEditCard({ club }) {
 export default function ClubSettings() {
   const { club } = useClubContext();
   const navigate = useNavigate();
-  const [squadName, setSquadName] = useState('');
+  const [squadForm, setSquadForm] = useState({
+    name: '',
+    level: '',
+    training_focus: '',
+    lead_coach_name: '',
+  });
   const queryClient = useQueryClient();
 
   const memberRole = club?._memberRole || 'coach';
@@ -190,12 +213,33 @@ export default function ClubSettings() {
   const addSquad = useMutation({
     mutationFn: async (data) => {
       const { error } = await supabase.from('squads').insert(data);
-      if (error) throw error;
+      if (error) {
+        if (error.message?.toLowerCase().includes('column')) {
+          const { error: fallbackError } = await supabase
+            .from('squads')
+            .insert({ club_id: data.club_id, name: data.name });
+          if (fallbackError) throw fallbackError;
+          return;
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['squads', club?.id] });
-      setSquadName('');
+      setSquadForm({ name: '', level: '', training_focus: '', lead_coach_name: '' });
     },
+  });
+
+  const archiveSquad = useMutation({
+    mutationFn: async (squadId) => {
+      const { error } = await supabase
+        .from('squads')
+        .update({ is_active: false, archived_at: new Date().toISOString() })
+        .eq('id', squadId)
+        .eq('club_id', club.id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['squads', club?.id] }),
   });
 
   if (!club) {
@@ -251,9 +295,26 @@ export default function ClubSettings() {
           {squads.length > 0 ? (
             <div className="space-y-2 mb-4">
               {squads.map(s => (
-                <div key={s.id} className="flex items-center gap-2 p-2 rounded bg-secondary text-sm text-foreground">
+                <div key={s.id} className={`flex items-start gap-2 p-3 rounded bg-secondary text-sm text-foreground ${s.is_active === false ? 'opacity-60' : ''}`}>
                   <div className="w-2 h-2 rounded-full bg-primary" />
-                  {s.name}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">{s.name}</div>
+                    <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                      {s.level && <span>{s.level}</span>}
+                      {s.training_focus && <span>{s.training_focus}</span>}
+                      {s.lead_coach_name && <span>Lead: {s.lead_coach_name}</span>}
+                      {s.is_active === false && <span>Archived</span>}
+                    </div>
+                  </div>
+                  {canManage && s.is_active !== false && (
+                    <button
+                      type="button"
+                      onClick={() => archiveSquad.mutate(s.id)}
+                      className="text-[10px] text-muted-foreground hover:text-amber-600 flex items-center gap-1"
+                    >
+                      <Archive className="w-3 h-3" /> Archive
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -261,21 +322,46 @@ export default function ClubSettings() {
             <p className="text-xs text-muted-foreground mb-4">No squads created yet.</p>
           )}
           {canManage && (
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Input
-                value={squadName}
-                onChange={e => setSquadName(e.target.value)}
+                value={squadForm.name}
+                onChange={e => setSquadForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="New squad name"
                 className="bg-secondary border-border text-sm"
-                onKeyDown={e => e.key === 'Enter' && squadName.trim() && addSquad.mutate({ club_id: club.id, name: squadName.trim() })}
               />
-              <Button
-                size="sm"
-                disabled={!squadName.trim() || addSquad.isPending}
-                onClick={() => addSquad.mutate({ club_id: club.id, name: squadName.trim() })}
-              >
-                <Plus className="w-4 h-4 mr-1" /> Add
-              </Button>
+              <Input
+                value={squadForm.level}
+                onChange={e => setSquadForm(prev => ({ ...prev, level: e.target.value }))}
+                placeholder="Level e.g. Junior / Senior"
+                className="bg-secondary border-border text-sm"
+              />
+              <Input
+                value={squadForm.training_focus}
+                onChange={e => setSquadForm(prev => ({ ...prev, training_focus: e.target.value }))}
+                placeholder="Training focus"
+                className="bg-secondary border-border text-sm"
+              />
+              <div className="flex gap-2">
+                <Input
+                  value={squadForm.lead_coach_name}
+                  onChange={e => setSquadForm(prev => ({ ...prev, lead_coach_name: e.target.value }))}
+                  placeholder="Lead coach"
+                  className="bg-secondary border-border text-sm"
+                />
+                <Button
+                  size="sm"
+                  disabled={!squadForm.name.trim() || addSquad.isPending}
+                  onClick={() => addSquad.mutate({
+                    club_id: club.id,
+                    name: squadForm.name.trim(),
+                    level: squadForm.level.trim() || null,
+                    training_focus: squadForm.training_focus.trim() || null,
+                    lead_coach_name: squadForm.lead_coach_name.trim() || null,
+                  })}
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Add
+                </Button>
+              </div>
             </div>
           )}
         </div>

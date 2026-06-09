@@ -84,14 +84,7 @@ export async function loadUserClubs(userId) {
       linked_swimmer_id,
       created_at,
       updated_at,
-      clubs (
-        id,
-        name,
-        slug,
-        created_by,
-        created_at,
-        updated_at
-      )
+      clubs (*)
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: true });

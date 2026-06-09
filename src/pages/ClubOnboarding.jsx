@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,12 +8,14 @@ import { normaliseClub, resetClubContext } from '@/lib/useClubContext';
 import functions from '@/lib/data/functions';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
+import { appendInviteParam, clearPendingInviteCode, rememberPendingInviteCode } from '@/lib/inviteRedirect';
 import { Waves, Plus, KeyRound, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function ClubOnboarding() {
   const [tab, setTab] = useState('create'); // 'create' | 'join'
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated, isLoadingAuth } = useAuth();
+  const attemptedAutoJoin = useRef(false);
 
   // Pre-fill invite code from URL ?code= param
   const urlParams = new URLSearchParams(window.location.search);
@@ -50,7 +52,11 @@ export default function ClubOnboarding() {
 
   // Switch to join tab if code in URL
   useEffect(() => {
-    if (urlCode) setTab('join');
+    if (urlCode) {
+      setTab('join');
+      rememberPendingInviteCode(urlCode);
+      setInviteCode(urlCode.toUpperCase());
+    }
   }, [urlCode]);
 
   const joinClub = useMutation({
@@ -66,6 +72,7 @@ export default function ClubOnboarding() {
       const clubWithRole = normaliseClub(club, membership);
       setActiveClub(clubWithRole);
       setActiveRole(clubWithRole._memberRole);
+      clearPendingInviteCode();
       resetClubContext();
       window.dispatchEvent(new Event('swimStateChanged'));
       navigate('/dashboard', { replace: true });
@@ -74,6 +81,85 @@ export default function ClubOnboarding() {
       setJoinError(err.message || 'Failed to join club.');
     },
   });
+
+  useEffect(() => {
+    if (!urlCode || !isAuthenticated || attemptedAutoJoin.current || joinClub.isPending) return;
+    attemptedAutoJoin.current = true;
+    setTab('join');
+    setInviteCode(urlCode.toUpperCase());
+    joinClub.mutate();
+  }, [isAuthenticated, joinClub, urlCode]);
+
+  if (urlCode && !isAuthenticated) {
+    if (isLoadingAuth) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Checking your invite...</span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-card border border-border rounded-2xl p-7 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
+            <KeyRound className="w-7 h-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">You have a club invite</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+            Sign in or create an account to join this Swim Sight 3D club workspace. Your invite code will be kept safe while you continue.
+          </p>
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-mono tracking-widest mb-6">
+            <KeyRound className="w-3.5 h-3.5" />
+            {urlCode.toUpperCase()}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button asChild className="h-11">
+              <Link to={appendInviteParam('/login', urlCode)}>Log in</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11">
+              <Link to={appendInviteParam('/register', urlCode)}>Create account</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    if (isLoadingAuth) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-card border border-border rounded-2xl p-7 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
+            <Waves className="w-7 h-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Sign in to join a club</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Club workspaces are private. Open your invite link again, or sign in to create a new club workspace.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button asChild className="h-11">
+              <Link to="/login">Log in</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11">
+              <Link to="/register">Create account</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">

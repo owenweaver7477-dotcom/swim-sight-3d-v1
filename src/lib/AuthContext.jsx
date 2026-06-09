@@ -272,16 +272,17 @@ export const AuthProvider = ({ children }) => {
     return data;
   }, [applySession]);
 
-  const register = useCallback(async ({ email, password, full_name } = {}) => {
+  const register = useCallback(async ({ email, password, full_name, redirectTo } = {}) => {
     const supabase = getSupabaseClient();
     setAuthError(null);
+    const safeRedirectTo = redirectTo?.startsWith('/') ? redirectTo : '/club-onboarding';
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: full_name || email?.split('@')[0] || '' },
-        emailRedirectTo: `${getAppOrigin()}/club-onboarding`,
+        emailRedirectTo: `${getAppOrigin()}${safeRedirectTo}`,
       },
     });
 

@@ -73,12 +73,13 @@ const AuthenticatedApp = () => {
       {/* Public report sharing — only via secure token */}
       <Route path="/shared-report/:token" element={<SharedReportPage />} />
 
+      {/* Public invite landing — membership is created only after authenticated API join */}
+      <Route path="/join" element={<ClubOnboarding />} />
+
       {/* Protected app routes */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         {/* Club onboarding — protected but outside AppLayout (no sidebar, own full-page layout) */}
           <Route path="/club-onboarding" element={<ClubOnboarding />} />
-          {/* Join via invite link — same page, code pre-filled from ?code= param */}
-          <Route path="/join" element={<ClubOnboarding />} />
 
         <Route element={<AppLayout />}>
           {/* Primary coach routes */}

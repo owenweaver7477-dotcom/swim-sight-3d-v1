@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,17 +8,31 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { useAuth } from "@/lib/AuthContext";
 import { loadUserClubs } from "@/lib/useClubContext";
+import {
+  appendInviteParam,
+  getInviteJoinPath,
+  peekPendingInviteCode,
+  rememberInviteCodeFromSearch,
+} from "@/lib/inviteRedirect";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loginWithGoogle, isGoogleAuthEnabled, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const visibleError = error || authError?.message || '';
+  const pendingInviteCode = useMemo(
+    () => rememberInviteCodeFromSearch(location.search) || peekPendingInviteCode(),
+    [location.search]
+  );
 
   const getPostLoginPath = async (authResult) => {
+    const inviteCode = peekPendingInviteCode();
+    if (inviteCode) return getInviteJoinPath(inviteCode);
+
     const userId = authResult?.user?.id || authResult?.session?.user?.id;
     if (!userId) return "/dashboard";
 
@@ -49,7 +63,7 @@ export default function Login() {
   const handleGoogle = async () => {
     setError("");
     try {
-      await loginWithGoogle("/dashboard");
+      await loginWithGoogle(pendingInviteCode ? getInviteJoinPath(pendingInviteCode) : "/dashboard");
     } catch (err) {
       setError(err.message || "Google sign-in failed");
     }
@@ -63,7 +77,7 @@ export default function Login() {
       footer={
         <>
           Don't have an account?{" "}
-          <Link to="/register" className="text-primary font-medium hover:underline">
+          <Link to={appendInviteParam('/register', pendingInviteCode)} className="text-primary font-medium hover:underline">
             Create one
           </Link>
         </>

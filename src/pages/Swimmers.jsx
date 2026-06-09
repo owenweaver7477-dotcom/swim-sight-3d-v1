@@ -26,6 +26,7 @@ const EMPTY_FORM = {
   notes: '',
   swimmer_email: '',
   parent_email: '',
+  notification_preference: 'in_app',
 };
 
 export default function Swimmers() {
@@ -35,6 +36,7 @@ export default function Swimmers() {
   const [selected, setSelected] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // swimmer to confirm delete
   const [form, setForm] = useState(EMPTY_FORM);
+  const [squadFilter, setSquadFilter] = useState('all');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const canManageSwimmers = MANAGE_SWIMMER_ROLES.includes(memberRole);
@@ -64,6 +66,9 @@ export default function Swimmers() {
   });
 
   const swimmerNotifications = [];
+  const filteredSwimmers = squadFilter === 'all'
+    ? swimmers
+    : swimmers.filter(swimmer => (squadFilter === 'unassigned' ? !swimmer.squad_id : swimmer.squad_id === squadFilter));
 
   // Accurate counters — active (non-deleted) reports only
   const activeReports = swimmerReports.filter(r => !r.is_deleted);
@@ -211,7 +216,7 @@ export default function Swimmers() {
       <PageHeader
         eyebrow={club.name}
         title="Swimmers"
-        subtitle={`${swimmers.length} swimmer${swimmers.length !== 1 ? 's' : ''} registered.`}
+        subtitle={`${filteredSwimmers.length} of ${swimmers.length} swimmer${swimmers.length !== 1 ? 's' : ''} shown.`}
         action={
           canManageSwimmers ? (
             <Dialog open={open} onOpenChange={setOpen}>
@@ -252,6 +257,20 @@ export default function Swimmers() {
                     <Label className="text-xs text-muted-foreground">Parent Email (optional)</Label>
                     <Input value={form.parent_email} onChange={e => setForm(p => ({ ...p, parent_email: e.target.value }))} placeholder="parent@email.com" className="bg-secondary border-border mt-1" />
                   </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Report Delivery Preference</Label>
+                    <Select value={form.notification_preference} onValueChange={v => setForm(p => ({ ...p, notification_preference: v }))}>
+                      <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="in_app">Manual secure link</SelectItem>
+                        <SelectItem value="email">Email when connected</SelectItem>
+                        <SelectItem value="none">Do not notify</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Email delivery only sends a secure report link when a real email provider is connected.
+                    </p>
+                  </div>
                   <Button type="submit" className="w-full" disabled={!form.name.trim() || addSwimmer.isPending}>
                     {addSwimmer.isPending ? 'Adding...' : 'Add Swimmer'}
                   </Button>
@@ -272,8 +291,25 @@ export default function Swimmers() {
           )}
         </div>
       ) : (
+        <>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Filter by squad</span>
+          <Select value={squadFilter} onValueChange={setSquadFilter}>
+            <SelectTrigger className="w-48 h-8 bg-card border-border text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All swimmers</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {squads.map(squad => <SelectItem key={squad.id} value={squad.id}>{squad.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        {filteredSwimmers.length === 0 ? (
+          <div className="p-8 rounded-xl bg-card border border-dashed border-border text-center text-xs text-muted-foreground">
+            No swimmers match this squad filter.
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {swimmers.map(s => {
+          {filteredSwimmers.map(s => {
             const squad = squads.find(sq => sq.id === s.squad_id);
             const strokes = s.main_strokes?.split(',').map(x => x.trim()).filter(Boolean) || [];
             return (
@@ -317,6 +353,8 @@ export default function Swimmers() {
             );
           })}
         </div>
+        )}
+        </>
       )}
 
       {/* Delete confirmation dialog */}

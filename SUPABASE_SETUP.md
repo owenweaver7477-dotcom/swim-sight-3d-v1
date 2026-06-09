@@ -51,6 +51,12 @@ Apply in order:
 3. `supabase/migrations/003_v1_private_video_storage_policies.sql`
 4. `supabase/migrations/004_v1_ai_job_reliability.sql`
 5. `supabase/migrations/005_v1_default_drills.sql`
+6. `supabase/migrations/006_v1_coach_review_assistant.sql`
+7. `supabase/migrations/007_v1_video_annotations.sql`
+8. `supabase/migrations/008_v1_technical_standards_reference_library.sql`
+9. `supabase/migrations/009_v1_notification_delivery.sql`
+10. `supabase/migrations/010_v1_video_annotations.sql`
+11. `supabase/migrations/011_v1_club_profile_squad_polish.sql`
 
 Confirm that:
 
@@ -59,6 +65,8 @@ Confirm that:
 - Helper functions such as `public.has_club_role` are present.
 - `ai_processing_jobs` has the V1 reliability columns and granular statuses before testing AI Review callbacks.
 - `drills` exists with shared default rows before testing database-backed Drill Library content.
+- `video_annotations`, `technical_standards`, `reference_profiles`, `reference_assets`, and `notification_logs` exist before testing Coach Draw, standards/reference, and report delivery.
+- `clubs` has profile fields and `squads` has V1 organisation fields before testing club settings polish.
 
 ## 4. Storage
 

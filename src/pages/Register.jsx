@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,9 +7,16 @@ import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { useAuth } from "@/lib/AuthContext";
+import {
+  appendInviteParam,
+  getInviteJoinPath,
+  peekPendingInviteCode,
+  rememberInviteCodeFromSearch,
+} from "@/lib/inviteRedirect";
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, loginWithGoogle, isGoogleAuthEnabled, authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +25,10 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
   const visibleError = error || authError?.message || '';
+  const pendingInviteCode = useMemo(
+    () => rememberInviteCodeFromSearch(location.search) || peekPendingInviteCode(),
+    [location.search]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,9 +39,11 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const result = await register({ email, password });
+      const inviteCode = peekPendingInviteCode();
+      const postRegisterPath = inviteCode ? getInviteJoinPath(inviteCode) : "/club-onboarding";
+      const result = await register({ email, password, redirectTo: postRegisterPath });
       if (result?.session) {
-        navigate("/club-onboarding", { replace: true });
+        navigate(postRegisterPath, { replace: true });
       } else {
         setCheckEmail(true);
       }
@@ -44,7 +57,7 @@ export default function Register() {
   const handleGoogle = async () => {
     setError("");
     try {
-      await loginWithGoogle("/club-onboarding");
+      await loginWithGoogle(pendingInviteCode ? getInviteJoinPath(pendingInviteCode) : "/club-onboarding");
     } catch (err) {
       setError(err.message || "Google sign-in failed");
     }
@@ -64,10 +77,10 @@ export default function Register() {
         )}
         <p className="text-sm text-foreground text-center">
           Open the link in that email to finish creating your account. Once confirmed,
-          you can log in and continue to club setup.
+          you can log in and continue {pendingInviteCode ? 'joining your club.' : 'to club setup.'}
         </p>
         <Button className="w-full h-12 font-medium mt-6" asChild>
-          <Link to="/login">Back to log in</Link>
+          <Link to={appendInviteParam('/login', pendingInviteCode)}>Back to log in</Link>
         </Button>
       </AuthLayout>
     );
@@ -81,7 +94,7 @@ export default function Register() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to={appendInviteParam('/login', pendingInviteCode)} className="text-primary font-medium hover:underline">
             Log in
           </Link>
         </>

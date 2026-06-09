@@ -30,8 +30,8 @@ const SECTIONS = [
       { item: 'Club Progress dashboard — filtered by squad, stroke, status' },
       { item: 'Corrective Drill Library — fault-based packs, search, assign to findings' },
       { item: 'Reference Library — stroke profiles and reference assets' },
-      { item: 'In-app notifications and email delivery to swimmer and parent' },
-      { item: 'Notify Swimmer CTA on finalised reports' },
+      { item: 'Manual swimmer/parent report delivery with secure shared links' },
+      { item: 'Notify Swimmer CTA on finalised reports', note: 'Email sending is only marked sent when a real provider is configured' },
       { item: 'Team Leaderboard — improvement, consistency, severity reduction' },
       { item: 'Club settings, branding, member management' },
     ],
@@ -74,7 +74,7 @@ const SECTIONS = [
       { item: 'AI reliability guidance on reports and review list — real_pose, partial, unreliable, error states', note: 'Phase 13' },
       { item: 'Public report disclaimer and coach-approval labelling', note: 'Phase 13' },
       { item: 'AI Job Monitor', note: 'Admin page to debug pose pipeline, track job status, errors, and callback flow' },
-      { item: 'Annotation export to shared public report', note: 'Coordinates stored; surfacing on public share link in progress' },
+      { item: 'Annotation export to shared public report', note: 'Coach-selected annotations only; private video URLs are never exposed' },
       { item: '3D model asset uploads via Reference Library', note: 'Upload form exists; full pipeline in progress' },
       { item: 'Shared annotation export in PDF report', note: 'Coach-reviewed annotations marked for report inclusion; PDF rendering in progress' },
     ],
@@ -105,7 +105,7 @@ const SECTIONS = [
       { item: 'Calibrated 3D reconstruction from multi-angle rigs', note: 'Requires stereo or multi-angle camera setup; not feasible with single-angle footage' },
       { item: 'Automatic AI-generated annotations', note: 'AI server suggests annotation markers based on pose data; coach creates all annotations currently' },
       { item: 'Exact drag coefficient modelling', note: 'Current system is a coaching estimate only. Real drag measurement requires flume testing or CFD simulation' },
-      { item: 'Direct SwimPro camera integration', note: 'Supports exported SwimPro footage currently; direct camera control not planned' },
+      { item: 'SwimPro-export workflow compatibility', note: 'Supports coach-uploaded exported footage only; camera connection is not included' },
       { item: 'Swimmer-specific 3D biomechanics avatar', note: 'Pose data exists; swimmer-specific 3D rendering requires dedicated model pipeline' },
       { item: 'Club benchmark comparisons against squad or national norms' },
       { item: 'Automated session planning from approved findings and drills' },
@@ -177,7 +177,7 @@ export default function Roadmap() {
 
       <div className="mt-8 p-4 rounded-lg bg-secondary border border-border text-[10px] text-muted-foreground leading-relaxed">
         <strong className="text-foreground text-xs">Accuracy note:</strong> This roadmap reflects the codebase as of{' '}
-        <span className="font-medium text-foreground">June 2026 (Phase 15)</span>. Status categories are based on implemented routes, entities, backend functions, and UI components — not planned or speculative work.
+        <span className="font-medium text-foreground">June 2026 (Sunday club-test sprint)</span>. Status categories are based on implemented routes, entities, backend functions, and UI components — not planned or speculative work.
       </div>
     </div>
   );
