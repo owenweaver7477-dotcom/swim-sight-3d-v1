@@ -6,6 +6,7 @@ import { CheckCircle2, Link2, Trash2 } from 'lucide-react';
 export default function AnnotationPreviewCard({
   annotation,
   findings = [],
+  linkedFinding,
   onUpdate,
   onDelete,
   canEdit = true,
@@ -30,7 +31,7 @@ export default function AnnotationPreviewCard({
               {annotation.title || 'Coach-created annotation'}
             </div>
             <div className="text-[10px] text-muted-foreground">
-              Frame {annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+              Marked frame {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
             </div>
           </div>
           {annotation.include_in_report && (
@@ -41,6 +42,11 @@ export default function AnnotationPreviewCard({
         </div>
         {annotation.coach_note && (
           <p className="text-[11px] text-muted-foreground leading-relaxed">{annotation.coach_note}</p>
+        )}
+        {linkedFinding && (
+          <div className="text-[10px] text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2 py-1">
+            Linked finding: <span className="font-semibold text-slate-800">{linkedFinding.finding_name || linkedFinding.observation}</span>
+          </div>
         )}
 
         {canEdit && (

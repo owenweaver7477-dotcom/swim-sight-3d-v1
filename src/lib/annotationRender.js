@@ -13,6 +13,27 @@ function esc(value = '') {
     .replace(/"/g, '&quot;');
 }
 
+function clampNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function safeColor(value, fallback = '#22d3ee') {
+  const color = String(value || '').trim();
+  if (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(color)) return color;
+  if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i.test(color)) return color;
+  return fallback;
+}
+
+function safePoints(points = [], width = 1280, height = 720) {
+  if (!Array.isArray(points)) return [];
+  return points.slice(0, 600).map(point => ({
+    x: clampNumber(point?.x, 0, 0, width),
+    y: clampNumber(point?.y, 0, 0, height),
+  }));
+}
+
 function pointsPath(points = []) {
   if (!points.length) return '';
   return points
@@ -35,15 +56,15 @@ function arrowHead(shape) {
 }
 
 export function drawingToSvg(drawingData = {}, options = {}) {
-  const width = Number(drawingData.canvas_width || options.width || 1280);
-  const height = Number(drawingData.canvas_height || options.height || 720);
-  const shapes = Array.isArray(drawingData.shapes) ? drawingData.shapes : [];
+  const width = clampNumber(drawingData.canvas_width || options.width, 1280, 240, 4096);
+  const height = clampNumber(drawingData.canvas_height || options.height, 720, 180, 4096);
+  const shapes = Array.isArray(drawingData.shapes) ? drawingData.shapes.slice(0, 80) : [];
   const background = options.background || '#0f172a';
 
   const body = shapes.map((shape) => {
-    const color = esc(shape.color || '#22d3ee');
-    const size = Number(shape.size || 4);
-    const points = shape.points || [];
+    const color = esc(safeColor(shape.color));
+    const size = clampNumber(shape.size, 4, 1, 24);
+    const points = safePoints(shape.points, width, height);
     const common = `stroke="${color}" stroke-width="${size}" stroke-linecap="round" stroke-linejoin="round"`;
 
     if (shape.tool === 'text') {

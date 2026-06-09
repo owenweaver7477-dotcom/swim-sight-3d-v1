@@ -19,6 +19,27 @@ function sanitizeFinding(finding) {
   };
 }
 
+function sanitizeAnnotation(annotation, findingTitlesById) {
+  const thumbnail = typeof annotation.thumbnail_data_url === 'string'
+    && annotation.thumbnail_data_url.startsWith('data:image/')
+    ? annotation.thumbnail_data_url
+    : null;
+
+  return {
+    annotation_type: annotation.annotation_type,
+    timestamp_seconds: annotation.timestamp_seconds,
+    frame_label: annotation.frame_label || annotation.video_frame_time_label,
+    video_frame_time_label: annotation.video_frame_time_label || annotation.frame_label,
+    canvas_width: annotation.canvas_width,
+    canvas_height: annotation.canvas_height,
+    drawing_data: annotation.drawing_data,
+    thumbnail_data_url: thumbnail,
+    title: annotation.title,
+    coach_note: annotation.coach_note,
+    linked_finding_title: annotation.finding_id ? findingTitlesById.get(annotation.finding_id) || null : null,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return sendJson(res, 405, { error: 'Method not allowed' });
@@ -60,7 +81,7 @@ export default async function handler(req, res) {
       service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
       service
         .from('findings')
-        .select('severity,stroke_phase,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,next_focus,approval_status')
+        .select('id,severity,stroke_phase,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,next_focus,approval_status')
         .eq('report_id', report.id)
         .eq('approval_status', 'approved')
         .order('created_at', { ascending: true }),
@@ -71,7 +92,7 @@ export default async function handler(req, res) {
         .order('timestamp_seconds', { ascending: true }),
       service
         .from('video_annotations')
-        .select('id,annotation_type,timestamp_seconds,video_frame_time_label,canvas_width,canvas_height,drawing_data,title,coach_note,include_in_report,is_public')
+        .select('annotation_type,timestamp_seconds,frame_label,video_frame_time_label,canvas_width,canvas_height,drawing_data,thumbnail_data_url,title,coach_note,finding_id,include_in_report,is_public')
         .eq('report_id', report.id)
         .eq('include_in_report', true)
         .eq('is_public', true)
@@ -81,6 +102,10 @@ export default async function handler(req, res) {
           return data || [];
         }),
     ]);
+    const findingTitlesById = new Map((findings || []).map((finding) => [
+      finding.id,
+      finding.observation || finding.stroke_phase || 'Technical finding',
+    ]));
 
     return sendJson(res, 200, {
       report: {
@@ -110,17 +135,7 @@ export default async function handler(req, res) {
         label: frame.label,
         note: frame.note,
       })),
-      annotations: (annotations || []).map((annotation) => ({
-        id: annotation.id,
-        annotation_type: annotation.annotation_type,
-        timestamp_seconds: annotation.timestamp_seconds,
-        video_frame_time_label: annotation.video_frame_time_label,
-        canvas_width: annotation.canvas_width,
-        canvas_height: annotation.canvas_height,
-        drawing_data: annotation.drawing_data,
-        title: annotation.title,
-        coach_note: annotation.coach_note,
-      })),
+      annotations: (annotations || []).map((annotation) => sanitizeAnnotation(annotation, findingTitlesById)),
       drag_items: [],
       disclaimer: 'AI-assisted evidence supports coach review. Final report content is coach-approved.',
     });

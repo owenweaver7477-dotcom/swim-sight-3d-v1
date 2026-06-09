@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import DragRiskReportSection from '@/components/drag/DragRiskReportSection';
 import { useParams } from 'react-router-dom';
 import functions from '@/lib/data/functions';
-import { Loader2, AlertTriangle, CheckCircle2, Waves, Target, Dumbbell, Download } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, Waves, Target, Dumbbell, Download, PencilLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
@@ -23,9 +23,61 @@ function SeverityBadge({ severity }) {
   );
 }
 
+function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
+  const safeThumbnail = typeof annotation.thumbnail_data_url === 'string'
+    && annotation.thumbnail_data_url.startsWith('data:image/')
+    ? annotation.thumbnail_data_url
+    : null;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
+      {safeThumbnail ? (
+        <img src={safeThumbnail} alt={annotation.title || 'Coach annotation'} className="w-full bg-slate-950 object-contain" />
+      ) : (
+        <div
+          className="bg-slate-950"
+          style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+          dangerouslySetInnerHTML={{
+            __html: drawingToSvg(annotation.drawing_data, {
+              width: annotation.canvas_width,
+              height: annotation.canvas_height,
+            }),
+          }}
+        />
+      )}
+      <div className="p-3">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700 mb-1 flex items-center gap-1.5">
+          <PencilLine className="w-3 h-3" /> Coach annotation
+        </div>
+        <div className="text-sm font-bold text-slate-900">{annotation.title || 'Marked frame'}</div>
+        <div className="text-[10px] font-mono text-blue-600 mt-0.5">
+          Frame {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+        </div>
+        {linkedFindingTitle && (
+          <div className="text-[10px] text-slate-500 mt-1">
+            Linked technical finding: <span className="font-semibold text-slate-700">{linkedFindingTitle}</span>
+          </div>
+        )}
+        {annotation.coach_note && <p className="text-sm text-slate-600 mt-2 leading-relaxed">{annotation.coach_note}</p>}
+      </div>
+    </div>
+  );
+}
+
 // Clean public-facing report — no internal links, no debug info, no approval controls
 function PublicReportContent({ report, swimmer, club, video_meta, findings, annotations = [], dragItems = [] }) {
   const reportDate = report.ai_completed_at || report.created_date;
+  const annotationsByFindingTitle = new Map();
+  annotations.forEach(annotation => {
+    if (!annotation.linked_finding_title) return;
+    const group = annotationsByFindingTitle.get(annotation.linked_finding_title) || [];
+    group.push(annotation);
+    annotationsByFindingTitle.set(annotation.linked_finding_title, group);
+  });
+  const linkedAnnotationSet = new Set(
+    Array.from(annotationsByFindingTitle.values()).flat()
+  );
+  const unlinkedAnnotations = annotations.filter(annotation => !linkedAnnotationSet.has(annotation));
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -133,7 +185,9 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
             Technical Findings <span className="text-sm font-normal text-slate-500">({findings.length})</span>
           </h2>
           <div className="space-y-4">
-            {findings.map((finding, index) => (
+            {findings.map((finding, index) => {
+              const linkedAnnotations = annotationsByFindingTitle.get(finding.finding_name) || [];
+              return (
               <div key={index} className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid print:border-slate-300">
                 <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
                   <div className="flex items-start gap-3 flex-wrap">
@@ -202,40 +256,39 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                       </div>
                     </div>
                   )}
+                  {linkedAnnotations.length > 0 && (
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Marked frames for this finding
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {linkedAnnotations.map((annotation, annotationIndex) => (
+                          <PublicAnnotationCard
+                            key={`${finding.finding_name}-${annotationIndex}`}
+                            annotation={annotation}
+                            linkedFindingTitle={finding.finding_name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       )}
 
-      {annotations.length > 0 && (
+      {unlinkedAnnotations.length > 0 && (
         <div className="px-8 py-6 border-t border-slate-200">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
-            Coach-created annotations <span className="text-sm font-normal text-slate-500">({annotations.length})</span>
+            Included Coach Annotations <span className="text-sm font-normal text-slate-500">({unlinkedAnnotations.length})</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {annotations.map(annotation => (
-              <div key={annotation.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
-                <div
-                  className="bg-slate-950"
-                  style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
-                  dangerouslySetInnerHTML={{
-                    __html: drawingToSvg(annotation.drawing_data, {
-                      width: annotation.canvas_width,
-                      height: annotation.canvas_height,
-                    }),
-                  }}
-                />
-                <div className="p-4">
-                  <div className="text-sm font-bold text-slate-900">{annotation.title || 'Coach-created annotation'}</div>
-                  <div className="text-[10px] font-mono text-blue-600 mt-0.5">
-                    Frame {annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
-                  </div>
-                  {annotation.coach_note && <p className="text-sm text-slate-600 mt-2 leading-relaxed">{annotation.coach_note}</p>}
-                </div>
-              </div>
+            {unlinkedAnnotations.map((annotation, index) => (
+              <PublicAnnotationCard key={index} annotation={annotation} />
             ))}
           </div>
         </div>

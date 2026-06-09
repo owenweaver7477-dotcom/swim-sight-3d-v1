@@ -279,7 +279,6 @@ export default function AIReportPage() {
   });
 
   const dragAnalysisItems = [];
-  const annotations = [];
 
   const approveFinding = useMutation({
     mutationFn: (f) => entities.Finding.update(f.id, { approval_status: 'approved' }),
@@ -330,6 +329,7 @@ export default function AIReportPage() {
       annotation_type: drawingData.shapes?.some(shape => shape.tool === 'body_line') ? 'body_line' : 'coach_draw',
       timestamp_seconds: timestampSeconds,
       video_frame_time_label: videoFrameTimeLabel,
+      frame_label: videoFrameTimeLabel,
       canvas_width: drawingData.canvas_width,
       canvas_height: drawingData.canvas_height,
       video_width: videoWidth,
@@ -441,6 +441,7 @@ export default function AIReportPage() {
   const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
   const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
   const approvedFindings = findings.filter(f => f.approval_status === 'approved');
+  const includedAnnotations = videoAnnotations.filter(annotation => annotation.include_in_report);
   const isReportFinalised = FINAL_REPORT_STATUSES.includes(report?.status);
   const isManualReviewReport = report?.analysis_mode === 'error'
     || report?.analysis_mode === 'placeholder'
@@ -839,6 +840,11 @@ export default function AIReportPage() {
               onUpdate={(annotation, patch) => updateAnnotation.mutateAsync({ annotation, patch })}
               onDelete={(annotation) => deleteAnnotation.mutateAsync(annotation)}
             />
+            {videoAnnotations.length > 0 && includedAnnotations.length === 0 && (
+              <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[10px] text-muted-foreground">
+                No coach annotations selected for this report yet. Mark a saved frame as “Include in report” when it is ready for the final/shared report.
+              </div>
+            )}
           </div>
 
           {canEdit && !isReportFinalised && (
@@ -982,7 +988,7 @@ export default function AIReportPage() {
               swimmer={swimmer}
               video={video}
               approvedFindings={approvedFindings}
-              annotations={videoAnnotations.filter(annotation => annotation.include_in_report)}
+              annotations={includedAnnotations}
             />
             {/* Hidden printable version for PDF export */}
             <div id="printable-report-area" className="hidden print:block print:absolute print:top-0 print:left-0 print:w-full print:h-full print:bg-white print:z-50">
@@ -996,7 +1002,7 @@ export default function AIReportPage() {
                   camera_angle: video?.camera_angle,
                 }}
                 findings={approvedFindings}
-                annotations={videoAnnotations.filter(annotation => annotation.include_in_report)}
+                annotations={includedAnnotations}
                 dragItems={dragAnalysisItems.filter(d => d.approval_status === 'approved' && d.included_in_report)}
                 share_link={null}
                 showPrintButton={false}

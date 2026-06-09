@@ -21,8 +21,49 @@ function SeverityBadge({ severity }) {
   );
 }
 
+function AnnotationPrintCard({ annotation, linkedFinding }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
+      <div
+        className="bg-slate-950"
+        style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+        dangerouslySetInnerHTML={{
+          __html: drawingToSvg(annotation.drawing_data, {
+            width: annotation.canvas_width,
+            height: annotation.canvas_height,
+          }),
+        }}
+      />
+      <div className="p-3">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700 mb-1 flex items-center gap-1.5">
+          <Pencil className="w-3 h-3" /> Coach-created annotation
+        </div>
+        <div className="text-sm font-semibold text-slate-900">{annotation.title || 'Marked frame'}</div>
+        <div className="text-[10px] font-mono text-blue-600 mt-0.5">
+          Frame {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+        </div>
+        {linkedFinding && (
+          <div className="text-[10px] text-slate-500 mt-1">
+            Linked finding: <span className="font-semibold text-slate-700">{linkedFinding.finding_name || linkedFinding.observation}</span>
+          </div>
+        )}
+        {annotation.coach_note && <p className="text-sm text-slate-600 mt-1 leading-relaxed">{annotation.coach_note}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function PrintableReport({ report, swimmer, club, video_meta, findings, annotations = [], dragItems = [], share_link, showPrintButton = false }) {
   const reportDate = report.ai_completed_at || report.created_date;
+  const findingIds = new Set((findings || []).map(finding => finding.id));
+  const annotationsByFinding = new Map();
+  (annotations || []).forEach(annotation => {
+    if (!annotation.finding_id || !findingIds.has(annotation.finding_id)) return;
+    const group = annotationsByFinding.get(annotation.finding_id) || [];
+    group.push(annotation);
+    annotationsByFinding.set(annotation.finding_id, group);
+  });
+  const unlinkedAnnotations = (annotations || []).filter(annotation => !annotation.finding_id || !findingIds.has(annotation.finding_id));
 
   const handlePrint = () => {
     window.scrollTo(0, 0);
@@ -222,6 +263,18 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                         </div>
                       </div>
                     )}
+                    {(annotationsByFinding.get(finding.id) || []).length > 0 && (
+                      <div className="pt-3 border-t border-slate-100">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                          Marked frames for this finding
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {annotationsByFinding.get(finding.id).map(annotation => (
+                            <AnnotationPrintCard key={annotation.id} annotation={annotation} linkedFinding={finding} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -229,34 +282,16 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           </div>
         )}
 
-        {/* Coach Annotations included in report */}
-        {annotations.length > 0 && (
+        {/* Standalone coach annotations included in report */}
+        {unlinkedAnnotations.length > 0 && (
           <div className="px-8 py-6 border-t border-slate-200">
             <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
               <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
-              Coach Annotations <span className="text-sm font-normal text-slate-500">({annotations.length})</span>
+              Included Coach Annotations <span className="text-sm font-normal text-slate-500">({unlinkedAnnotations.length})</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {annotations.map((a) => (
-                <div key={a.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
-                  <div
-                    className="bg-slate-950"
-                    style={{ aspectRatio: `${a.canvas_width || 16}/${a.canvas_height || 9}` }}
-                    dangerouslySetInnerHTML={{
-                      __html: drawingToSvg(a.drawing_data, {
-                        width: a.canvas_width,
-                        height: a.canvas_height,
-                      }),
-                    }}
-                  />
-                  <div className="p-3">
-                    <div className="text-sm font-semibold text-slate-900">{a.title || 'Coach-created annotation'}</div>
-                    <div className="text-[10px] font-mono text-blue-600 mt-0.5">
-                      Frame {a.video_frame_time_label || formatTimestamp(a.timestamp_seconds)}
-                    </div>
-                    {a.coach_note && <p className="text-sm text-slate-600 mt-1 leading-relaxed">{a.coach_note}</p>}
-                  </div>
-                </div>
+              {unlinkedAnnotations.map(annotation => (
+                <AnnotationPrintCard key={annotation.id} annotation={annotation} />
               ))}
             </div>
           </div>

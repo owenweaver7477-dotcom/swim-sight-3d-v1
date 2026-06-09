@@ -3,7 +3,47 @@ import { SeverityBadge } from './AIFindingCard';
 import { CheckCircle2, Star, Activity, Target, PencilLine } from 'lucide-react';
 import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
 
+function AnnotationCard({ annotation, linkedFinding }) {
+  return (
+    <div className="rounded-lg bg-card border border-border overflow-hidden">
+      <div
+        className="bg-slate-950"
+        style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+        dangerouslySetInnerHTML={{
+          __html: drawingToSvg(annotation.drawing_data, {
+            width: annotation.canvas_width,
+            height: annotation.canvas_height,
+          }),
+        }}
+      />
+      <div className="p-2.5">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">Coach-created annotation</div>
+        <div className="text-xs font-semibold text-foreground">{annotation.title || 'Marked frame'}</div>
+        <div className="text-[10px] text-muted-foreground">
+          Frame {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+        </div>
+        {linkedFinding && (
+          <div className="text-[10px] text-muted-foreground mt-1">
+            Linked finding: <span className="font-semibold text-foreground">{linkedFinding.finding_name || linkedFinding.observation}</span>
+          </div>
+        )}
+        {annotation.coach_note && <p className="text-[10px] text-muted-foreground mt-1">{annotation.coach_note}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings, annotations = [] }) {
+  const approvedFindingIds = new Set(approvedFindings.map(finding => finding.id));
+  const annotationsByFinding = new Map();
+  annotations.forEach(annotation => {
+    if (!annotation.finding_id || !approvedFindingIds.has(annotation.finding_id)) return;
+    const group = annotationsByFinding.get(annotation.finding_id) || [];
+    group.push(annotation);
+    annotationsByFinding.set(annotation.finding_id, group);
+  });
+  const unlinkedAnnotations = annotations.filter(annotation => !annotation.finding_id || !approvedFindingIds.has(annotation.finding_id));
+
   if (approvedFindings.length === 0 && annotations.length === 0) {
     return (
       <div className="p-6 rounded-xl bg-card border border-dashed border-border text-center space-y-2">
@@ -92,38 +132,35 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
                     <span>{f.next_focus}</span>
                   </div>
                 )}
+
+                {(annotationsByFinding.get(f.id) || []).length > 0 && (
+                  <div className="ml-4 pt-2 border-t border-border">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      Marked frames for this finding
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {annotationsByFinding.get(f.id).map(annotation => (
+                        <AnnotationCard key={annotation.id} annotation={annotation} linkedFinding={f} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {annotations.length > 0 && (
+        {unlinkedAnnotations.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-2.5">
               <PencilLine className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                Coach-created annotations ({annotations.length})
+                Included Coach Annotations ({unlinkedAnnotations.length})
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {annotations.map(annotation => (
-                <div key={annotation.id} className="rounded-lg bg-card border border-border overflow-hidden">
-                  <div
-                    className="bg-slate-950"
-                    style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
-                    dangerouslySetInnerHTML={{
-                      __html: drawingToSvg(annotation.drawing_data, {
-                        width: annotation.canvas_width,
-                        height: annotation.canvas_height,
-                      }),
-                    }}
-                  />
-                  <div className="p-2.5">
-                    <div className="text-xs font-semibold text-foreground">{annotation.title || 'Coach-created annotation'}</div>
-                    <div className="text-[10px] text-muted-foreground">Frame {annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}</div>
-                    {annotation.coach_note && <p className="text-[10px] text-muted-foreground mt-1">{annotation.coach_note}</p>}
-                  </div>
-                </div>
+              {unlinkedAnnotations.map(annotation => (
+                <AnnotationCard key={annotation.id} annotation={annotation} />
               ))}
             </div>
           </div>
