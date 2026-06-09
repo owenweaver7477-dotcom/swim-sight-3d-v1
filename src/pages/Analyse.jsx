@@ -60,6 +60,11 @@ const getPhases = (stroke) => STROKE_PHASES[stroke] || STROKE_PHASES['Freestyle'
 const SPEEDS = [0.25, 0.5, 1.0];
 const ACCEPTED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/mov'];
 const MAX_SIZE_MB = 500;
+const SUNDAY_RECOMMENDED_MAX_MB = 20;
+const LARGE_FILE_WARNING_MB = 40;
+const SUPABASE_RESUMABLE_GUIDANCE_MB = 6;
+const UPLOAD_ACTIVE_STATUSES = ['preparing_upload', 'uploading_storage', 'saving_video_record'];
+const UPLOAD_READY_STATUSES = ['uploaded', 'ready_for_ai', 'done'];
 const CAPTURE_SOURCES = [
   { value: 'standard_camera', label: 'Standard camera' },
   { value: 'phone_tablet', label: 'Phone/tablet' },
@@ -67,6 +72,21 @@ const CAPTURE_SOURCES = [
   { value: 'other', label: 'Other' },
 ];
 function formatBytes(b) { return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`; }
+function formatMb(bytes = 0) { return bytes / (1024 * 1024); }
+
+function getFileSizeWarning(f) {
+  const mb = formatMb(f.size);
+  if (mb > LARGE_FILE_WARNING_MB) {
+    return `This file is ${mb.toFixed(1)} MB. Large uploads can take a long time or fail on mobile networks. For Sunday testing, trim to a 5-10 second MP4 under ${SUNDAY_RECOMMENDED_MAX_MB} MB if possible.`;
+  }
+  if (mb > SUNDAY_RECOMMENDED_MAX_MB) {
+    return `This file is ${mb.toFixed(1)} MB. It should upload, but Sunday testing will be faster with a 5-10 second clip under ${SUNDAY_RECOMMENDED_MAX_MB} MB.`;
+  }
+  if (mb > SUPABASE_RESUMABLE_GUIDANCE_MB) {
+    return `This file is ${mb.toFixed(1)} MB. Keep the iPad awake and on Wi-Fi while it uploads.`;
+  }
+  return '';
+}
 
 // ─── Step indicators ──────────────────────────────────────────────────────────
 const STEPS = ['Swimmer', 'Video', 'Configure', 'Analyse'];
@@ -117,7 +137,9 @@ export default function Analyse() {
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
   const [durationWarning, setDurationWarning] = useState('');
+  const [fileSizeWarning, setFileSizeWarning] = useState('');
   const [uploadStatus, setUploadStatus] = useState('idle');
+  const [uploadStatusMessage, setUploadStatusMessage] = useState('');
   const [uploadedUrl, setUploadedUrl] = useState(''); // signed URL for playback
   const [videoUploadId, setVideoUploadId] = useState(null);
   const [captureSource, setCaptureSource] = useState('standard_camera');
@@ -303,7 +325,7 @@ export default function Analyse() {
       URL.revokeObjectURL(url);
       const seconds = video.duration || 0;
       if (seconds > 15) {
-        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. AI Review works best with 5-10 second clips; clips over 15 seconds may time out.`);
+        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. AI Review works best with 5-10 second clips; clips over 15 seconds may upload slowly or time out. Trim to one swimmer, side-view, 720p/1080p MP4 for fastest Sunday testing.`);
       }
     };
     video.onerror = () => URL.revokeObjectURL(url);
@@ -314,10 +336,15 @@ export default function Analyse() {
     const f = e.target.files?.[0];
     if (!f) return;
     setDurationWarning('');
+    setFileSizeWarning('');
+    setUploadStatusMessage('');
     const err = validateFile(f);
     setFileError(err || '');
     setFile(err ? null : f);
-    if (!err) detectVideoDuration(f);
+    if (!err) {
+      setFileSizeWarning(getFileSizeWarning(f));
+      detectVideoDuration(f);
+    }
     setUploadStatus('idle');
     setUploadedUrl('');
   };
@@ -327,15 +354,22 @@ export default function Analyse() {
     const f = e.dataTransfer.files?.[0];
     if (!f) return;
     setDurationWarning('');
+    setFileSizeWarning('');
+    setUploadStatusMessage('');
     const err = validateFile(f);
     setFileError(err || '');
     setFile(err ? null : f);
-    if (!err) detectVideoDuration(f);
+    if (!err) {
+      setFileSizeWarning(getFileSizeWarning(f));
+      detectVideoDuration(f);
+    }
+    setUploadStatus('idle');
   };
 
   const handleUpload = async () => {
     if (!file) return;
-    setUploadStatus('uploading');
+    setUploadStatus('preparing_upload');
+    setUploadStatusMessage('Preparing private upload...');
     setFileError('');
     try {
       const uploadRecord = await uploadPrivateVideo({
@@ -365,6 +399,14 @@ export default function Analyse() {
             ),
           },
         },
+        onStage: (stage) => {
+          setUploadStatus(stage);
+          if (stage === 'uploading_storage') {
+            setUploadStatusMessage('Uploading video to private club storage...');
+          } else if (stage === 'saving_video_record') {
+            setUploadStatusMessage('Saving video record...');
+          }
+        },
       });
       setVideoUploadId(uploadRecord.id);
       setUploadedVideoId(uploadRecord.id);
@@ -373,12 +415,14 @@ export default function Analyse() {
       if (res.data?.signed_url) {
         setUploadedUrl(res.data.signed_url);
       }
-      setUploadStatus('done');
+      setUploadStatus('ready_for_ai');
+      setUploadStatusMessage(`Video uploaded. Ready for AI Review. Video row: ${uploadRecord.id}`);
       queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
     } catch (err) {
-      setUploadStatus('error');
+      setUploadStatus('upload_failed');
       const msg = err?.response?.data?.error || err?.message || 'Upload failed.';
       setFileError(msg);
+      setUploadStatusMessage('Upload did not complete. Try a shorter clip or continue manual review with an already uploaded video.');
     }
   };
 
@@ -454,6 +498,9 @@ export default function Analyse() {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const phases = getPhases(strokeForAnalysis);
   const faultTags = getFaultTags(strokeForAnalysis);
+  const uploadInProgress = UPLOAD_ACTIVE_STATUSES.includes(uploadStatus);
+  const uploadReady = UPLOAD_READY_STATUSES.includes(uploadStatus);
+  const uploadFailed = uploadStatus === 'upload_failed' || uploadStatus === 'error';
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -878,7 +925,7 @@ export default function Analyse() {
                 <div className="text-sm font-medium">{file.name}</div>
                 <div className="text-xs text-muted-foreground">{formatBytes(file.size)}</div>
                 <button className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 mt-1"
-                  onClick={e => { e.stopPropagation(); setFile(null); setUploadStatus('idle'); setUploadedUrl(''); setVideoUploadId(null); setFileError(''); setDurationWarning(''); }}>
+                  onClick={e => { e.stopPropagation(); setFile(null); setUploadStatus('idle'); setUploadedUrl(''); setVideoUploadId(null); setFileError(''); setDurationWarning(''); setFileSizeWarning(''); setUploadStatusMessage(''); }}>
                   <X className="w-3 h-3" /> Remove
                 </button>
               </div>
@@ -892,23 +939,30 @@ export default function Analyse() {
               </div>
             )}
           </div>
-          {fileError && <div className="text-xs text-destructive flex items-center gap-1 mb-3"><AlertCircle className="w-3.5 h-3.5" />{fileError}</div>}
+          {fileError && <div className="text-xs text-destructive flex items-start gap-1 mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{fileError}</div>}
+          {fileSizeWarning && <div className="text-xs text-amber-700 flex items-start gap-1 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{fileSizeWarning}</div>}
           {durationWarning && <div className="text-xs text-amber-700 flex items-start gap-1 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{durationWarning}</div>}
+          {file && !fileSizeWarning && !durationWarning && (
+            <div className="text-xs text-muted-foreground flex items-start gap-1 mb-3 p-3 rounded-lg bg-card border border-border">
+              <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-green-500" />
+              For fastest AI testing, use one swimmer, side-view, 5-10 seconds, 720p or 1080p MP4.
+            </div>
+          )}
           {!selectedSwimmer && file && (
             <div className="text-xs text-muted-foreground flex items-start gap-1 mb-3 p-3 rounded-lg bg-card border border-border">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               Select a swimmer before uploading. Private videos must be linked to a club swimmer in V1.
             </div>
           )}
-          {uploadStatus === 'uploading' && (
+          {uploadInProgress && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 p-3 rounded-lg bg-card border border-border">
-              <Loader2 className="w-4 h-4 animate-spin text-primary" /> Uploading to private secure storage...
+              <Loader2 className="w-4 h-4 animate-spin text-primary" /> {uploadStatusMessage || 'Uploading video to private club storage...'}
             </div>
           )}
-          {uploadStatus === 'done' && (
+          {uploadReady && (
             <div className="space-y-3 mb-3">
               <div className="flex items-center gap-2 text-xs text-green-400 p-3 rounded-lg bg-card border border-border">
-                <CheckCircle2 className="w-4 h-4" /> Uploaded securely. Video ready for review.
+                <CheckCircle2 className="w-4 h-4" /> {uploadStatusMessage || 'Video uploaded. Ready for AI Review.'}
               </div>
               {/* Review Setup Panel — appears after successful upload */}
               <ReviewSetupPanel
@@ -944,19 +998,19 @@ export default function Analyse() {
               </div>
             </div>
           )}
-          {uploadStatus === 'error' && (
-            <div className="flex items-center justify-between text-xs text-destructive mb-3 p-3 rounded-lg bg-card border border-border">
-              <span className="flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> Upload failed.</span>
-              <button className="underline" onClick={() => setUploadStatus('idle')}>Retry</button>
+          {uploadFailed && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-destructive mb-3 p-3 rounded-lg bg-card border border-border">
+              <span className="flex items-start gap-1"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadStatusMessage || 'Upload did not complete. Try a shorter clip or continue manual review.'}</span>
+              <button className="underline text-left sm:text-right" onClick={() => { setUploadStatus('idle'); setUploadStatusMessage(''); }}>Retry upload</button>
             </div>
           )}
           <div className="flex gap-3">
-            {uploadStatus !== 'done' && (
-              <Button className="flex-1 bg-primary text-primary-foreground" disabled={!file || uploadStatus === 'uploading' || !selectedSwimmer} onClick={handleUpload}>
-                {uploadStatus === 'uploading' ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : <><Upload className="w-4 h-4 mr-2" />Upload to Private Storage</>}
+            {!uploadReady && (
+              <Button className="flex-1 bg-primary text-primary-foreground" disabled={!file || uploadInProgress || !selectedSwimmer} onClick={handleUpload}>
+                {uploadInProgress ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : <><Upload className="w-4 h-4 mr-2" />Upload to Private Storage</>}
               </Button>
             )}
-            {uploadStatus === 'done' && (
+            {uploadReady && (
               <Button className="flex-1 bg-primary text-primary-foreground" onClick={() => setStep(2)}>Continue to Configure →</Button>
             )}
             <Button variant="outline" className="text-xs" onClick={() => videoLibraryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Use Existing Video</Button>

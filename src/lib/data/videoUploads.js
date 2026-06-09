@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabaseClient';
 import entities from '@/lib/data/entities';
 
 export const PRIVATE_VIDEO_BUCKET = 'private-videos';
+const DEFAULT_STORAGE_UPLOAD_TIMEOUT_MS = 4 * 60 * 1000;
 
 export function safeVideoFilename(filename = 'video') {
   const trimmed = filename.trim();
@@ -21,7 +22,21 @@ export function buildPrivateVideoPath({ clubId, swimmerId, videoUploadId, filena
   return `${clubId}/${swimmerId}/${videoUploadId}/${safeVideoFilename(filename)}`;
 }
 
-export async function uploadPrivateVideo({ file, clubId, swimmer, userId, metadata = {} }) {
+function createUploadTimeoutError(timeoutMs) {
+  return new Error(
+    `Video upload did not finish within ${Math.round(timeoutMs / 60000)} minutes. Try a shorter 5-10 second MP4 clip under 20 MB for Sunday testing.`
+  );
+}
+
+export async function uploadPrivateVideo({
+  file,
+  clubId,
+  swimmer,
+  userId,
+  metadata = {},
+  onStage,
+  timeoutMs = DEFAULT_STORAGE_UPLOAD_TIMEOUT_MS,
+}) {
   if (!file) throw new Error('No video file selected.');
   if (!clubId) throw new Error('No active club selected.');
   if (!swimmer?.id) throw new Error('Select a swimmer before uploading a video.');
@@ -34,17 +49,27 @@ export async function uploadPrivateVideo({ file, clubId, swimmer, userId, metada
     filename: file.name,
   });
 
+  onStage?.('uploading_storage', { videoUploadId, filePath });
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(createUploadTimeoutError(timeoutMs)), timeoutMs);
+
   const { error: uploadError } = await supabase
     .storage
     .from(PRIVATE_VIDEO_BUCKET)
     .upload(filePath, file, {
       contentType: file.type || 'video/mp4',
       upsert: false,
-    });
+      signal: controller.signal,
+    })
+    .finally(() => globalThis.clearTimeout(timeout));
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    if (uploadError.name === 'AbortError') throw createUploadTimeoutError(timeoutMs);
+    throw uploadError;
+  }
 
   try {
+    onStage?.('saving_video_record', { videoUploadId });
     return await entities.VideoUpload.create({
       id: videoUploadId,
       club_id: clubId,
@@ -70,6 +95,8 @@ export async function uploadPrivateVideo({ file, clubId, swimmer, userId, metada
     });
   } catch (error) {
     await supabase.storage.from(PRIVATE_VIDEO_BUCKET).remove([filePath]);
-    throw error;
+    throw new Error(
+      `Video reached private storage, but the video record could not be saved: ${error.message || 'Unknown database error'}. The storage object was cleaned up; please retry with a shorter clip.`
+    );
   }
 }

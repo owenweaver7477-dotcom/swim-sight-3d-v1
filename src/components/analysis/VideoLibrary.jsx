@@ -89,7 +89,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       onAIStatusChange?.(upload.id, nextStatus);
       setAiMessage('AI Review queued. The report will appear when the secure callback returns.');
     } catch (err) {
-      setAiError(err?.message || 'Could not start AI Review. Manual review remains available.');
+      onAIStatusChange?.(upload.id, 'error');
+      setAiError(`${err?.message || 'Could not start AI Review.'} Uploaded video remains saved. Retry AI Review or continue manual review.`);
     } finally {
       setAiLoading(false);
     }
@@ -306,6 +307,11 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
         <AIJobStatusBadge status={status} jobStatus={jobStatus} />
 
+        <div className="text-[9px] text-muted-foreground font-mono">
+          Video row: {upload.id} · Status: {status}
+          {job?.id ? ` · AI job: ${job.id}` : ''}
+        </div>
+
         {ACTIVE_PROCESSING_STATUSES.includes(status) && jobStage && (
           <div className="text-[10px] text-muted-foreground leading-relaxed">{jobStage}</div>
         )}
@@ -344,7 +350,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           <div className="text-[10px] text-green-600 leading-relaxed">{aiMessage}</div>
         )}
         {aiError && (
-          <div className="text-[10px] text-muted-foreground leading-relaxed">{aiError}</div>
+          <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">{aiError}</div>
         )}
       </div>
 

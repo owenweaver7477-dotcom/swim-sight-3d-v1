@@ -21,6 +21,8 @@ const QUALITY_OPTIONS = [
   { value: 'usable', label: 'Usable — Some blur or shaky, swimmer visible' },
   { value: 'poor', label: 'Poor — Very blurry or obstructed' },
 ];
+const SUNDAY_RECOMMENDED_MAX_MB = 20;
+const LARGE_FILE_WARNING_MB = 40;
 
 function captureSourceFromDevice(device) {
   if (device === 'swimpro') return 'swimpro_export';
@@ -31,6 +33,17 @@ function captureSourceFromDevice(device) {
 
 function formatBytes(b) {
   return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`;
+}
+
+function getLargeFileWarning(file) {
+  const mb = file.size / (1024 * 1024);
+  if (mb > LARGE_FILE_WARNING_MB) {
+    return `This angle is ${mb.toFixed(1)} MB. Large uploads may fail on mobile networks. For Sunday testing, trim to 5-10 seconds under ${SUNDAY_RECOMMENDED_MAX_MB} MB if possible.`;
+  }
+  if (mb > SUNDAY_RECOMMENDED_MAX_MB) {
+    return `This angle is ${mb.toFixed(1)} MB. Upload should work, but Sunday demos are faster under ${SUNDAY_RECOMMENDED_MAX_MB} MB.`;
+  }
+  return '';
 }
 
 export default function MultiAngleUploadCard({
@@ -50,7 +63,9 @@ export default function MultiAngleUploadCard({
   const fileRef = useRef();
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | uploading | done | error
+  const [fileWarning, setFileWarning] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | preparing_upload | uploading_storage | saving_video_record | done | error
+  const [statusMessage, setStatusMessage] = useState('');
   const [device, setDevice] = useState('');
   const [quality, setQuality] = useState('');
   const [syncOffset, setSyncOffset] = useState('');
@@ -71,8 +86,10 @@ export default function MultiAngleUploadCard({
     if (!f) return;
     const err = validateFile(f);
     setFileError(err || '');
+    setFileWarning(err ? '' : getLargeFileWarning(f));
     setFile(err ? null : f);
     setStatus('idle');
+    setStatusMessage('');
   };
 
   const handleDrop = (e) => {
@@ -81,12 +98,16 @@ export default function MultiAngleUploadCard({
     if (!f) return;
     const err = validateFile(f);
     setFileError(err || '');
+    setFileWarning(err ? '' : getLargeFileWarning(f));
     setFile(err ? null : f);
+    setStatus('idle');
+    setStatusMessage('');
   };
 
   const handleUpload = async () => {
     if (!file) return;
-    setStatus('uploading');
+    setStatus('preparing_upload');
+    setStatusMessage('Preparing private upload...');
     setFileError('');
     try {
       const record = await uploadPrivateVideo({
@@ -104,12 +125,20 @@ export default function MultiAngleUploadCard({
           is_primary_angle: isPrimary,
           review_context: { upload_order: uploadOrder },
         },
+        onStage: (stage) => {
+          setStatus(stage);
+          setStatusMessage(stage === 'saving_video_record'
+            ? 'Saving video record...'
+            : 'Uploading video to private club storage...');
+        },
       });
       setStatus('done');
+      setStatusMessage('Video uploaded. Ready for AI Review.');
       onUploaded(angleKey, record, isPrimary);
     } catch (err) {
       setStatus('error');
       setFileError(err?.response?.data?.error || err?.message || 'Upload failed.');
+      setStatusMessage('Upload did not complete. Try a shorter clip or retry on Wi-Fi.');
     }
   };
 
@@ -186,7 +215,7 @@ export default function MultiAngleUploadCard({
                   <span className="text-xs text-foreground truncate max-w-[140px]">{file.name}</span>
                   <span className="text-[10px] text-muted-foreground">{formatBytes(file.size)}</span>
                   <button
-                    onClick={e => { e.stopPropagation(); setFile(null); setStatus('idle'); setFileError(''); }}
+                    onClick={e => { e.stopPropagation(); setFile(null); setStatus('idle'); setFileError(''); setFileWarning(''); setStatusMessage(''); }}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <X className="w-3 h-3" />
@@ -201,8 +230,13 @@ export default function MultiAngleUploadCard({
             </div>
 
             {fileError && (
-              <div className="flex items-center gap-1 text-[10px] text-destructive">
-                <AlertCircle className="w-3 h-3" /> {fileError}
+              <div className="flex items-start gap-1 text-[10px] text-destructive">
+                <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" /> {fileError}
+              </div>
+            )}
+            {fileWarning && (
+              <div className="flex items-start gap-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" /> {fileWarning}
               </div>
             )}
 
@@ -270,10 +304,10 @@ export default function MultiAngleUploadCard({
                 size="sm"
                 className="w-full h-8 text-xs bg-primary text-primary-foreground"
                 onClick={handleUpload}
-                disabled={status === 'uploading'}
+                disabled={['preparing_upload', 'uploading_storage', 'saving_video_record'].includes(status)}
               >
-                {status === 'uploading' ? (
-                  <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" />Uploading…</>
+                {['preparing_upload', 'uploading_storage', 'saving_video_record'].includes(status) ? (
+                  <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" />{statusMessage || 'Uploading…'}</>
                 ) : (
                   <><Upload className="w-3 h-3 mr-1.5" />Upload {angleName}</>
                 )}
@@ -281,7 +315,7 @@ export default function MultiAngleUploadCard({
             )}
 
             {status === 'error' && (
-              <button className="text-[10px] text-destructive underline" onClick={() => setStatus('idle')}>
+              <button className="text-[10px] text-destructive underline" onClick={() => { setStatus('idle'); setStatusMessage(''); }}>
                 Retry
               </button>
             )}

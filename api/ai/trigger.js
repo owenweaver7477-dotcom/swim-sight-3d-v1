@@ -24,6 +24,7 @@ const ACTIVE_JOB_STATUSES = [
 const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'];
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
+const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -142,11 +143,24 @@ export default async function handler(req, res) {
       downscale_frames: true,
     };
 
-    const aiResponse = await fetch(aiProcessUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_SERVER_TRIGGER_TIMEOUT_MS);
+    let aiResponse;
+    try {
+      aiResponse = await fetch(aiProcessUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw new Error('AI server did not accept the job within 20 seconds. The uploaded video is saved; retry AI Review or continue manual review.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
     const responseText = await aiResponse.text();
     let aiData;
     try {
