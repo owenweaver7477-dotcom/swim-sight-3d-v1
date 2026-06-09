@@ -1,38 +1,54 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { Link } from 'react-router-dom';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid
-} from 'recharts';
-import {
-  BarChart2, TrendingUp, Target, Users, FileText, Activity, Waves, Loader2, CheckCircle2, Trophy
-} from 'lucide-react';
-import {
-  activeCompletedReports, approvedFindings,
-  buildFaultFrequency, buildPhaseFrequency, buildSeverityDistribution
-} from '@/components/analytics/analyticsHelpers';
 import TeamLeaderboard from '@/components/leaderboard/TeamLeaderboard';
+import {
+  activeCompletedReports,
+  approvedFindings,
+  buildFaultFrequency,
+  buildPhaseFrequency,
+  buildSeverityDistribution,
+  formatShortDate,
+  reportDate,
+  reportMode,
+  reportStroke,
+  swimmerName,
+} from '@/components/analytics/analyticsHelpers';
+import { Activity, BarChart2, FileText, Loader2, Shield, Target, TrendingUp, Trophy, Users, Waves } from 'lucide-react';
 
-const CHART_STYLE = {
-  contentStyle: { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 11 },
-  labelStyle: { color: '#0b1f33' },
-  itemStyle: { color: '#0077b6' },
-};
+const STROKES = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'General'];
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
-    <div className="p-4 rounded-xl bg-white border border-border text-center">
-      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-2">
-        <Icon className="w-4 h-4 text-primary" />
+    <div className="p-4 rounded-xl bg-white border border-border">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-primary" />
+        </div>
+        <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{label}</div>
       </div>
-      <div className="text-2xl font-bold text-foreground">{value}</div>
-      <div className="text-[10px] text-muted-foreground">{label}</div>
-      {sub && <div className="text-[10px] text-primary mt-0.5">{sub}</div>}
+      <div className="text-2xl font-black text-foreground">{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="p-10 rounded-xl bg-white border border-border text-center space-y-3">
+      <Waves className="w-9 h-9 text-muted-foreground mx-auto opacity-50" />
+      <div className="text-sm font-semibold text-foreground">Not enough finalised reports yet</div>
+      <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+        Club progress uses real coach-approved reports only. Charts unlock after at least three finalised reports exist.
+      </p>
+      <Link to="/ai-reviews">
+        <Button size="sm" className="mt-2">Open AI Reviews</Button>
+      </Link>
     </div>
   );
 }
@@ -40,38 +56,109 @@ function StatCard({ icon: Icon, label, value, sub }) {
 export default function ClubProgress() {
   const { club, loading } = useClubContext();
   const [activeTab, setActiveTab] = useState('analytics');
-  const [strokeFilter, setStrokeFilter] = useState('all');
+  const [strokeFilter, setStrokeFilter] = useState('All');
   const [squadFilter, setSquadFilter] = useState('all');
 
-  const { data: swimmers = [] } = useQuery({
-    queryKey: ['swimmers', club?.id],
-    queryFn: () => base44.entities.Swimmer.filter({ club_id: club.id }),
+  const { data: swimmers = [], isLoading: swimmersLoading } = useQuery({
+    queryKey: ['progress-swimmers', club?.id],
+    queryFn: () => entities.Swimmer.filter({ club_id: club.id }, 'last_name', 400),
     enabled: !!club?.id,
   });
 
   const { data: squads = [] } = useQuery({
-    queryKey: ['squads', club?.id],
-    queryFn: () => base44.entities.Squad.filter({ club_id: club.id }),
+    queryKey: ['progress-squads', club?.id],
+    queryFn: () => entities.Squad.filter({ club_id: club.id }, 'name', 100),
     enabled: !!club?.id,
   });
 
-  const { data: allReports = [], isLoading: loadingReports } = useQuery({
-    queryKey: ['reports-progress', club?.id],
-    queryFn: () => base44.entities.Report.filter({ club_id: club.id }, '-created_date', 500),
+  const { data: reports = [], isLoading: reportsLoading } = useQuery({
+    queryKey: ['progress-reports', club?.id],
+    queryFn: () => entities.Report.filter({ club_id: club.id }, '-created_date', 700),
     enabled: !!club?.id,
   });
 
-  const { data: allFindings = [], isLoading: loadingFindings } = useQuery({
-    queryKey: ['findings-progress', club?.id],
-    queryFn: () => base44.entities.Finding.filter({ club_id: club.id }, '-created_date', 1000),
+  const { data: findings = [], isLoading: findingsLoading } = useQuery({
+    queryKey: ['progress-findings', club?.id],
+    queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 1500),
     enabled: !!club?.id,
   });
 
-  if (loading) {
+  const isLoading = loading || swimmersLoading || reportsLoading || findingsLoading;
+
+  const progress = useMemo(() => {
+    const completed = activeCompletedReports(reports);
+    const swimmerMap = new Map(swimmers.map(swimmer => [swimmer.id, swimmer]));
+    const squadMap = new Map(squads.map(squad => [squad.id, squad]));
+
+    const allowedSwimmerIds = new Set(
+      swimmers
+        .filter(swimmer => squadFilter === 'all' || swimmer.squad_id === squadFilter)
+        .map(swimmer => swimmer.id)
+    );
+
+    const filteredReports = completed.filter(report => {
+      const strokeOk = strokeFilter === 'All' || reportStroke(report).toLowerCase().includes(strokeFilter.toLowerCase());
+      return allowedSwimmerIds.has(report.swimmer_id) && strokeOk;
+    });
+
+    const approved = approvedFindings(findings, filteredReports.map(report => report.id));
+    const scoredReports = filteredReports.filter(report => report.overall_score !== null && report.overall_score !== undefined);
+    const avgScore = scoredReports.length
+      ? Math.round(scoredReports.reduce((sum, report) => sum + Number(report.overall_score), 0) / scoredReports.length)
+      : null;
+
+    const reviewedSwimmerIds = new Set(filteredReports.map(report => report.swimmer_id).filter(Boolean));
+
+    const reportsByStroke = Object.values(filteredReports.reduce((map, report) => {
+      const stroke = reportStroke(report);
+      map[stroke] = map[stroke] || { name: stroke, reports: 0 };
+      map[stroke].reports += 1;
+      return map;
+    }, {})).sort((a, b) => b.reports - a.reports);
+
+    const reportsBySquad = squads.map(squad => {
+      const squadSwimmerIds = new Set(swimmers.filter(swimmer => swimmer.squad_id === squad.id).map(swimmer => swimmer.id));
+      const squadReports = filteredReports.filter(report => squadSwimmerIds.has(report.swimmer_id));
+      return { name: squad.name, reports: squadReports.length };
+    }).filter(item => item.reports > 0);
+
+    const modeCounts = Object.values(filteredReports.reduce((map, report) => {
+      const mode = reportMode(report);
+      map[mode] = map[mode] || { name: mode, reports: 0 };
+      map[mode].reports += 1;
+      return map;
+    }, {}));
+
+    const recentReports = [...filteredReports]
+      .sort((a, b) => new Date(reportDate(b)) - new Date(reportDate(a)))
+      .slice(0, 6)
+      .map(report => ({
+        report,
+        swimmer: swimmerMap.get(report.swimmer_id),
+        squad: squadMap.get(swimmerMap.get(report.swimmer_id)?.squad_id),
+      }));
+
+    return {
+      completed,
+      filteredReports,
+      approved,
+      reviewedSwimmerIds,
+      avgScore,
+      reportsByStroke,
+      reportsBySquad,
+      modeCounts,
+      commonFindings: buildFaultFrequency(approved, 8),
+      phaseFocus: buildPhaseFrequency(approved, 8),
+      severity: buildSeverityDistribution(approved),
+      recentReports,
+    };
+  }, [findings, reports, squadFilter, squads, strokeFilter, swimmers]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-        <span className="text-sm text-muted-foreground">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading club progress...</span>
       </div>
     );
   }
@@ -82,334 +169,218 @@ export default function ClubProgress() {
         <div className="p-10 rounded-xl bg-white border border-border text-center">
           <Waves className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
           <div className="text-sm font-medium text-foreground mb-1">No club workspace selected</div>
-          <p className="text-xs text-muted-foreground">Create or join a club to view progress data.</p>
+          <p className="text-xs text-muted-foreground">Create or join a club to view progress.</p>
         </div>
       </div>
     );
   }
 
-  // ── Filter to only active, coach-finalised reports ──
-  const completedReports = activeCompletedReports(allReports);
-  const completedIds = completedReports.map(r => r.id);
-  const goodFindings = approvedFindings(allFindings, completedIds);
-
-  // Apply filters
-  const filteredSwimmers = squadFilter === 'all'
-    ? swimmers
-    : swimmers.filter(s => s.squad_id === squadFilter);
-
-  const filteredSwimmerIds = new Set(filteredSwimmers.map(s => s.id));
-
-  const filteredReports = completedReports.filter(r => {
-    const matchSquad = filteredSwimmerIds.has(r.swimmer_id);
-    const matchStroke = strokeFilter === 'all' || (r.title || '').toLowerCase().includes(strokeFilter.toLowerCase());
-    return matchSquad && matchStroke;
-  });
-
-  const filteredIds = new Set(filteredReports.map(r => r.id));
-  const filteredFindings = goodFindings.filter(f => filteredIds.has(f.report_id));
-
-  // Swimmers with at least 1 completed report
-  const reviewedSwimmerIds = new Set(filteredReports.map(r => r.swimmer_id).filter(Boolean));
-  const reviewedCount = reviewedSwimmerIds.size;
-
-  // Average score
-  const scoredReports = filteredReports.filter(r => r.overall_score != null);
-  const avgScore = scoredReports.length > 0
-    ? Math.round(scoredReports.reduce((a, r) => a + r.overall_score, 0) / scoredReports.length)
-    : null;
-
-  // Score over time (monthly average, last 6 months)
-  const now = new Date();
-  const monthlyScoreData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const label = d.toLocaleString('en-AU', { month: 'short' });
-    const monthReports = filteredReports.filter(r => {
-      const rd = new Date(r.ai_completed_at || r.updated_date || r.created_date);
-      return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth() && r.overall_score != null;
-    });
-    const avg = monthReports.length > 0
-      ? Math.round(monthReports.reduce((a, r) => a + r.overall_score, 0) / monthReports.length)
-      : null;
-    const count = filteredReports.filter(r => {
-      const rd = new Date(r.ai_completed_at || r.updated_date || r.created_date);
-      return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
-    }).length;
-    return { month: label, avgScore: avg, reports: count };
-  });
-
-  // Faults + phases
-  const faultData = buildFaultFrequency(filteredFindings, 8);
-  const phaseData = buildPhaseFrequency(filteredFindings, 6);
-  const severityDist = buildSeverityDistribution(filteredFindings);
-  const totalSeverity = Object.values(severityDist).reduce((a, b) => a + b, 0);
-
-  // Per-swimmer report counts (leaderboard)
-  const swimmerReportCounts = filteredSwimmers
-    .map(s => ({
-      ...s,
-      count: filteredReports.filter(r => r.swimmer_id === s.id).length,
-      avgScore: (() => {
-        const rs = filteredReports.filter(r => r.swimmer_id === s.id && r.overall_score != null);
-        return rs.length > 0 ? Math.round(rs.reduce((a, r) => a + r.overall_score, 0) / rs.length) : null;
-      })(),
-    }))
-    .filter(s => s.count > 0)
-    .sort((a, b) => (b.avgScore ?? 0) - (a.avgScore ?? 0));
-
-  const strokeOptions = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-
-  const isEmpty = completedReports.length < 3;
+  const severityTotal = Object.values(progress.severity).reduce((sum, count) => sum + count, 0);
+  const canChart = progress.completed.length >= 3;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 pb-20">
+    <div className="max-w-6xl mx-auto px-4 py-8 pb-20">
       <PageHeader
         eyebrow={club.name}
         title="Club Progress"
-        subtitle="Coach-approved report trends, fault patterns, and team leaderboard."
+        subtitle="Real progress from finalised reports and approved findings only."
         action={
-          <Link to="/ai-reviews">
-            <Button size="sm" variant="outline" className="text-xs h-8">
-              <FileText className="w-3.5 h-3.5 mr-1" /> AI Review Queue
+          <Link to="/performance">
+            <Button size="sm" variant="outline" className="h-8 text-xs">
+              <TrendingUp className="w-3.5 h-3.5 mr-1" /> Performance Hub
             </Button>
           </Link>
         }
       />
 
-      {/* Tab switcher */}
+      <div className="mb-5 flex flex-wrap gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+        <Shield className="w-4 h-4 text-primary mt-0.5" />
+        <p className="text-[10px] text-muted-foreground flex-1 leading-relaxed">
+          No fake charts here. Pending AI reports, rejected findings, deleted reports, and weak-pose drafts are excluded.
+        </p>
+      </div>
+
       <div className="flex gap-1 mb-6 p-1 rounded-xl bg-secondary/50 border border-border w-fit">
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'analytics' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <BarChart2 className="w-3.5 h-3.5" /> Analytics
-        </button>
-        <button
-          onClick={() => setActiveTab('leaderboard')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'leaderboard' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          <Trophy className="w-3.5 h-3.5" /> Team Leaderboard
-        </button>
+        {[
+          ['analytics', BarChart2, 'Analytics'],
+          ['leaderboard', Trophy, 'Leaderboard'],
+        ].map(([key, Icon, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold ${
+              activeTab === key ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" /> {label}
+          </button>
+        ))}
       </div>
 
-      {activeTab === 'leaderboard' && <TeamLeaderboard />}
-      {activeTab === 'analytics' && <div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <StatCard icon={FileText} label="Completed Reports" value={completedReports.length} />
-        <StatCard icon={Users} label="Swimmers Reviewed" value={reviewedCount} sub={`of ${swimmers.length} total`} />
-        <StatCard icon={Activity} label="Approved Findings" value={goodFindings.length} />
-        {avgScore != null
-          ? <StatCard icon={TrendingUp} label="Avg Score" value={avgScore} sub="coach-reviewed" />
-          : <StatCard icon={TrendingUp} label="Avg Score" value="—" sub="no scored reports yet" />
-        }
-      </div>
-
-      {/* Empty state */}
-      {isEmpty ? (
-        <div className="p-10 rounded-xl bg-white border border-border text-center space-y-3">
-          <Waves className="w-8 h-8 text-muted-foreground mx-auto" />
-          <div className="text-sm font-medium text-foreground">Not enough data yet</div>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-            Club progress charts appear after at least <strong>3 coach-approved, finalised reports</strong> exist across your club.
-            Complete and finalise AI review sessions to start seeing trends.
-          </p>
-          <Link to="/ai-reviews">
-            <Button size="sm" className="bg-primary text-primary-foreground mt-2">
-              Go to AI Review Queue
-            </Button>
-          </Link>
-        </div>
+      {activeTab === 'leaderboard' ? (
+        <TeamLeaderboard />
       ) : (
-        <>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2 mb-5 p-3 rounded-xl bg-secondary/40 border border-border">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground">Stroke:</span>
-              {['all', ...strokeOptions].map(s => (
-                <button key={s} onClick={() => setStrokeFilter(s)}
-                  className={`text-[10px] px-2 py-1 rounded border transition-colors font-medium ${
-                    strokeFilter === s ? 'bg-primary text-primary-foreground border-primary' : 'bg-white text-muted-foreground border-border hover:border-primary/40'
-                  }`}>
-                  {s === 'all' ? 'All' : s}
-                </button>
-              ))}
-            </div>
-            {squads.length > 1 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground">Squad:</span>
-                {[{ id: 'all', name: 'All' }, ...squads].map(sq => (
-                  <button key={sq.id} onClick={() => setSquadFilter(sq.id)}
-                    className={`text-[10px] px-2 py-1 rounded border transition-colors font-medium ${
-                      squadFilter === sq.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-white text-muted-foreground border-border hover:border-primary/40'
-                    }`}>
-                    {sq.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            {filteredReports.length !== completedReports.length && (
-              <span className="text-[10px] text-muted-foreground self-center ml-auto">
-                Showing {filteredReports.length} of {completedReports.length} reports
-              </span>
-            )}
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={FileText} label="Finalised reports" value={progress.completed.length} />
+            <StatCard icon={Users} label="Swimmers reviewed" value={progress.reviewedSwimmerIds.size} sub={`of ${swimmers.length} swimmers`} />
+            <StatCard icon={Activity} label="Approved findings" value={progress.approved.length} />
+            <StatCard icon={TrendingUp} label="Average score" value={progress.avgScore ?? '—'} sub={progress.avgScore == null ? 'needs scored reports' : 'coach finalised'} />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Score trend over time */}
-            {monthlyScoreData.some(d => d.avgScore != null) && (
-              <div className="p-4 rounded-xl bg-white border border-border">
-                <div className="flex items-center gap-1.5 mb-4">
-                  <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">Avg Score Trend (6 months)</span>
-                </div>
-                <ResponsiveContainer width="100%" height={150}>
-                  <LineChart data={monthlyScoreData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} />
-                    <Tooltip {...CHART_STYLE} formatter={(v) => v != null ? [v, 'Avg Score'] : ['—', 'No data']} />
-                    <Line type="monotone" dataKey="avgScore" stroke="#0077b6" strokeWidth={2}
-                      dot={{ r: 3, fill: '#0077b6' }} connectNulls />
-                  </LineChart>
-                </ResponsiveContainer>
+          {!canChart ? <EmptyState /> : (
+            <>
+              <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-white border border-border">
+                <span className="text-[10px] text-muted-foreground self-center mr-1">Stroke</span>
+                {STROKES.map(stroke => (
+                  <button
+                    key={stroke}
+                    type="button"
+                    onClick={() => setStrokeFilter(stroke)}
+                    className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold ${
+                      strokeFilter === stroke ? 'bg-primary text-white border-primary' : 'bg-secondary text-muted-foreground border-border'
+                    }`}
+                  >
+                    {stroke}
+                  </button>
+                ))}
+                {squads.length > 0 && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground self-center ml-2 mr-1">Squad</span>
+                    {[{ id: 'all', name: 'All' }, ...squads].map(squad => (
+                      <button
+                        key={squad.id}
+                        type="button"
+                        onClick={() => setSquadFilter(squad.id)}
+                        className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold ${
+                          squadFilter === squad.id ? 'bg-primary text-white border-primary' : 'bg-secondary text-muted-foreground border-border'
+                        }`}
+                      >
+                        {squad.name}
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
-            )}
 
-            {/* Completed reports per month */}
-            <div className="p-4 rounded-xl bg-white border border-border">
-              <div className="flex items-center gap-1.5 mb-4">
-                <BarChart2 className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs font-semibold text-foreground">Completed Reports (6 months)</span>
-              </div>
-              <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={monthlyScoreData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#64748b' }} />
-                  <YAxis tick={{ fontSize: 9, fill: '#64748b' }} allowDecimals={false} />
-                  <Tooltip {...CHART_STYLE} />
-                  <Bar dataKey="reports" fill="#0077b6" radius={[3, 3, 0, 0]} opacity={0.85} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-white border border-border">
+                  <div className="text-xs font-bold text-foreground mb-3">Reports by Stroke</div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={progress.reportsByStroke}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Bar dataKey="reports" fill="#0077b6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
 
-            {/* Common faults */}
-            {faultData.length > 0 && (
-              <div className="p-4 rounded-xl bg-white border border-border md:col-span-2">
-                <div className="flex items-center gap-1.5 mb-4">
-                  <Target className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">Most Common Approved Faults</span>
-                  <span className="text-[10px] text-muted-foreground ml-auto">from coach-approved findings only</span>
+                <div className="p-4 rounded-xl bg-white border border-border">
+                  <div className="text-xs font-bold text-foreground mb-3">Manual vs AI-Assisted Reviews</div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={progress.modeCounts}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Bar dataKey="reports" fill="#00a6c8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <ResponsiveContainer width="100%" height={Math.max(160, faultData.length * 26)}>
-                  <BarChart data={faultData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 9, fill: '#64748b' }} allowDecimals={false} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fill: '#64748b' }} width={150} />
-                    <Tooltip {...CHART_STYLE} />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} opacity={0.85} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
 
-            {/* Phase frequency */}
-            {phaseData.length > 0 && (
-              <div className="p-4 rounded-xl bg-white border border-border">
-                <div className="flex items-center gap-1.5 mb-4">
-                  <Waves className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">Phases Needing Attention</span>
-                </div>
-                <div className="space-y-2">
-                  {phaseData.map(p => {
-                    const pct = Math.round((p.count / phaseData[0].count) * 100);
-                    return (
-                      <div key={p.name}>
-                        <div className="flex justify-between text-[10px] mb-0.5">
-                          <span className="text-muted-foreground">{p.name}</span>
-                          <span className="text-foreground font-medium">{p.count}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Severity distribution */}
-            {totalSeverity > 0 && (
-              <div className="p-4 rounded-xl bg-white border border-border">
-                <div className="flex items-center gap-1.5 mb-4">
-                  <Activity className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">Severity Distribution</span>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { key: 'low',      label: 'Low',      color: 'bg-green-400',  textColor: 'text-green-700' },
-                    { key: 'medium',   label: 'Medium',   color: 'bg-amber-400',  textColor: 'text-amber-700' },
-                    { key: 'high',     label: 'High',     color: 'bg-orange-400', textColor: 'text-orange-700' },
-                    { key: 'critical', label: 'Critical', color: 'bg-red-500',    textColor: 'text-red-700' },
-                  ].filter(s => severityDist[s.key] > 0).map(s => {
-                    const pct = Math.round((severityDist[s.key] / totalSeverity) * 100);
-                    return (
-                      <div key={s.key}>
-                        <div className="flex justify-between text-[10px] mb-0.5">
-                          <span className="text-muted-foreground">{s.label}</span>
-                          <span className={`font-medium ${s.textColor}`}>{severityDist[s.key]} ({pct}%)</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${s.color}`} style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Swimmer leaderboard */}
-            {swimmerReportCounts.length > 0 && (
-              <div className="p-4 rounded-xl bg-white border border-border md:col-span-2">
-                <div className="flex items-center gap-1.5 mb-4">
-                  <Users className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">Swimmer Activity</span>
-                  <span className="text-[10px] text-muted-foreground ml-auto">coach-approved reports only</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {swimmerReportCounts.map((s, i) => (
-                    <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-secondary/30">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
-                        {i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-foreground truncate">{s.name}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {s.count} report{s.count !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-                      {s.avgScore != null && (
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-sm font-black text-primary">{s.avgScore}</div>
-                          <div className="text-[9px] text-muted-foreground">avg score</div>
-                        </div>
-                      )}
+                {progress.commonFindings.length > 0 && (
+                  <div className="p-4 rounded-xl bg-white border border-border">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-primary" />
+                      <div className="text-xs font-bold text-foreground">Common Approved Findings</div>
                     </div>
+                    <div className="space-y-2">
+                      {progress.commonFindings.map(item => (
+                        <div key={item.name}>
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="text-muted-foreground truncate pr-2">{item.name}</span>
+                            <span className="font-semibold text-foreground">{item.count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                            <div className="h-full bg-amber-400" style={{ width: `${Math.max(8, (item.count / progress.commonFindings[0].count) * 100)}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {progress.phaseFocus.length > 0 && (
+                  <div className="p-4 rounded-xl bg-white border border-border">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Waves className="w-4 h-4 text-primary" />
+                      <div className="text-xs font-bold text-foreground">Stroke Phases Needing Attention</div>
+                    </div>
+                    <div className="space-y-2">
+                      {progress.phaseFocus.map(item => (
+                        <div key={item.name} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border">
+                          <span className="text-xs font-medium text-foreground">{item.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{item.count} finding{item.count !== 1 ? 's' : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {progress.reportsBySquad.length > 0 && (
+                  <div className="p-4 rounded-xl bg-white border border-border">
+                    <div className="text-xs font-bold text-foreground mb-3">Reports by Squad</div>
+                    <div className="space-y-2">
+                      {progress.reportsBySquad.map(item => (
+                        <div key={item.name} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border">
+                          <span className="text-xs font-medium text-foreground">{item.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{item.reports} report{item.reports !== 1 ? 's' : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {severityTotal > 0 && (
+                  <div className="p-4 rounded-xl bg-white border border-border">
+                    <div className="text-xs font-bold text-foreground mb-3">Severity Mix</div>
+                    <div className="space-y-2">
+                      {Object.entries(progress.severity).filter(([, count]) => count > 0).map(([severity, count]) => (
+                        <div key={severity}>
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="capitalize text-muted-foreground">{severity}</span>
+                            <span className="font-semibold text-foreground">{count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                            <div className="h-full bg-primary" style={{ width: `${(count / severityTotal) * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl bg-white border border-border">
+                <div className="text-xs font-bold text-foreground mb-3">Recent Finalised Reports</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {progress.recentReports.map(({ report, swimmer, squad }) => (
+                    <Link key={report.id} to={`/ai-review?report_id=${report.id}`} className="p-3 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/60 transition-colors">
+                      <div className="text-xs font-semibold text-foreground">{swimmerName(swimmer)}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {reportStroke(report)} · {formatShortDate(reportDate(report))}{squad ? ` · ${squad.name}` : ''}
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-
-          <p className="text-[10px] text-muted-foreground mt-4 border-t border-border pt-3">
-            All data sourced from coach-approved, finalised reports only. Pending AI reports, deleted reports, and rejected findings are excluded.
-          </p>
-        </>
+            </>
+          )}
+        </div>
       )}
-      </div>}
     </div>
   );
 }

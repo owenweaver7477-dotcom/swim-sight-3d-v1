@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, Waves, ChevronsUpDown, Check, Brain,
-  ShieldAlert, Activity
+  ShieldAlert, Activity, TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -22,6 +22,7 @@ const NAV_MAIN = [
 
 const NAV_TOOLS = [
   { to: '/drill-library',   label: 'Drill Library',   icon: Dumbbell },
+  { to: '/performance',     label: 'Performance',     icon: TrendingUp },
 ];
 
 const NAV_CLUB = [
