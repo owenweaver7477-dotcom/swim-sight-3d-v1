@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import InstallAppPrompt from '@/components/shared/InstallAppPrompt';
 
 import AppLayout from './components/layout/AppLayout';
 import Home from './pages/Home.jsx';
@@ -125,6 +126,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <AuthenticatedApp />
+          <InstallAppPrompt />
         </Router>
         <Toaster />
       </QueryClientProvider>

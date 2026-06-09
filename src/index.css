@@ -109,6 +109,29 @@
   }
   body {
     @apply bg-background text-foreground font-inter;
+    min-width: 0;
+    overflow-x: hidden;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  html {
+    overflow-x: hidden;
+    background: hsl(var(--background));
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  @media (min-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: inherit;
+    }
   }
 }
 
