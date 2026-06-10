@@ -3,6 +3,9 @@ import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle, Brain, Download, 
 
 export const JOB_STATUS_CONFIG = {
   // VideoUpload.processing_status
+  preparing_upload:{ label: 'Preparing upload',                  color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
+  uploading:        { label: 'Uploading private video',           color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true },
+  upload_failed:    { label: 'Upload Failed',                     color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
   uploaded:         { label: 'Ready for AI Review',                color: 'text-green-600 bg-green-50 border-green-200',    icon: CheckCircle2, spin: false },
   queued_ai:        { label: 'Queued for AI review',              color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
   pending_ai:       { label: 'Queued for AI review',              color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },

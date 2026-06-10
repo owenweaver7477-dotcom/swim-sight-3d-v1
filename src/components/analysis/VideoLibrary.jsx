@@ -13,7 +13,10 @@ import { format, differenceInMinutes } from 'date-fns';
 import AIJobStatusBadge from './AIJobStatusBadge';
 
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading'];
+const FAILED_UPLOAD_STATUSES = ['upload_failed'];
 const ACTIVE_PROCESSING_STATUSES = ['queued_ai', 'processing_ai', 'pending_ai', 'processing'];
+const REFRESHING_STATUSES = [...ACTIVE_UPLOAD_STATUSES, ...ACTIVE_PROCESSING_STATUSES];
 
 const NEXT_ACTION_LABELS = {
   use_clearer_video: 'Try uploading a clearer or higher-quality video.',
@@ -56,6 +59,10 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const [aiError, setAiError] = useState('');
 
   const status = upload.processing_status || 'uploaded';
+  const uploadStatus = upload.upload_status || (status === 'uploaded' ? 'uploaded' : null);
+  const isUploading = ACTIVE_UPLOAD_STATUSES.includes(status) || ACTIVE_UPLOAD_STATUSES.includes(uploadStatus);
+  const isUploadFailed = FAILED_UPLOAD_STATUSES.includes(status) || FAILED_UPLOAD_STATUSES.includes(uploadStatus);
+  const hasPrivateObject = Boolean((upload.file_bucket || upload.storage_bucket) && (upload.file_path || upload.storage_path));
 
   const { data: linkedReports = [] } = useQuery({
     queryKey: ['ai-report-for-video', upload.id],
@@ -67,7 +74,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const reportWasDeleted = linkedReports.length > 0 && !linkedReport;
 
   const isStuck = (() => {
-    if (!ACTIVE_PROCESSING_STATUSES.includes(status)) return false;
+    if (!REFRESHING_STATUSES.includes(status) && !ACTIVE_UPLOAD_STATUSES.includes(uploadStatus)) return false;
     const ts = upload.updated_date || upload.created_date;
     if (!ts) return false;
     return differenceInMinutes(new Date(), new Date(ts)) >= 10;
@@ -97,6 +104,10 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   };
 
   const loadSignedUrl = async () => {
+    if (isUploadFailed || isUploading || !hasPrivateObject) {
+      setUrlError('Private video is not available yet. Finish or retry the upload first.');
+      return;
+    }
     if (signedUrl) {
       setShowPlayer(true);
       return;
@@ -127,6 +138,34 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const isTimedOut = jobStatus === 'timed_out' || (jobStatus === 'error' && job?.stage === 'timed_out');
 
   const renderPrimaryAction = () => {
+    if (isUploadFailed) {
+      return (
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-1.5 p-2.5 rounded-lg bg-red-50 border border-red-200 text-[10px] text-red-700">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            <span>{upload.upload_error || upload.ai_error_message || 'Upload failed before the private video was ready. Retry from the upload form or delete this failed row.'}</span>
+          </div>
+          <Button size="sm" variant="outline" className="w-full h-8 text-xs" disabled>
+            <Brain className="w-3 h-3 mr-1.5" /> AI Review unavailable until upload completes
+          </Button>
+        </div>
+      );
+    }
+
+    if (isUploading) {
+      return (
+        <div className="space-y-1.5">
+          <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
+            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Uploading private video...
+          </Button>
+          <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
+            <Clock className="w-3 h-3 flex-shrink-0 mt-0.5" />
+            <span>{isStuck ? 'This upload appears stalled. Delete this row and upload again on stable Wi-Fi.' : 'Keep the browser tab open until upload completes.'}</span>
+          </div>
+        </div>
+      );
+    }
+
     if (isTimedOut) {
       return (
         <div className="space-y-1.5">
@@ -218,7 +257,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       );
     }
 
-    if (canTriggerAI) {
+    if (canTriggerAI && hasPrivateObject) {
       return (
         <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
           onClick={handleTriggerAI} disabled={aiLoading}>
@@ -356,7 +395,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
       {renderPrimaryAction()}
 
-      {status !== 'completed' && (
+      {status !== 'completed' && !isUploading && !isUploadFailed && (
         <Button size="sm" variant="ghost"
           className="w-full h-7 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => onStartReview(upload)}>
@@ -371,7 +410,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
               className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
               onClick={() => setConfirmDelete(true)}
             >
-              <Trash2 className="w-3 h-3" /> Delete video
+              <Trash2 className="w-3 h-3" /> {isUploadFailed || isUploading ? 'Delete upload row' : 'Delete video'}
             </button>
           ) : (
             <div className="flex gap-1.5">
@@ -402,13 +441,13 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
     refetchInterval: (query) => {
       const currentUploads = query?.state?.data;
       const active = Array.isArray(currentUploads)
-        && currentUploads.some(u => ACTIVE_PROCESSING_STATUSES.includes(u.processing_status));
+        && currentUploads.some(u => REFRESHING_STATUSES.includes(u.processing_status) || ACTIVE_UPLOAD_STATUSES.includes(u.upload_status));
       return active ? 10000 : false;
     },
   });
 
   const activeVideoIds = uploads
-    .filter(u => ACTIVE_PROCESSING_STATUSES.includes(u.processing_status))
+    .filter(u => REFRESHING_STATUSES.includes(u.processing_status) || ACTIVE_UPLOAD_STATUSES.includes(u.upload_status))
     .map(u => u.id);
 
   const { data: activeJobs = [] } = useQuery({

@@ -197,8 +197,13 @@ function mapVideoUploadToDb(data) {
 
   return {
     ...remaining,
+    file_bucket: remaining.file_bucket || remaining.storage_bucket,
+    file_path: remaining.file_path || remaining.storage_path,
+    storage_bucket: remaining.storage_bucket || remaining.file_bucket,
+    storage_path: remaining.storage_path || remaining.file_path,
     original_filename: remaining.original_filename || file_name,
     file_size_bytes: remaining.file_size_bytes ?? file_size,
+    file_size_mb: remaining.file_size_mb ?? (remaining.file_size_bytes || file_size ? Number(((remaining.file_size_bytes ?? file_size) / 1048576).toFixed(2)) : undefined),
     created_by: remaining.created_by || uploaded_by_user_id,
     stroke_type: remaining.stroke_type || stroke,
     review_context: Object.keys(reviewContext).length
@@ -210,10 +215,16 @@ function mapVideoUploadToDb(data) {
 function mapVideoUploadFromDb(row) {
   if (!row) return row;
   const reviewContext = row.review_context || {};
+  const bucket = row.file_bucket || row.storage_bucket;
+  const path = row.file_path || row.storage_path;
   return withBase44DateAliases({
     ...row,
     ...reviewContext,
-    file_uri: row.file_bucket && row.file_path ? `private://${row.file_bucket}/${row.file_path}` : undefined,
+    file_bucket: bucket,
+    file_path: path,
+    storage_bucket: row.storage_bucket || bucket,
+    storage_path: row.storage_path || path,
+    file_uri: bucket && path ? `private://${bucket}/${path}` : undefined,
     file_name: row.original_filename,
     file_size: row.file_size_bytes,
     stroke: row.stroke_type,

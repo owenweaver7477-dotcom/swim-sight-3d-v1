@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
-import { uploadPrivateVideo } from '@/lib/data/videoUploads';
+import { uploadPrivateVideo, fileSizeMb } from '@/lib/data/videoUploads';
 import { getReviewSession, setReviewSession, setCoachModeFinding,
   SWIM_STROKES_FULL, CAMERA_ANGLES, SESSION_TYPES, SEVERITY_LEVELS, FAULT_SUGGESTIONS } from '@/lib/swimState';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -60,10 +60,10 @@ const getPhases = (stroke) => STROKE_PHASES[stroke] || STROKE_PHASES['Freestyle'
 const SPEEDS = [0.25, 0.5, 1.0];
 const ACCEPTED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/mov'];
 const MAX_SIZE_MB = 500;
-const SUNDAY_RECOMMENDED_MAX_MB = 20;
-const LARGE_FILE_WARNING_MB = 40;
-const SUPABASE_RESUMABLE_GUIDANCE_MB = 6;
-const UPLOAD_ACTIVE_STATUSES = ['preparing_upload', 'uploading_storage', 'saving_video_record'];
+const LARGE_FILE_WARNING_MB = 80;
+const STRONG_FILE_WARNING_MB = 150;
+const TRIM_RECOMMENDATION_MB = 250;
+const UPLOAD_ACTIVE_STATUSES = ['preparing_upload', 'uploading', 'finalising_upload'];
 const UPLOAD_READY_STATUSES = ['uploaded', 'ready_for_ai', 'done'];
 const CAPTURE_SOURCES = [
   { value: 'standard_camera', label: 'Standard camera' },
@@ -72,18 +72,16 @@ const CAPTURE_SOURCES = [
   { value: 'other', label: 'Other' },
 ];
 function formatBytes(b) { return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`; }
-function formatMb(bytes = 0) { return bytes / (1024 * 1024); }
-
 function getFileSizeWarning(f) {
-  const mb = formatMb(f.size);
-  if (mb > LARGE_FILE_WARNING_MB) {
-    return `This file is ${mb.toFixed(1)} MB. Large uploads can take a long time or fail on mobile networks. For Sunday testing, trim to a 5-10 second MP4 under ${SUNDAY_RECOMMENDED_MAX_MB} MB if possible.`;
+  const mb = fileSizeMb(f);
+  if (mb >= TRIM_RECOMMENDATION_MB) {
+    return `This file is ${mb.toFixed(1)} MB. Large swim videos are supported, but 250 MB+ clips are not recommended for pilot testing. Trim or compress to a 5-15 second side-view 720p/1080p clip before uploading if possible.`;
   }
-  if (mb > SUNDAY_RECOMMENDED_MAX_MB) {
-    return `This file is ${mb.toFixed(1)} MB. It should upload, but Sunday testing will be faster with a 5-10 second clip under ${SUNDAY_RECOMMENDED_MAX_MB} MB.`;
+  if (mb >= STRONG_FILE_WARNING_MB) {
+    return `This file is ${mb.toFixed(1)} MB. It is allowed, but it may take several minutes. Use strong Wi-Fi, keep this tab open, and consider trimming or compressing for faster testing.`;
   }
-  if (mb > SUPABASE_RESUMABLE_GUIDANCE_MB) {
-    return `This file is ${mb.toFixed(1)} MB. Keep the iPad awake and on Wi-Fi while it uploads.`;
+  if (mb >= LARGE_FILE_WARNING_MB) {
+    return `This file is ${mb.toFixed(1)} MB. Upload speed depends on Wi-Fi and device performance. Keep this tab open until upload completes.`;
   }
   return '';
 }
@@ -137,6 +135,7 @@ export default function Analyse() {
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
   const [durationWarning, setDurationWarning] = useState('');
+  const [videoDurationSeconds, setVideoDurationSeconds] = useState(null);
   const [fileSizeWarning, setFileSizeWarning] = useState('');
   const [uploadStatus, setUploadStatus] = useState('idle');
   const [uploadStatusMessage, setUploadStatusMessage] = useState('');
@@ -318,14 +317,16 @@ export default function Analyse() {
 
   const detectVideoDuration = (f) => {
     setDurationWarning('');
+    setVideoDurationSeconds(null);
     const url = URL.createObjectURL(f);
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.onloadedmetadata = () => {
       URL.revokeObjectURL(url);
       const seconds = video.duration || 0;
+      setVideoDurationSeconds(Number.isFinite(seconds) ? Number(seconds.toFixed(2)) : null);
       if (seconds > 15) {
-        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. AI Review works best with 5-10 second clips; clips over 15 seconds may upload slowly or time out. Trim to one swimmer, side-view, 720p/1080p MP4 for fastest Sunday testing.`);
+        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. AI Review works best with 5-15 second clips; longer videos can upload and process more slowly. Trim to one swimmer, side-view, 720p/1080p MP4 for faster testing.`);
       }
     };
     video.onerror = () => URL.revokeObjectURL(url);
@@ -336,6 +337,7 @@ export default function Analyse() {
     const f = e.target.files?.[0];
     if (!f) return;
     setDurationWarning('');
+    setVideoDurationSeconds(null);
     setFileSizeWarning('');
     setUploadStatusMessage('');
     const err = validateFile(f);
@@ -354,6 +356,7 @@ export default function Analyse() {
     const f = e.dataTransfer.files?.[0];
     if (!f) return;
     setDurationWarning('');
+    setVideoDurationSeconds(null);
     setFileSizeWarning('');
     setUploadStatusMessage('');
     const err = validateFile(f);
@@ -364,14 +367,16 @@ export default function Analyse() {
       detectVideoDuration(f);
     }
     setUploadStatus('idle');
+    setUploadedUrl('');
   };
 
   const handleUpload = async () => {
     if (!file) return;
     setUploadStatus('preparing_upload');
-    setUploadStatusMessage('Preparing private upload...');
+    setUploadStatusMessage('Creating private video record...');
     setFileError('');
     try {
+      const retryVideoUploadId = uploadStatus === 'upload_failed' && videoUploadId ? videoUploadId : null;
       const uploadRecord = await uploadPrivateVideo({
         file,
         clubId: club?.id,
@@ -382,6 +387,7 @@ export default function Analyse() {
           analysis_type: sessionType || 'Technique Review',
           camera_angle: angle,
           capture_source: captureSource,
+          duration_seconds: videoDurationSeconds,
           review_context: {
             ...reviewContext,
             session_mode: sessionMode,
@@ -399,12 +405,20 @@ export default function Analyse() {
             ),
           },
         },
-        onStage: (stage) => {
+        existingVideoUploadId: retryVideoUploadId,
+        onStage: (stage, details = {}) => {
           setUploadStatus(stage);
-          if (stage === 'uploading_storage') {
-            setUploadStatusMessage('Uploading video to private club storage...');
-          } else if (stage === 'saving_video_record') {
-            setUploadStatusMessage('Saving video record...');
+          if (details.videoUploadId) {
+            setVideoUploadId(details.videoUploadId);
+            setUploadedVideoId(details.videoUploadId);
+          }
+          if (stage === 'preparing_upload') {
+            setUploadStatusMessage('Creating private video record...');
+          } else if (stage === 'uploading') {
+            setUploadStatusMessage(`Uploading to private storage. Keep this tab open. Video row: ${details.videoUploadId || retryVideoUploadId || 'creating...'}`);
+            queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
+          } else if (stage === 'finalising_upload') {
+            setUploadStatusMessage('Finalising upload...');
           }
         },
       });
@@ -415,15 +429,30 @@ export default function Analyse() {
       if (res.data?.signed_url) {
         setUploadedUrl(res.data.signed_url);
       }
-      setUploadStatus('ready_for_ai');
+      setUploadStatus('uploaded');
       setUploadStatusMessage(`Video uploaded. Ready for AI Review. Video row: ${uploadRecord.id}`);
       queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
     } catch (err) {
       setUploadStatus('upload_failed');
+      if (err?.videoUploadId) {
+        setVideoUploadId(err.videoUploadId);
+        setUploadedVideoId(err.videoUploadId);
+      }
       const msg = err?.response?.data?.error || err?.message || 'Upload failed.';
       setFileError(msg);
-      setUploadStatusMessage('Upload did not complete. Try a shorter clip or continue manual review with an already uploaded video.');
+      setUploadStatusMessage(`${msg} Video row: ${err?.videoUploadId || videoUploadId || 'created before upload'}. Retry this upload or delete the failed row from the video library.`);
+      queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
     }
+  };
+
+  const handleDeleteFailedUpload = async () => {
+    if (!videoUploadId) return;
+    await entities.VideoUpload.delete(videoUploadId);
+    setVideoUploadId(null);
+    setUploadedVideoId(null);
+    setUploadStatus('idle');
+    setUploadStatusMessage('');
+    queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
   };
 
   // When a video is chosen from the library, fetch a fresh signed URL for Step 3 playback
@@ -788,7 +817,7 @@ export default function Analyse() {
         <div className="text-[10px] uppercase tracking-wider text-primary font-bold mb-2">V1 Coach Flow</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
           <div><span className="font-semibold text-foreground">1. Select swimmer</span><br />Every private video is linked to a club swimmer.</div>
-          <div><span className="font-semibold text-foreground">2. Upload 5-10s clip</span><br />Side angle and above-water footage give the best pose evidence.</div>
+          <div><span className="font-semibold text-foreground">2. Upload 5-15s clip</span><br />Side angle and above-water footage give the best pose evidence.</div>
           <div><span className="font-semibold text-foreground">3. Coach approves</span><br />AI output is draft evidence; weak pose becomes manual review.</div>
         </div>
       </div>
@@ -849,7 +878,7 @@ export default function Analyse() {
           <h2 className="text-lg font-bold text-foreground mb-1">Upload Private Swim Clip</h2>
           {selectedSwimmer && <div className="text-xs text-muted-foreground mb-4">Swimmer: <span className="text-primary font-medium">{selectedSwimmer.name}</span></div>}
           <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-[11px] text-muted-foreground leading-relaxed">
-            Upload footage exported from SwimPro or any standard camera system. Use a short 5-10 second clip where the swimmer is clearly visible. Side angle is preferred. Avoid screen recordings where possible; underwater distortion can reduce pose reliability. If AI evidence is weak, the report will move to manual coach review.
+            Upload footage exported from SwimPro or any standard camera system. Use a short 5-15 second clip where the swimmer is clearly visible. Side angle is preferred. Large swim videos are supported, but upload speed depends on Wi-Fi and device. Avoid screen recordings where possible; underwater distortion can reduce pose reliability. If AI evidence is weak, the report will move to manual coach review.
           </div>
 
           <div className="mb-4">
@@ -925,7 +954,7 @@ export default function Analyse() {
                 <div className="text-sm font-medium">{file.name}</div>
                 <div className="text-xs text-muted-foreground">{formatBytes(file.size)}</div>
                 <button className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 mt-1"
-                  onClick={e => { e.stopPropagation(); setFile(null); setUploadStatus('idle'); setUploadedUrl(''); setVideoUploadId(null); setFileError(''); setDurationWarning(''); setFileSizeWarning(''); setUploadStatusMessage(''); }}>
+                  onClick={e => { e.stopPropagation(); setFile(null); setUploadStatus('idle'); setUploadedUrl(''); setVideoUploadId(null); setFileError(''); setDurationWarning(''); setVideoDurationSeconds(null); setFileSizeWarning(''); setUploadStatusMessage(''); }}>
                   <X className="w-3 h-3" /> Remove
                 </button>
               </div>
@@ -934,7 +963,7 @@ export default function Analyse() {
                 <Upload className="w-10 h-10 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium mb-1">Drag & drop or click to select</div>
-                  <div className="text-xs text-muted-foreground">MP4, MOV, WebM · Max {MAX_SIZE_MB} MB · 5-10 seconds recommended</div>
+                  <div className="text-xs text-muted-foreground">MP4, MOV, WebM · Max {MAX_SIZE_MB} MB · 5-15 seconds recommended</div>
                 </div>
               </div>
             )}
@@ -945,7 +974,7 @@ export default function Analyse() {
           {file && !fileSizeWarning && !durationWarning && (
             <div className="text-xs text-muted-foreground flex items-start gap-1 mb-3 p-3 rounded-lg bg-card border border-border">
               <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-green-500" />
-              For fastest AI testing, use one swimmer, side-view, 5-10 seconds, 720p or 1080p MP4.
+              For fastest AI testing, use one swimmer, side-view, 5-15 seconds, 720p or 1080p MP4. Avoid raw 4K slow-motion for live demos unless compressed.
             </div>
           )}
           {!selectedSwimmer && file && (
@@ -999,9 +1028,18 @@ export default function Analyse() {
             </div>
           )}
           {uploadFailed && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-destructive mb-3 p-3 rounded-lg bg-card border border-border">
-              <span className="flex items-start gap-1"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadStatusMessage || 'Upload did not complete. Try a shorter clip or continue manual review.'}</span>
-              <button className="underline text-left sm:text-right" onClick={() => { setUploadStatus('idle'); setUploadStatusMessage(''); }}>Retry upload</button>
+            <div className="space-y-2 text-xs text-destructive mb-3 p-3 rounded-lg bg-card border border-border">
+              <span className="flex items-start gap-1"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadStatusMessage || 'Upload did not complete. Retry on stable Wi-Fi or delete the failed row.'}</span>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleUpload} disabled={!file}>
+                  Retry upload
+                </Button>
+                {videoUploadId && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground hover:text-destructive" onClick={handleDeleteFailedUpload}>
+                    Delete failed row
+                  </Button>
+                )}
+              </div>
             </div>
           )}
           <div className="flex gap-3">

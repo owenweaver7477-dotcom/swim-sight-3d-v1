@@ -23,6 +23,7 @@ const ACTIVE_JOB_STATUSES = [
 ];
 const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'];
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
+const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
 const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
 
@@ -55,6 +56,25 @@ export default async function handler(req, res) {
     if (!upload.stroke_type) {
       return sendJson(res, 400, {
         error: 'stroke_type is missing from this video. Configure the review before sending it for AI analysis.',
+      });
+    }
+
+    const uploadStatus = upload.upload_status || (upload.processing_status === 'uploaded' ? 'uploaded' : null);
+    if (INCOMPLETE_UPLOAD_STATUSES.includes(upload.processing_status) || INCOMPLETE_UPLOAD_STATUSES.includes(uploadStatus)) {
+      return sendJson(res, 409, {
+        error: uploadStatus === 'upload_failed' || upload.processing_status === 'upload_failed'
+          ? 'This video upload failed before the private file was ready. Retry or delete the failed upload row before sending for AI Review.'
+          : 'This video is still uploading. Wait until the upload is complete before sending it for AI Review.',
+        processing_status: upload.processing_status,
+        upload_status: upload.upload_status,
+      });
+    }
+
+    const storageBucket = upload.file_bucket || upload.storage_bucket;
+    const storagePath = upload.file_path || upload.storage_path;
+    if (!storageBucket || !storagePath) {
+      return sendJson(res, 422, {
+        error: 'This video is missing its private storage location. Retry the upload before sending it for AI Review.',
       });
     }
 
@@ -92,8 +112,8 @@ export default async function handler(req, res) {
 
     const { data: signed, error: signError } = await service
       .storage
-      .from(upload.file_bucket)
-      .createSignedUrl(upload.file_path, PYTHON_SIGNED_URL_TTL_SECONDS);
+      .from(storageBucket)
+      .createSignedUrl(storagePath, PYTHON_SIGNED_URL_TTL_SECONDS);
 
     if (signError) {
       const error = new Error(`Could not create secure video URL for AI processing: ${signError.message}`);

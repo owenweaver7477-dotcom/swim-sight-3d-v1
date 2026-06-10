@@ -21,8 +21,10 @@ const QUALITY_OPTIONS = [
   { value: 'usable', label: 'Usable — Some blur or shaky, swimmer visible' },
   { value: 'poor', label: 'Poor — Very blurry or obstructed' },
 ];
-const SUNDAY_RECOMMENDED_MAX_MB = 20;
-const LARGE_FILE_WARNING_MB = 40;
+const LARGE_FILE_WARNING_MB = 80;
+const STRONG_FILE_WARNING_MB = 150;
+const TRIM_RECOMMENDATION_MB = 250;
+const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'finalising_upload'];
 
 function captureSourceFromDevice(device) {
   if (device === 'swimpro') return 'swimpro_export';
@@ -37,11 +39,14 @@ function formatBytes(b) {
 
 function getLargeFileWarning(file) {
   const mb = file.size / (1024 * 1024);
-  if (mb > LARGE_FILE_WARNING_MB) {
-    return `This angle is ${mb.toFixed(1)} MB. Large uploads may fail on mobile networks. For Sunday testing, trim to 5-10 seconds under ${SUNDAY_RECOMMENDED_MAX_MB} MB if possible.`;
+  if (mb >= TRIM_RECOMMENDATION_MB) {
+    return `This angle is ${mb.toFixed(1)} MB. 250 MB+ clips are not recommended for pilot testing. Trim or compress to a 5-15 second 720p/1080p clip if possible.`;
   }
-  if (mb > SUNDAY_RECOMMENDED_MAX_MB) {
-    return `This angle is ${mb.toFixed(1)} MB. Upload should work, but Sunday demos are faster under ${SUNDAY_RECOMMENDED_MAX_MB} MB.`;
+  if (mb >= STRONG_FILE_WARNING_MB) {
+    return `This angle is ${mb.toFixed(1)} MB. It is allowed, but it may take several minutes. Keep this tab open on stable Wi-Fi.`;
+  }
+  if (mb >= LARGE_FILE_WARNING_MB) {
+    return `This angle is ${mb.toFixed(1)} MB. Upload speed depends on Wi-Fi and device performance. Keep this tab open until upload completes.`;
   }
   return '';
 }
@@ -64,8 +69,9 @@ export default function MultiAngleUploadCard({
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
   const [fileWarning, setFileWarning] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | preparing_upload | uploading_storage | saving_video_record | done | error
+  const [status, setStatus] = useState('idle'); // idle | preparing_upload | uploading | finalising_upload | done | error
   const [statusMessage, setStatusMessage] = useState('');
+  const [failedRecordId, setFailedRecordId] = useState(null);
   const [device, setDevice] = useState('');
   const [quality, setQuality] = useState('');
   const [syncOffset, setSyncOffset] = useState('');
@@ -90,6 +96,7 @@ export default function MultiAngleUploadCard({
     setFile(err ? null : f);
     setStatus('idle');
     setStatusMessage('');
+    setFailedRecordId(null);
   };
 
   const handleDrop = (e) => {
@@ -102,12 +109,13 @@ export default function MultiAngleUploadCard({
     setFile(err ? null : f);
     setStatus('idle');
     setStatusMessage('');
+    setFailedRecordId(null);
   };
 
   const handleUpload = async () => {
     if (!file) return;
     setStatus('preparing_upload');
-    setStatusMessage('Preparing private upload...');
+    setStatusMessage('Creating private video record...');
     setFileError('');
     try {
       const record = await uploadPrivateVideo({
@@ -125,11 +133,13 @@ export default function MultiAngleUploadCard({
           is_primary_angle: isPrimary,
           review_context: { upload_order: uploadOrder },
         },
-        onStage: (stage) => {
+        existingVideoUploadId: status === 'error' ? failedRecordId : null,
+        onStage: (stage, details = {}) => {
           setStatus(stage);
-          setStatusMessage(stage === 'saving_video_record'
-            ? 'Saving video record...'
-            : 'Uploading video to private club storage...');
+          if (details.videoUploadId) setFailedRecordId(details.videoUploadId);
+          if (stage === 'preparing_upload') setStatusMessage('Creating private video record...');
+          else if (stage === 'uploading') setStatusMessage(`Uploading to private storage. Keep this tab open. Video row: ${details.videoUploadId || failedRecordId || 'creating...'}`);
+          else if (stage === 'finalising_upload') setStatusMessage('Finalising upload...');
         },
       });
       setStatus('done');
@@ -137,8 +147,9 @@ export default function MultiAngleUploadCard({
       onUploaded(angleKey, record, isPrimary);
     } catch (err) {
       setStatus('error');
+      if (err?.videoUploadId) setFailedRecordId(err.videoUploadId);
       setFileError(err?.response?.data?.error || err?.message || 'Upload failed.');
-      setStatusMessage('Upload did not complete. Try a shorter clip or retry on Wi-Fi.');
+      setStatusMessage(`Upload did not complete. Retry on stable Wi-Fi or delete the failed row from the video library. Video row: ${err?.videoUploadId || failedRecordId || 'created before upload'}.`);
     }
   };
 
@@ -215,7 +226,7 @@ export default function MultiAngleUploadCard({
                   <span className="text-xs text-foreground truncate max-w-[140px]">{file.name}</span>
                   <span className="text-[10px] text-muted-foreground">{formatBytes(file.size)}</span>
                   <button
-                    onClick={e => { e.stopPropagation(); setFile(null); setStatus('idle'); setFileError(''); setFileWarning(''); setStatusMessage(''); }}
+                    onClick={e => { e.stopPropagation(); setFile(null); setStatus('idle'); setFileError(''); setFileWarning(''); setStatusMessage(''); setFailedRecordId(null); }}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <X className="w-3 h-3" />
@@ -304,9 +315,9 @@ export default function MultiAngleUploadCard({
                 size="sm"
                 className="w-full h-8 text-xs bg-primary text-primary-foreground"
                 onClick={handleUpload}
-                disabled={['preparing_upload', 'uploading_storage', 'saving_video_record'].includes(status)}
+                disabled={ACTIVE_UPLOAD_STATUSES.includes(status)}
               >
-                {['preparing_upload', 'uploading_storage', 'saving_video_record'].includes(status) ? (
+                {ACTIVE_UPLOAD_STATUSES.includes(status) ? (
                   <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" />{statusMessage || 'Uploading…'}</>
                 ) : (
                   <><Upload className="w-3 h-3 mr-1.5" />Upload {angleName}</>
@@ -315,9 +326,12 @@ export default function MultiAngleUploadCard({
             )}
 
             {status === 'error' && (
-              <button className="text-[10px] text-destructive underline" onClick={() => { setStatus('idle'); setStatusMessage(''); }}>
-                Retry
-              </button>
+              <div className="space-y-1">
+                {statusMessage && <div className="text-[10px] text-destructive leading-relaxed">{statusMessage}</div>}
+                <button className="text-[10px] text-destructive underline" onClick={handleUpload}>
+                  Retry upload
+                </button>
+              </div>
             )}
           </>
         )}

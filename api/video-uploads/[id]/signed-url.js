@@ -21,7 +21,14 @@ export default async function handler(req, res) {
 
     if (error) throw error;
     if (!upload) return sendJson(res, 404, { error: 'Video not found' });
-    if (!upload.file_bucket || !upload.file_path) {
+    const uploadStatus = upload.upload_status || (upload.processing_status === 'uploaded' ? 'uploaded' : null);
+    if (['preparing_upload', 'uploading', 'upload_failed'].includes(upload.processing_status) || ['preparing_upload', 'uploading', 'upload_failed'].includes(uploadStatus)) {
+      return sendJson(res, 409, { error: 'Video upload is not complete yet' });
+    }
+
+    const bucket = upload.file_bucket || upload.storage_bucket;
+    const path = upload.file_path || upload.storage_path;
+    if (!bucket || !path) {
       return sendJson(res, 422, { error: 'Video storage path is missing' });
     }
 
@@ -29,8 +36,8 @@ export default async function handler(req, res) {
 
     const { data, error: signError } = await service
       .storage
-      .from(upload.file_bucket)
-      .createSignedUrl(upload.file_path, SIGNED_URL_EXPIRES_IN);
+      .from(bucket)
+      .createSignedUrl(path, SIGNED_URL_EXPIRES_IN);
 
     if (signError) throw signError;
     return sendJson(res, 200, {
