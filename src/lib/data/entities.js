@@ -23,6 +23,7 @@ const entityTables = {
   ReferenceAsset: 'reference_assets',
   NotificationLog: 'notification_logs',
   AIFindingFeedback: 'ai_finding_feedback',
+  PilotFeedback: 'pilot_feedback',
 };
 
 function normaliseOrder(order) {
@@ -283,6 +284,7 @@ function isClubScopedEntity(entityName) {
     'ReferenceAsset',
     'NotificationLog',
     'AIFindingFeedback',
+    'PilotFeedback',
   ].includes(entityName);
 }
 

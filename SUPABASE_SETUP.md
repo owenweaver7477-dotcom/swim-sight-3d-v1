@@ -6,15 +6,16 @@ This project uses Supabase for V1 auth, database, storage, and RLS. Do not put r
 
 Run this checklist before handing the app to a coach:
 
-1. Run all migrations through `011_v1_club_profile_squad_polish.sql`.
+1. Run all migrations through `014_v1_pilot_feedback.sql`.
 2. Confirm `notification_logs` exists.
 3. Confirm `video_annotations` exists.
-4. Confirm `clubs` has `initials`, `location`, `primary_color`, and `accent_color`.
-5. Confirm `squads` has `level`, `training_focus`, `lead_coach_name`, `is_active`, and `archived_at`.
-6. Confirm the `private-videos` bucket exists and is private.
-7. Confirm Vercel has `SUPABASE_SERVICE_ROLE_KEY`, `AI_WEBHOOK_SECRET`, `AI_SERVER_URL`, and `PUBLIC_APP_URL`.
-8. Confirm Render has the same `AI_WEBHOOK_SECRET` value as Vercel.
-9. Confirm the Python callback sends `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>`.
+4. Confirm `pilot_feedback` exists before using `/pilot-readiness`.
+5. Confirm `clubs` has `initials`, `location`, `primary_color`, and `accent_color`.
+6. Confirm `squads` has `level`, `training_focus`, `lead_coach_name`, `is_active`, and `archived_at`.
+7. Confirm the `private-videos` bucket exists and is private.
+8. Confirm Vercel has `SUPABASE_SERVICE_ROLE_KEY`, `AI_WEBHOOK_SECRET`, `AI_SERVER_URL`, and `PUBLIC_APP_URL`.
+9. Confirm Render has the same `AI_WEBHOOK_SECRET` value as Vercel.
+10. Confirm the Python callback sends `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>`.
 
 ## 1. Create Project
 
@@ -71,6 +72,9 @@ Apply in order:
 9. `supabase/migrations/009_v1_notification_delivery.sql`
 10. `supabase/migrations/010_v1_video_annotations.sql`
 11. `supabase/migrations/011_v1_club_profile_squad_polish.sql`
+12. `supabase/migrations/012_v1_large_video_upload_lifecycle.sql`
+13. `supabase/migrations/013_v1_ai_feedback_calibration.sql`
+14. `supabase/migrations/014_v1_pilot_feedback.sql`
 
 Confirm that:
 
@@ -79,7 +83,7 @@ Confirm that:
 - Helper functions such as `public.has_club_role` are present.
 - `ai_processing_jobs` has the V1 reliability columns and granular statuses before testing AI Review callbacks.
 - `drills` exists with shared default rows before testing database-backed Drill Library content.
-- `video_annotations`, `technical_standards`, `reference_profiles`, `reference_assets`, and `notification_logs` exist before testing Coach Draw, standards/reference, and report delivery.
+- `video_annotations`, `technical_standards`, `reference_profiles`, `reference_assets`, `notification_logs`, `ai_finding_feedback`, and `pilot_feedback` exist before testing Coach Draw, standards/reference, report delivery, calibration, and pilot feedback.
 - `clubs` has profile fields and `squads` has V1 organisation fields before testing club settings polish.
 
 ## 4. Storage
