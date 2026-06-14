@@ -117,6 +117,10 @@ function mapFindingToDb(data) {
 
 function mapFindingFromDb(row) {
   if (!row) return row;
+  const rawPayload = row.raw_ai_payload || {};
+  const rawEvidence = rawPayload.evidence || {};
+  const evidenceNote = rawEvidence.evidence_note || rawPayload.measurement_summary;
+  const rawTimestamp = rawPayload.timestamp_seconds ?? rawPayload.timestamp_start;
   return withBase44DateAliases({
     ...row,
     finding_name: row.finding_name || row.observation,
@@ -125,7 +129,13 @@ function mapFindingFromDb(row) {
     cue: row.cue || row.correction_cue,
     confidence_score: row.confidence_score ?? row.ai_confidence,
     included_in_report: row.included_in_report ?? row.approval_status === 'approved',
-    timestamp_start: row.timestamp_start ?? row.timestamp_seconds,
+    timestamp_start: row.timestamp_start ?? row.timestamp_seconds ?? rawTimestamp,
+    timestamp_end: row.timestamp_end ?? (
+      rawTimestamp != null ? Number(rawTimestamp) + 0.8 : undefined
+    ),
+    evidence_type: row.evidence_type || rawPayload.evidence_type,
+    measurement_summary: row.measurement_summary || evidenceNote,
+    frame_reference: row.frame_reference || rawPayload.frame_reference,
   });
 }
 
