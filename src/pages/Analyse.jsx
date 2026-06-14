@@ -230,55 +230,70 @@ export default function Analyse() {
   // ── Mutations ────────────────────────────────────────────────────────────────
   const createReview = useMutation({
     mutationFn: async () => {
+      if (!videoUploadId) {
+        throw new Error('Upload or select a video before opening manual review.');
+      }
+
       // Update VideoUpload with the stroke/angle chosen in Step 2 (Configure),
       // so the AI server always gets the coach's actual selection.
-      if (videoUploadId) {
-        await entities.VideoUpload.update(videoUploadId, {
-          stroke_type: stroke,
-          camera_angle: angle,
-          analysis_type: sessionType,
-          capture_source: captureSource,
-          review_context: {
-            ...reviewContext,
-            stroke_focus: reviewContext.stroke_focus || stroke,
-            camera_angle_context: reviewContext.camera_angle_context || angle,
-            pre_session_notes: reviewNotes || null,
-          },
-        });
-        queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
-      }
-      const review = await base44.entities.Review.create({
-        club_id: club?.id || undefined,
-        swimmer_id: selectedSwimmer?.id || undefined,
-        video_upload_id: videoUploadId || undefined,
-        review_type: 'full_review',
-        stroke_or_movement: stroke,
+      const nextReviewContext = {
+        ...reviewContext,
+        review_mode: 'manual_review',
+        stroke_focus: reviewContext.stroke_focus || stroke,
+        camera_angle_context: reviewContext.camera_angle_context || angle,
+        pre_session_notes: reviewNotes || null,
+        review_title: reviewTitle || null,
+      };
+
+      await entities.VideoUpload.update(videoUploadId, {
+        stroke_type: stroke,
         camera_angle: angle,
-        environment: 'swim',
-        status: 'in_progress',
-        coach_notes: reviewNotes,
+        analysis_type: sessionType,
+        capture_source: captureSource,
+        processing_status: 'manual_review',
+        ai_error_message: 'Manual coach review opened. No AI findings were generated.',
+        review_context: nextReviewContext,
+      });
+      queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
+
+      const existingReports = await entities.Report.filter({ video_upload_id: videoUploadId }, '-created_date', 10);
+      const reusableReport = existingReports.find(report =>
+        !report.is_deleted && ['draft', 'in_review', 'error'].includes(report.status)
+      );
+
+      if (reusableReport) {
+        await entities.Report.update(reusableReport.id, {
+          status: reusableReport.status === 'error' ? 'in_review' : reusableReport.status,
+          stroke_type: stroke,
+          analysis_type: sessionType,
+          analysis_mode: 'manual_review',
+          real_pose_detected: false,
+          review_context: nextReviewContext,
+        });
+        return { ...reusableReport, status: reusableReport.status === 'error' ? 'in_review' : reusableReport.status };
+      }
+
+      const review = await entities.Report.create({
+        club_id: club?.id,
+        swimmer_id: selectedSwimmer?.id,
+        video_upload_id: videoUploadId || undefined,
+        status: 'in_review',
+        stroke_type: stroke,
+        analysis_type: sessionType,
+        analysis_mode: 'manual_review',
+        real_pose_detected: false,
+        phase_breakdown: {},
+        coach_summary: reviewNotes || null,
+        review_context: nextReviewContext,
+        created_by: user?.id,
       });
       return review;
     },
     onSuccess: (review) => {
-      setReviewSession({
-        review_id: review.id,
-        swimmer_id: selectedSwimmer?.id || null,
-        swimmer_name: selectedSwimmer?.name || null,
-        club_id: club?.id || null,
-        has_file: !!uploadedUrl,
-        preview_url: uploadedUrl || null,
-        video_upload_id: videoUploadId || null,
-        file_name: file?.name || reviewTitle || 'video',
-        stroke_or_movement: stroke,
-        camera_angle: angle,
-        analysis_type: sessionType,
-        review_type: 'full_review',
-      });
-      // Clear local file state now that review is created
       setFile(null);
-      queryClient.invalidateQueries({ queryKey: ['reviews'] });
-      setStep(3);
+      queryClient.invalidateQueries({ queryKey: ['ai-reports', club?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-report', review.id] });
+      navigate(`/ai-review?report_id=${review.id}`);
     },
   });
 
@@ -1218,7 +1233,7 @@ export default function Analyse() {
                 className="w-full"
                 variant="outline"
                 onClick={() => createReview.mutate()}
-                disabled={createReview.isPending || !stroke || !angle}
+                disabled={createReview.isPending || !stroke || !angle || !videoUploadId}
               >
                 {createReview.isPending ? 'Opening...' : 'Continue Manual Review'}
               </Button>
