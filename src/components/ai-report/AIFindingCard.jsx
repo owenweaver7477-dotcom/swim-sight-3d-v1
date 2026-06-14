@@ -16,6 +16,16 @@ const SEVERITY_CONFIG = {
   critical: { bg: 'bg-red-900/30',    text: 'text-red-400',    label: 'Critical' },
 };
 
+const REJECTION_REASONS = [
+  { value: 'not_visible_on_video', label: 'Not visible on video' },
+  { value: 'incorrect_observation', label: 'Incorrect observation' },
+  { value: 'wrong_phase', label: 'Wrong phase' },
+  { value: 'wrong_fault_tag', label: 'Wrong fault tag' },
+  { value: 'not_actionable', label: 'Not actionable' },
+  { value: 'duplicate', label: 'Duplicate' },
+  { value: 'other', label: 'Other' },
+];
+
 export function SeverityBadge({ severity }) {
   const c = SEVERITY_CONFIG[severity?.toLowerCase()] || { bg: 'bg-secondary', text: 'text-muted-foreground', label: severity };
   return <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${c.bg} ${c.text}`}>{c.label}</span>;
@@ -52,6 +62,9 @@ export default function AIFindingCard({
   const [showNoteField, setShowNoteField] = useState(false);
   const [noteValue, setNoteValue] = useState(finding.next_focus || '');
   const [savingNote, setSavingNote] = useState(false);
+  const [showRejectReason, setShowRejectReason] = useState(false);
+  const [rejectReason, setRejectReason] = useState('not_visible_on_video');
+  const [rejectNote, setRejectNote] = useState('');
 
   const isPending = finding.approval_status === 'pending';
   const isApproved = finding.approval_status === 'approved';
@@ -73,6 +86,13 @@ export default function AIFindingCard({
     await onUpdateNote(finding, noteValue);
     setSavingNote(false);
     setShowNoteField(false);
+  };
+
+  const handleReject = async () => {
+    await onReject(finding, { reason: rejectReason, note: rejectNote });
+    setShowRejectReason(false);
+    setRejectReason('not_visible_on_video');
+    setRejectNote('');
   };
 
   const borderColor = isApproved ? 'border-green-700/50' : isRejected ? 'border-border/50' : 'border-border';
@@ -392,7 +412,45 @@ export default function AIFindingCard({
 
           {/* Approve / Reject controls */}
           {canEdit && (
-            <div className="flex gap-2 pt-1 border-t border-border">
+            <div className="space-y-2 pt-1 border-t border-border">
+              {showRejectReason && (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+                    Why dismiss this AI draft?
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {REJECTION_REASONS.map(reason => (
+                      <button
+                        key={reason.value}
+                        type="button"
+                        onClick={() => setRejectReason(reason.value)}
+                        className={`text-left text-[10px] px-2 py-1.5 rounded border transition-colors ${
+                          rejectReason === reason.value
+                            ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold'
+                            : 'bg-white border-amber-200 text-amber-800 hover:border-amber-300'
+                        }`}
+                      >
+                        {reason.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea
+                    value={rejectNote}
+                    onChange={event => setRejectNote(event.target.value)}
+                    className="text-xs min-h-[48px] bg-white border-amber-200"
+                    placeholder="Optional note for calibration, e.g. swimmer was obscured..."
+                  />
+                  <div className="flex gap-1.5">
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-800" onClick={handleReject}>
+                      <ThumbsDown className="w-3 h-3 mr-1" /> Confirm Dismiss
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowRejectReason(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
               {isPending && (
                 <>
                   <Button
@@ -406,7 +464,7 @@ export default function AIFindingCard({
                     size="sm"
                     variant="outline"
                     className="h-7 text-xs text-muted-foreground flex-1"
-                    onClick={() => onReject(finding)}
+                    onClick={() => setShowRejectReason(true)}
                   >
                     <ThumbsDown className="w-3 h-3 mr-1" /> Dismiss
                   </Button>
@@ -417,7 +475,7 @@ export default function AIFindingCard({
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs text-muted-foreground"
-                  onClick={() => onReject(finding)}
+                  onClick={() => setShowRejectReason(true)}
                 >
                   <ThumbsDown className="w-3 h-3 mr-1" /> Undo Approve
                 </Button>
@@ -432,6 +490,7 @@ export default function AIFindingCard({
                   <ThumbsUp className="w-3 h-3 mr-1" /> Re-approve
                 </Button>
               )}
+              </div>
             </div>
           )}
         </div>

@@ -35,6 +35,7 @@ import TechnicalStandards from './pages/TechnicalStandards';
 import PerformanceHub from './pages/PerformanceHub';
 import AIJobMonitor from './pages/AIJobMonitor';
 import CoachTestingPack from './pages/CoachTestingPack';
+import AICalibration from './pages/AICalibration';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -102,6 +103,7 @@ const AuthenticatedApp = () => {
           <Route path="/drills" element={<Drills />} />
           <Route path="/drill-library" element={<DrillLibrary />} />
           <Route path="/ai-jobs" element={<AIJobMonitor />} />
+          <Route path="/ai-calibration" element={<AICalibration />} />
           <Route path="/coach-testing" element={<CoachTestingPack />} />
           <Route path="/roadmap" element={<Roadmap />} />
           {/* Legacy redirects — keep old links working */}

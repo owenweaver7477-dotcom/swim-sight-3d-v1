@@ -55,7 +55,14 @@ function asQualityFlags(value) {
   return [];
 }
 
-function JobRow({ job, swimmers, videos, onRetry, retrying }) {
+function feedbackCounts(rows = []) {
+  return rows.reduce((acc, row) => {
+    acc[row.coach_action] = (acc[row.coach_action] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const video   = videos.find(v => v.id === job.video_upload_id);
@@ -63,6 +70,12 @@ function JobRow({ job, swimmers, videos, onRetry, retrying }) {
   const cfg = STATUS_CONFIG[job.status] || { label: job.status, color: 'text-muted-foreground bg-secondary border-border' };
   const relCfg = job.pose_reliability ? RELIABILITY_CONFIG[job.pose_reliability] : null;
   const qualityFlags = asQualityFlags(job.quality_flags);
+  const jobFeedback = feedback.filter(row => (
+    row.ai_job_id === job.id
+    || row.report_id === job.report_id
+    || row.video_upload_id === job.video_upload_id
+  ));
+  const calibrationCounts = feedbackCounts(jobFeedback);
 
   const timedOut = isTimedOut(job);
   const canRetry = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'].includes(job.status);
@@ -131,6 +144,29 @@ function JobRow({ job, swimmers, videos, onRetry, retrying }) {
               </div>
             </div>
           )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[10px]">
+            <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+              <span className="text-muted-foreground">AI returned</span>
+              <div className="font-semibold text-foreground">{job.callback_summary?.findings_count ?? '—'}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+              <span className="text-muted-foreground">Approved</span>
+              <div className="font-semibold text-green-400">{calibrationCounts.approved || 0}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+              <span className="text-muted-foreground">Edited</span>
+              <div className="font-semibold text-primary">{calibrationCounts.edited || 0}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+              <span className="text-muted-foreground">Rejected</span>
+              <div className="font-semibold text-amber-400">{calibrationCounts.rejected || 0}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+              <span className="text-muted-foreground">Manual added</span>
+              <div className="font-semibold text-foreground">{calibrationCounts.manual_added || 0}</div>
+            </div>
+          </div>
 
           {job.recommended_next_action && (
             <div className="p-2.5 rounded-lg bg-secondary/50 text-[10px] text-muted-foreground">
@@ -207,6 +243,13 @@ export default function AIJobMonitor() {
     queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100),
     enabled: !!club?.id,
     staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: feedback = [] } = useQuery({
+    queryKey: ['ai-job-feedback', club?.id],
+    queryFn: () => entities.AIFindingFeedback.list('-created_at', 500),
+    enabled: !!club?.id && isAdmin,
+    staleTime: 60 * 1000,
   });
 
   const handleResetTimedOut = async () => {
@@ -360,6 +403,7 @@ export default function AIJobMonitor() {
               job={job}
               swimmers={swimmers}
               videos={videos}
+              feedback={feedback}
               onRetry={handleRetry}
               retrying={retrying}
             />

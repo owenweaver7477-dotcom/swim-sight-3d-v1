@@ -66,6 +66,45 @@ const REVIEW_STATUS_CONFIG = {
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 
+function normaliseFlags(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').map(flag => flag.trim()).filter(Boolean);
+  return [];
+}
+
+function aiPayloadForFinding(finding = {}) {
+  return finding?.raw_ai_payload || {};
+}
+
+function feedbackBase({ report, video, aiJob, user, finding, action, extras = {} }) {
+  const raw = aiPayloadForFinding(finding);
+  const rawEvidence = raw.evidence || {};
+  const evidenceNote = rawEvidence.evidence_note
+    || raw.measurement_summary
+    || finding?.measurement_summary
+    || null;
+
+  return {
+    club_id: report?.club_id,
+    report_id: report?.id,
+    finding_id: finding?.id || null,
+    video_upload_id: report?.video_upload_id || finding?.video_upload_id || null,
+    ai_job_id: report?.ai_processing_job_id || aiJob?.id || null,
+    coach_id: user?.id || null,
+    stroke: raw.stroke || video?.stroke_type || report?.stroke_type || null,
+    phase: raw.phase || finding?.phase || finding?.stroke_phase || null,
+    fault_tag: raw.fault_tag || finding?.fault_tag || null,
+    ai_confidence: raw.confidence || null,
+    ai_confidence_score: finding?.confidence_score ?? finding?.ai_confidence ?? raw.confidence_score ?? raw.ai_confidence ?? null,
+    ai_evidence_note: evidenceNote,
+    ai_finding_title: raw.finding_title || finding?.finding_name || null,
+    ai_finding_description: raw.finding_description || finding?.observation || finding?.coach_sees || null,
+    coach_action: action,
+    quality_flags: normaliseFlags(aiJob?.quality_flags),
+    ...extras,
+  };
+}
+
 function asQualityFlags(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') return value.split(',').map(flag => flag.trim()).filter(Boolean);
@@ -250,6 +289,25 @@ export default function AIReportPage() {
   const aiJob = jobArr[0] || null;
   const qualityMeta = qualityGateMeta(report, aiJob);
 
+  const logFeedback = async (finding, action, extras = {}) => {
+    if (!report?.id || !report?.club_id) return;
+    try {
+      await entities.AIFindingFeedback.create(feedbackBase({
+        report,
+        video,
+        aiJob,
+        user,
+        finding,
+        action,
+        extras,
+      }));
+      queryClient.invalidateQueries({ queryKey: ['ai-calibration', club?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-job-feedback', club?.id] });
+    } catch (error) {
+      console.warn('AI calibration feedback was not saved; coach workflow continued.', error?.message || error);
+    }
+  };
+
   const { data: sharedLinks = [] } = useQuery({
     queryKey: ['shared-links', report?.id],
     queryFn: () => entities.SharedReportLink.filter({ report_id: report.id }, '-created_date', 10),
@@ -281,32 +339,78 @@ export default function AIReportPage() {
   const dragAnalysisItems = [];
 
   const approveFinding = useMutation({
-    mutationFn: (f) => entities.Finding.update(f.id, { approval_status: 'approved' }),
+    mutationFn: async (f) => {
+      const updated = await entities.Finding.update(f.id, { approval_status: 'approved' });
+      await logFeedback(updated, 'approved', {
+        coach_final_observation: updated.observation || updated.coach_sees || null,
+        coach_final_cue: updated.correction_cue || updated.cue || null,
+        coach_final_drill: updated.drill || null,
+      });
+      return updated;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const rejectFinding = useMutation({
-    mutationFn: (f) => entities.Finding.update(f.id, { approval_status: 'rejected' }),
+    mutationFn: async ({ finding, reason, note }) => {
+      const updated = await entities.Finding.update(finding.id, {
+        approval_status: 'rejected',
+        coach_notes: note || finding.coach_notes || null,
+      });
+      await logFeedback(updated, 'rejected', {
+        coach_rejection_reason: reason || 'other',
+        coach_edit_summary: note || null,
+      });
+      return updated;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const updateCue = useMutation({
-    mutationFn: ({ finding, cue }) => entities.Finding.update(finding.id, { cue }),
+    mutationFn: async ({ finding, cue }) => {
+      const originalCue = finding.cue || finding.correction_cue || '';
+      const updated = await entities.Finding.update(finding.id, { cue });
+      await logFeedback(updated, 'edited', {
+        coach_edit_summary: `Correction cue changed${originalCue ? ` from "${originalCue}"` : ''}.`,
+        coach_final_observation: updated.observation || updated.coach_sees || null,
+        coach_final_cue: cue,
+        coach_final_drill: updated.drill || null,
+      });
+      return updated;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const updateNote = useMutation({
-    mutationFn: ({ finding, note }) => entities.Finding.update(finding.id, { next_focus: note }),
+    mutationFn: async ({ finding, note }) => {
+      const updated = await entities.Finding.update(finding.id, { next_focus: note });
+      await logFeedback(updated, 'edited', {
+        coach_edit_summary: 'Next focus / coach note changed.',
+        coach_final_observation: updated.observation || updated.coach_sees || null,
+        coach_final_cue: updated.correction_cue || updated.cue || null,
+        coach_final_drill: updated.drill || null,
+      });
+      return updated;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
   const assignDrill = useMutation({
-    mutationFn: ({ finding, drill }) => entities.Finding.update(finding.id, {
-      drill: drill.title,
-      linked_drill_id: drill.id,
-      linked_drill_title: drill.title,
-      linked_drill_summary: drillSummary(drill),
-    }),
+    mutationFn: async ({ finding, drill }) => {
+      const updated = await entities.Finding.update(finding.id, {
+        drill: drill.title,
+        linked_drill_id: drill.id,
+        linked_drill_title: drill.title,
+        linked_drill_summary: drillSummary(drill),
+      });
+      await logFeedback(updated, 'edited', {
+        coach_edit_summary: `Drill assigned: ${drill.title}`,
+        coach_final_observation: updated.observation || updated.coach_sees || null,
+        coach_final_cue: updated.correction_cue || updated.cue || null,
+        coach_final_drill: drill.title,
+      });
+      return updated;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
@@ -379,7 +483,15 @@ export default function AIReportPage() {
       coach_notes: manualCoachNotes || null,
       created_by: user?.id,
     }),
-    onSuccess: () => {
+    onSuccess: async (createdFinding) => {
+      await logFeedback(createdFinding, 'manual_added', {
+        phase: manualPhase || createdFinding.stroke_phase || null,
+        fault_tag: createdFinding.fault_tag || null,
+        coach_final_observation: manualObservation,
+        coach_final_cue: manualCue,
+        coach_final_drill: manualDrill || null,
+        coach_edit_summary: manualCoachNotes || null,
+      });
       setManualObservation('');
       setManualPhase('');
       setManualSeverity('medium');
@@ -423,6 +535,18 @@ export default function AIReportPage() {
       finalised_at: new Date().toISOString(),
       coach_summary: coachSummary,
       next_focus: nextFocus,
+    });
+    const aiFindings = findings.filter(f => f.source === 'ai');
+    await logFeedback(null, 'finalised', {
+      coach_edit_summary: [
+        `approved=${findings.filter(f => f.approval_status === 'approved').length}`,
+        `edited=${findings.filter(f => f.approval_status === 'edited').length}`,
+        `rejected=${findings.filter(f => f.approval_status === 'rejected').length}`,
+        `manual_added=${findings.filter(f => f.source !== 'ai').length}`,
+        `ai_total=${aiFindings.length}`,
+      ].join('; '),
+      coach_final_observation: coachSummary || null,
+      coach_final_cue: nextFocus || null,
     });
     queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] });
     queryClient.invalidateQueries({ queryKey: ['ai-reports'] });
@@ -953,7 +1077,7 @@ export default function AIReportPage() {
                     canEdit={canEdit}
                     strokeType={video?.stroke_type}
                     onApprove={(finding) => approveFinding.mutate(finding)}
-                    onReject={(finding) => rejectFinding.mutate(finding)}
+                    onReject={(finding, rejection = {}) => rejectFinding.mutate({ finding, ...rejection })}
                     onUpdateCue={(finding, cue) => updateCue.mutateAsync({ finding, cue })}
                     onUpdateNote={(finding, note) => updateNote.mutateAsync({ finding, note })}
                     onAssignDrill={(finding, drill) => assignDrill.mutateAsync({ finding, drill })}
