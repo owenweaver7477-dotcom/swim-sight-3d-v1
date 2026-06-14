@@ -27,6 +27,15 @@ const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_fai
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
 const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
 
+function safeVideoState(upload, storageReady = false) {
+  return {
+    video_upload_id: upload?.id || null,
+    processing_status: upload?.processing_status || null,
+    upload_status: upload?.upload_status || null,
+    storage_ready: storageReady,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return sendJson(res, 405, { error: 'Method not allowed' });
@@ -56,6 +65,7 @@ export default async function handler(req, res) {
     if (!upload.stroke_type) {
       return sendJson(res, 400, {
         error: 'stroke_type is missing from this video. Configure the review before sending it for AI analysis.',
+        ...safeVideoState(upload, Boolean((upload.file_bucket || upload.storage_bucket) && (upload.file_path || upload.storage_path))),
       });
     }
 
@@ -65,8 +75,7 @@ export default async function handler(req, res) {
         error: uploadStatus === 'upload_failed' || upload.processing_status === 'upload_failed'
           ? 'This video upload failed before the private file was ready. Retry or delete the failed upload row before sending for AI Review.'
           : 'This video is still uploading. Wait until the upload is complete before sending it for AI Review.',
-        processing_status: upload.processing_status,
-        upload_status: upload.upload_status,
+        ...safeVideoState(upload, false),
       });
     }
 
@@ -75,28 +84,42 @@ export default async function handler(req, res) {
     if (!storageBucket || !storagePath) {
       return sendJson(res, 422, {
         error: 'This video is missing its private storage location. Retry the upload before sending it for AI Review.',
+        ...safeVideoState(upload, false),
       });
     }
 
     const { data: existingJobs, error: activeError } = await service
       .from('ai_processing_jobs')
-      .select('id,status,server_job_id,retry_count,created_at')
+      .select('id,status,stage,progress_percent,server_job_id,retry_count,created_at')
       .eq('video_upload_id', upload.id)
       .order('created_at', { ascending: false });
 
     if (activeError) throw activeError;
     const activeJobs = (existingJobs || []).filter((existingJob) => ACTIVE_JOB_STATUSES.includes(existingJob.status));
     if (activeJobs?.length) {
-      return sendJson(res, 409, {
-        error: 'An AI analysis job is already in progress for this video.',
-        job: activeJobs[0],
+      const activeJob = activeJobs[0];
+      await service
+        .from('video_uploads')
+        .update({ processing_status: 'pending_ai', ai_error_message: null })
+        .eq('id', upload.id);
+
+      return sendJson(res, 200, {
+        success: true,
+        duplicate_active_job: true,
+        message: 'AI Review is already in progress for this video.',
+        job: activeJob,
+        server_job_id: activeJob.server_job_id || null,
+        video_upload_id: upload.id,
+        processing_status: 'pending_ai',
+        stage: activeJob.stage || activeJob.status,
+        retry_count: activeJob.retry_count || 0,
       });
     }
 
     if (!RETRYABLE_VIDEO_STATUSES.includes(upload.processing_status || 'uploaded')) {
       return sendJson(res, 409, {
         error: 'This video is not in a retryable state. Refresh the video library before trying again.',
-        processing_status: upload.processing_status,
+        ...safeVideoState(upload, true),
       });
     }
 
@@ -105,6 +128,7 @@ export default async function handler(req, res) {
       return sendJson(res, 409, {
         error: 'The latest AI job is not retryable yet. Wait for it to finish or reset timed-out jobs.',
         job: latestJob,
+        ...safeVideoState(upload, true),
       });
     }
 
@@ -142,7 +166,7 @@ export default async function handler(req, res) {
 
     await service
       .from('video_uploads')
-      .update({ processing_status: 'queued_ai', ai_error_message: null })
+      .update({ processing_status: 'pending_ai', ai_error_message: null })
       .eq('id', upload.id);
 
     const aiProcessUrl = normaliseAiServerUrl();
@@ -158,6 +182,8 @@ export default async function handler(req, res) {
       stroke_type: upload.stroke_type,
       analysis_type: upload.analysis_type || 'Technique Review',
       camera_angle: upload.camera_angle || 'Side',
+      capture_source: upload.capture_source || null,
+      review_context: upload.review_context || {},
       callback_url: callbackUrl,
       max_sampled_frames: 100,
       downscale_frames: true,
