@@ -27,7 +27,7 @@ import CameraGuidancePanel from '@/components/analysis/CameraGuidancePanel';
 import {
   Play, Pause, SkipBack, SkipForward, Bookmark, FileText,
   Upload, CheckCircle2, AlertCircle, Loader2, Film, X,
-  Plus, Target, Dumbbell, User, ChevronRight, ArrowLeft, Zap
+  Plus, Target, Dumbbell, User, ChevronRight, ArrowLeft, Zap, Activity
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
@@ -144,6 +144,9 @@ export default function Analyse() {
   const [captureSource, setCaptureSource] = useState('standard_camera');
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploadedVideoId, setUploadedVideoId] = useState(null); // tracks most recently uploaded video for CTA
+  const [startAiLoading, setStartAiLoading] = useState(false);
+  const [startAiMessage, setStartAiMessage] = useState('');
+  const [startAiError, setStartAiError] = useState('');
   const videoLibraryRef = useRef();
 
   // Step 2 — Configure
@@ -453,6 +456,45 @@ export default function Analyse() {
     setUploadStatus('idle');
     setUploadStatusMessage('');
     queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
+  };
+
+  const handleSendForAIReview = async () => {
+    if (!videoUploadId) {
+      setStartAiError('Upload or select a video before sending it for AI Review.');
+      return;
+    }
+
+    setStartAiLoading(true);
+    setStartAiMessage('');
+    setStartAiError('');
+
+    try {
+      await entities.VideoUpload.update(videoUploadId, {
+        stroke_type: stroke,
+        camera_angle: angle,
+        analysis_type: sessionType,
+        capture_source: captureSource,
+        review_context: {
+          ...reviewContext,
+          stroke_focus: reviewContext.stroke_focus || stroke,
+          camera_angle_context: reviewContext.camera_angle_context || angle,
+          pre_session_notes: reviewNotes || null,
+        },
+      });
+
+      const res = await functions.triggerPoseAnalysis(videoUploadId);
+      setUploadStatus(res.data?.processing_status || 'processing_ai');
+      setStartAiMessage('AI Review started. Open AI Reviews or AI Jobs to watch progress.');
+      queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-jobs-active', club?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-reports', club?.id] });
+    } catch (err) {
+      const msg = err?.message || 'Could not start AI Review.';
+      setStartAiError(`${msg} The uploaded video remains saved. Retry AI Review or continue manual review.`);
+      queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
+    } finally {
+      setStartAiLoading(false);
+    }
   };
 
   // When a video is chosen from the library, fetch a fresh signed URL for Step 3 playback
@@ -1146,9 +1188,41 @@ export default function Analyse() {
               <Label className="text-xs text-muted-foreground">Pre-session Notes (optional)</Label>
               <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder="What are you focusing on today?" className="bg-card border-border mt-1" rows={3} />
             </div>
-            <Button className="w-full bg-primary text-primary-foreground" onClick={() => createReview.mutate()} disabled={createReview.isPending || !stroke || !angle}>
-              {createReview.isPending ? 'Starting...' : 'Start Analysis →'}
-            </Button>
+            {startAiMessage && (
+              <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-700 space-y-2">
+                <div>{startAiMessage}</div>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate('/ai-reviews')}>
+                    <FileText className="w-3 h-3 mr-1" /> Open AI Reviews
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/ai-jobs')}>
+                    <Activity className="w-3 h-3 mr-1" /> AI Jobs
+                  </Button>
+                </div>
+              </div>
+            )}
+            {startAiError && (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                {startAiError}
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                className="w-full bg-primary text-primary-foreground"
+                onClick={handleSendForAIReview}
+                disabled={startAiLoading || !stroke || !angle || !videoUploadId}
+              >
+                {startAiLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending to AI Review...</> : <><Zap className="w-4 h-4 mr-2" />Send for AI Review</>}
+              </Button>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => createReview.mutate()}
+                disabled={createReview.isPending || !stroke || !angle}
+              >
+                {createReview.isPending ? 'Opening...' : 'Continue Manual Review'}
+              </Button>
+            </div>
           </div>
         </div>
       )}

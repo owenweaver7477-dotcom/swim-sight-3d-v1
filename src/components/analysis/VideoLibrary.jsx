@@ -57,6 +57,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
   const [aiError, setAiError] = useState('');
+  const [aiStarted, setAiStarted] = useState(false);
 
   const status = upload.processing_status || 'uploaded';
   const uploadStatus = upload.upload_status || (status === 'uploaded' ? 'uploaded' : null);
@@ -90,11 +91,13 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     setAiLoading(true);
     setAiMessage('');
     setAiError('');
+    setAiStarted(false);
     try {
       const res = await functions.triggerPoseAnalysis(upload.id);
       const nextStatus = res.data?.processing_status || 'processing_ai';
       onAIStatusChange?.(upload.id, nextStatus);
-      setAiMessage('AI Review queued. The report will appear when the secure callback returns.');
+      setAiStarted(true);
+      setAiMessage('AI Review started. The report will appear when the secure callback returns.');
     } catch (err) {
       onAIStatusChange?.(upload.id, 'error');
       setAiError(`${err?.message || 'Could not start AI Review.'} Uploaded video remains saved. Retry AI Review or continue manual review.`);
@@ -386,7 +389,19 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         )}
 
         {aiMessage && !aiError && (
-          <div className="text-[10px] text-green-600 leading-relaxed">{aiMessage}</div>
+          <div className="space-y-1.5">
+            <div className="text-[10px] text-green-600 leading-relaxed">{aiMessage}</div>
+            {aiStarted && (
+              <div className="flex flex-wrap gap-1.5">
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate('/ai-reviews')}>
+                  <FileText className="w-3 h-3 mr-1" /> Open AI Reviews
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/ai-jobs')}>
+                  <Activity className="w-3 h-3 mr-1" /> AI Jobs
+                </Button>
+              </div>
+            )}
+          </div>
         )}
         {aiError && (
           <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">{aiError}</div>
