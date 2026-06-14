@@ -5,7 +5,6 @@
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
 import { uploadPrivateVideo, fileSizeMb } from '@/lib/data/videoUploads';
@@ -19,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import FindingCard from '@/components/analysis/FindingCard';
-import AiFindingSuggester from '@/components/analysis/AiFindingSuggester';
 import VideoLibrary from '@/components/analysis/VideoLibrary';
 import SessionModeSelector from '@/components/analysis/SessionModeSelector';
 import MultiAngleUploader from '@/components/analysis/MultiAngleUploader';
@@ -181,7 +179,6 @@ export default function Analyse() {
   const [activePhase, setActivePhase] = useState('');
   const [activeFaultTags, setActiveFaultTags] = useState([]);
   const [showFindingForm, setShowFindingForm] = useState(false);
-  const [showAI, setShowAI] = useState(false);
   const [coachNotes, setCoachNotes] = useState('');
   const [findingForm, setFindingForm] = useState({
     finding_name: '', severity: 'medium', phase: '',
@@ -213,13 +210,13 @@ export default function Analyse() {
 
   const { data: keyFrames = [] } = useQuery({
     queryKey: ['keyframes', reviewId],
-    queryFn: () => base44.entities.KeyFrame.filter({ review_id: reviewId }),
+    queryFn: () => entities.KeyFrame.filter({ report_id: reviewId }, 'timestamp_seconds', 100),
     enabled: !!reviewId,
   });
 
   const { data: findings = [] } = useQuery({
     queryKey: ['findings', reviewId],
-    queryFn: () => base44.entities.Finding.filter({ review_id: reviewId }),
+    queryFn: () => entities.Finding.filter({ report_id: reviewId }, '-created_date', 100),
     enabled: !!reviewId,
   });
 
@@ -298,12 +295,12 @@ export default function Analyse() {
   });
 
   const addKeyFrame = useMutation({
-    mutationFn: (data) => base44.entities.KeyFrame.create(data),
+    mutationFn: (data) => entities.KeyFrame.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['keyframes', reviewId] }),
   });
 
   const addFinding = useMutation({
-    mutationFn: (data) => base44.entities.Finding.create(data),
+    mutationFn: (data) => entities.Finding.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['findings', reviewId] });
       setShowFindingForm(false);
@@ -313,17 +310,21 @@ export default function Analyse() {
   });
 
   const saveNotes = useMutation({
-    mutationFn: () => base44.entities.Review.update(reviewId, { coach_notes: coachNotes }),
+    mutationFn: () => entities.Report.update(reviewId, { coach_summary: coachNotes }),
   });
 
   const completeReview = useMutation({
-    mutationFn: () => base44.entities.Review.update(reviewId, { status: 'completed', coach_notes: coachNotes }),
-    onSuccess: () => navigate('/report'),
+    mutationFn: () => entities.Report.update(reviewId, {
+      status: 'finalised',
+      coach_summary: coachNotes,
+      finalised_at: new Date().toISOString(),
+    }),
+    onSuccess: () => navigate(`/ai-review?report_id=${reviewId}`),
   });
 
   // ── Step 0: Swimmer select ────────────────────────────────────────────────
   const filteredSwimmers = swimmers.filter(s =>
-    s.name.toLowerCase().includes(swimmerSearch.toLowerCase())
+    (s.name || '').toLowerCase().includes(swimmerSearch.toLowerCase())
   );
 
   // ── Step 1: Video upload ─────────────────────────────────────────────────
@@ -544,7 +545,14 @@ export default function Analyse() {
 
   const handleMarkKeyFrame = () => {
     if (!reviewId) return;
-    addKeyFrame.mutate({ review_id: reviewId, timestamp_seconds: currentTime, phase: activePhase, note: '' });
+    addKeyFrame.mutate({
+      club_id: club?.id,
+      report_id: reviewId,
+      video_upload_id: videoUploadId,
+      timestamp_seconds: currentTime,
+      label: activePhase || null,
+      note: '',
+    });
   };
 
   const handleTagFault = (tag) => {
@@ -568,10 +576,20 @@ export default function Analyse() {
     e.preventDefault();
     if (!reviewId || !findingForm.finding_name) return;
     addFinding.mutate({
-      ...findingForm,
-      review_id: reviewId,
-      included_in_report: true,
-      coach_sees: findingForm.coach_sees || activeFaultTags.join(', '),
+      club_id: club?.id,
+      report_id: reviewId,
+      swimmer_id: selectedSwimmer?.id || null,
+      video_upload_id: videoUploadId || null,
+      source: 'coach',
+      approval_status: 'approved',
+      severity: findingForm.severity,
+      stroke_phase: findingForm.phase || activePhase || null,
+      observation: findingForm.coach_sees || findingForm.finding_name || activeFaultTags.join(', '),
+      why_it_matters: findingForm.why_it_matters || null,
+      correction_cue: findingForm.cue || null,
+      drill: findingForm.drill || null,
+      next_focus: findingForm.next_focus || null,
+      created_by: user?.id || null,
     });
   };
 
@@ -736,9 +754,6 @@ export default function Analyse() {
                     <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => setShowFindingForm(true)}>
                       <Plus className="w-3 h-3 mr-0.5" /> Finding
                     </Button>
-                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => setShowAI(true)}>
-                      <Zap className="w-3 h-3 mr-0.5 text-yellow-400" /> AI Suggest
-                    </Button>
                   </div>
                 )}
               </div>
@@ -757,22 +772,6 @@ export default function Analyse() {
 
           {/* RIGHT */}
           <div className="lg:col-span-3 space-y-3">
-            {/* AI Suggester */}
-            {showAI && (
-              <AiFindingSuggester
-                faultTags={activeFaultTags}
-                stroke={strokeForAnalysis}
-                phase={activePhase}
-                reviewId={reviewId}
-                onClose={() => setShowAI(false)}
-                onFindingAdded={() => {
-                  queryClient.invalidateQueries({ queryKey: ['findings', reviewId] });
-                  setShowAI(false);
-                  setActiveFaultTags([]);
-                }}
-              />
-            )}
-
             {/* Findings panel */}
             <div className="p-3 rounded-xl bg-card border border-border">
               <div className="flex items-center justify-between mb-2">

@@ -38,7 +38,7 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
           className="bg-slate-950"
           style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
           dangerouslySetInnerHTML={{
-            __html: drawingToSvg(annotation.drawing_data, {
+            __html: annotation.rendered_svg || drawingToSvg({}, {
               width: annotation.canvas_width,
               height: annotation.canvas_height,
             }),

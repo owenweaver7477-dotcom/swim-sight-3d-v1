@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Trash2 } from 'lucide-react';
 import { SEVERITY_LEVELS } from '@/lib/swimState';
-import { base44 } from '@/api/base44Client';
+import entities from '@/lib/data/entities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function FindingCard({ finding, onSendToCoachMode }) {
@@ -10,7 +10,7 @@ export default function FindingCard({ finding, onSendToCoachMode }) {
   const severity = SEVERITY_LEVELS.find(s => s.value === finding.severity);
 
   const deleteFinding = useMutation({
-    mutationFn: () => base44.entities.Finding.delete(finding.id),
+    mutationFn: () => entities.Finding.delete(finding.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['findings'] }),
   });
 

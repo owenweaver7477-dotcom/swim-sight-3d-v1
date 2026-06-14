@@ -12,17 +12,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const NAV_MAIN = [
-  { to: '/team-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/swimmers', label: 'Swimmers', icon: Users },
   { to: '/analyse', label: 'Analyse', icon: FlaskConical },
-  { to: '/report', label: 'Reports', icon: FileText },
+  { to: '/ai-reviews', label: 'Reports', icon: FileText },
   { to: '/reference-library', label: 'Library', icon: BookOpen },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const NAV_MORE = [
-  { to: '/coach-mode', label: 'Coach Mode', icon: Eye },
-  { to: '/drills', label: 'Drills', icon: Dumbbell },
+  { to: '/ai-calibration', label: 'AI Calibration', icon: Eye },
+  { to: '/drill-library', label: 'Drills', icon: Dumbbell },
   { to: '/club-progress', label: 'Club Progress', icon: BarChart3 },
   { to: '/roadmap', label: 'Roadmap', icon: Map },
 ];

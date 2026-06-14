@@ -1,4 +1,5 @@
 import { createServiceClient, handleApiError, sendJson } from '../_lib/server.js';
+import { drawingToSvg } from '../../src/lib/annotationRender.js';
 
 function sanitizeFinding(finding) {
   const observation = finding.observation || '';
@@ -24,6 +25,12 @@ function sanitizeAnnotation(annotation, findingTitlesById) {
     && annotation.thumbnail_data_url.startsWith('data:image/')
     ? annotation.thumbnail_data_url
     : null;
+  const renderedSvg = thumbnail
+    ? null
+    : drawingToSvg(annotation.drawing_data || {}, {
+      width: annotation.canvas_width,
+      height: annotation.canvas_height,
+    });
 
   return {
     annotation_type: annotation.annotation_type,
@@ -32,7 +39,7 @@ function sanitizeAnnotation(annotation, findingTitlesById) {
     video_frame_time_label: annotation.video_frame_time_label || annotation.frame_label,
     canvas_width: annotation.canvas_width,
     canvas_height: annotation.canvas_height,
-    drawing_data: annotation.drawing_data,
+    rendered_svg: renderedSvg,
     thumbnail_data_url: thumbnail,
     title: annotation.title,
     coach_note: annotation.coach_note,

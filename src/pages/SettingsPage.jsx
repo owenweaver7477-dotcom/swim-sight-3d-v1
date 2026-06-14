@@ -159,7 +159,7 @@ export default function SettingsPage() {
                 ['Role', user?.role || role || 'N/A'],
                 ['Club ID', club?.id || 'N/A'],
                 ['Club Name', club?.name || 'N/A'],
-                ['Backend', 'Base44 Connected'],
+                ['Backend', 'Supabase + Vercel + Render'],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between">
                   <span className="text-muted-foreground">{k}</span>

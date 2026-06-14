@@ -16,10 +16,7 @@ import ClubSettings from './pages/ClubSettings';
 import TeamDashboard from './pages/TeamDashboard.jsx';
 import Swimmers from './pages/Swimmers.jsx';
 import Analyse from './pages/Analyse';
-import CoachMode from './pages/CoachMode.jsx';
-import ReportPage from './pages/ReportPage';
 import ReferenceLibrary from './pages/ReferenceLibrary';
-import Drills from './pages/Drills.jsx';
 import DrillLibrary from './pages/DrillLibrary.jsx';
 import Roadmap from './pages/Roadmap.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -34,7 +31,6 @@ import SwimmerTrends from './pages/SwimmerTrends';
 import TechnicalStandards from './pages/TechnicalStandards';
 import PerformanceHub from './pages/PerformanceHub';
 import AIJobMonitor from './pages/AIJobMonitor';
-import CoachTestingPack from './pages/CoachTestingPack';
 import AICalibration from './pages/AICalibration';
 
 const AuthenticatedApp = () => {
@@ -97,14 +93,14 @@ const AuthenticatedApp = () => {
           <Route path="/settings" element={<SettingsPage />} />
           {/* Club management */}
           <Route path="/club-settings" element={<ClubSettings />} />
-          {/* Admin-only pages (still accessible but not in main nav) */}
-          <Route path="/report" element={<ReportPage />} />
-          <Route path="/coach-mode" element={<CoachMode />} />
-          <Route path="/drills" element={<Drills />} />
+          {/* Legacy migration-era routes — keep old links alive without loading stale pages */}
+          <Route path="/report" element={<Navigate to="/ai-reviews" replace />} />
+          <Route path="/coach-mode" element={<Navigate to="/ai-reviews" replace />} />
+          <Route path="/drills" element={<Navigate to="/drill-library" replace />} />
           <Route path="/drill-library" element={<DrillLibrary />} />
           <Route path="/ai-jobs" element={<AIJobMonitor />} />
           <Route path="/ai-calibration" element={<AICalibration />} />
-          <Route path="/coach-testing" element={<CoachTestingPack />} />
+          <Route path="/coach-testing" element={<Navigate to="/roadmap" replace />} />
           <Route path="/roadmap" element={<Roadmap />} />
           {/* Legacy redirects — keep old links working */}
           <Route path="/team-dashboard" element={<Navigate to="/dashboard" replace />} />
