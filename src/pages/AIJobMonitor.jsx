@@ -26,8 +26,8 @@ const STATUS_CONFIG = {
   callback_sending:    { label: 'Callback',          color: 'text-yellow-400 bg-yellow-900/20 border-yellow-700/30' },
   completed:           { label: 'Completed',         color: 'text-green-400 bg-green-900/20 border-green-700/30' },
   unreliable_pose:     { label: 'Unreliable Pose',   color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
-  manual_review_recommended: { label: 'Manual Review', color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
-  manual_review:       { label: 'Manual Review',       color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  manual_review_recommended: { label: 'Coach Studio', color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  manual_review:       { label: 'Coach Studio',       color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
   retry_available:     { label: 'Retry Available',     color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
   failed:              { label: 'Dispatch Failed',      color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   timed_out:           { label: 'Timed Out',         color: 'text-red-400 bg-red-900/20 border-red-700/30' },
@@ -252,7 +252,7 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             )}
             {video?.id && !job.report_id && (
               <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/analyse')}>
-                <FileText className="w-3 h-3 mr-1" /> Continue Manual Review
+                <FileText className="w-3 h-3 mr-1" /> Open Coach Studio
               </Button>
             )}
           </div>

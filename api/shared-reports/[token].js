@@ -7,6 +7,7 @@ function sanitizeFinding(finding) {
   return {
     severity: finding.severity,
     phase: finding.stroke_phase,
+    timestamp_seconds: finding.timestamp_seconds,
     finding_name: observation,
     observation,
     coach_sees: observation,
@@ -88,7 +89,7 @@ export default async function handler(req, res) {
       service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
       service
         .from('findings')
-        .select('id,severity,stroke_phase,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,next_focus,approval_status')
+        .select('id,severity,stroke_phase,timestamp_seconds,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,next_focus,approval_status')
         .eq('report_id', report.id)
         .eq('approval_status', 'approved')
         .order('created_at', { ascending: true }),

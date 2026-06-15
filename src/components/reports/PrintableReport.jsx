@@ -210,6 +210,11 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                             {finding.phase}
                           </span>
                         )}
+                        {finding.timestamp_start != null && (
+                          <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
+                            {formatTimestamp(finding.timestamp_start)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

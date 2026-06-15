@@ -65,6 +65,31 @@ const REVIEW_STATUS_CONFIG = {
 
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
+const COACH_STUDIO_PHASES = {
+  breaststroke: ['streamline', 'pull', 'breath', 'recovery', 'kick_setup', 'kick_drive', 'line_reset'],
+  freestyle: ['entry_extension', 'catch_setup', 'pull', 'breathing', 'recovery', 'body_line'],
+  backstroke: ['body_line', 'rotation', 'catch_setup', 'pull', 'recovery'],
+  butterfly: ['body_wave', 'catch_setup', 'pull', 'breath', 'kick_timing', 'recovery'],
+};
+const DEFAULT_STUDIO_PHASES = ['streamline', 'body_line', 'catch_setup', 'pull', 'breath', 'kick_setup', 'kick_drive', 'line_reset'];
+const COACH_STUDIO_FAULT_TAGS = [
+  'body_line',
+  'head_lift',
+  'wide_knees',
+  'rushed_line_reset',
+  'dropped_elbow',
+  'short_extension',
+  'timing_break',
+  'low_hips',
+  'breath_timing',
+  'recovery_timing',
+];
+
+function labelFromKey(value = '') {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
 
 function normaliseFlags(value) {
   if (Array.isArray(value)) return value;
@@ -225,6 +250,8 @@ export default function AIReportPage() {
   const [manualDrill, setManualDrill] = useState('');
   const [manualNextFocus, setManualNextFocus] = useState('');
   const [manualCoachNotes, setManualCoachNotes] = useState('');
+  const [manualTimestamp, setManualTimestamp] = useState(null);
+  const [manualFaultTag, setManualFaultTag] = useState('');
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -278,6 +305,8 @@ export default function AIReportPage() {
     staleTime: 10 * 60 * 1000,
   });
   const video = videoArr[0];
+  const strokeKey = String(video?.stroke_type || report?.stroke_type || '').toLowerCase();
+  const studioPhases = COACH_STUDIO_PHASES[strokeKey] || DEFAULT_STUDIO_PHASES;
 
   const { data: jobArr = [] } = useQuery({
     queryKey: ['ai-job-for-report', report?.ai_processing_job_id],
@@ -424,11 +453,13 @@ export default function AIReportPage() {
       includeInReport,
       videoWidth,
       videoHeight,
+      findingId,
     }) => entities.VideoAnnotation.create({
       club_id: report.club_id,
       report_id: report.id,
       video_upload_id: report.video_upload_id,
       swimmer_id: report.swimmer_id,
+      finding_id: findingId || null,
       created_by: user?.id,
       annotation_type: drawingData.shapes?.some(shape => shape.tool === 'body_line') ? 'body_line' : 'coach_draw',
       timestamp_seconds: timestampSeconds,
@@ -440,6 +471,48 @@ export default function AIReportPage() {
       video_height: videoHeight,
       drawing_data: drawingData,
       title,
+      coach_note: coachNote || null,
+      include_in_report: includeInReport,
+      is_public: includeInReport,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['video-annotations', reportId, report?.video_upload_id] }),
+  });
+
+  const createStudioMarker = useMutation({
+    mutationFn: ({ timestampSeconds, videoFrameTimeLabel, title, coachNote, includeInReport }) => entities.VideoAnnotation.create({
+      club_id: report.club_id,
+      report_id: report.id,
+      video_upload_id: report.video_upload_id,
+      swimmer_id: report.swimmer_id,
+      created_by: user?.id,
+      annotation_type: 'key_frame',
+      timestamp_seconds: timestampSeconds,
+      video_frame_time_label: videoFrameTimeLabel,
+      frame_label: videoFrameTimeLabel,
+      canvas_width: 1280,
+      canvas_height: 720,
+      drawing_data: {
+        version: 1,
+        type: 'key_frame_marker',
+        phase: manualPhase || null,
+        shapes: [
+          {
+            tool: 'text',
+            text: title || 'Key frame',
+            color: '#22d3ee',
+            size: 5,
+            points: [{ x: 72, y: 120 }],
+          },
+          ...(manualPhase ? [{
+            tool: 'text',
+            text: labelFromKey(manualPhase),
+            color: '#ffffff',
+            size: 4,
+            points: [{ x: 72, y: 178 }],
+          }] : []),
+        ],
+      },
+      title: title || 'Key frame',
       coach_note: coachNote || null,
       include_in_report: includeInReport,
       is_public: includeInReport,
@@ -475,12 +548,18 @@ export default function AIReportPage() {
       approval_status: 'approved',
       severity: manualSeverity,
       stroke_phase: manualPhase || null,
+      timestamp_seconds: manualTimestamp,
       observation: manualObservation,
       why_it_matters: manualWhy || null,
       correction_cue: manualCue,
       drill: manualDrill || null,
       next_focus: manualNextFocus,
       coach_notes: manualCoachNotes || null,
+      raw_ai_payload: {
+        source: 'coach_studio',
+        fault_tag: manualFaultTag || null,
+        timestamp_seconds: manualTimestamp,
+      },
       created_by: user?.id,
     }),
     onSuccess: async (createdFinding) => {
@@ -500,6 +579,8 @@ export default function AIReportPage() {
       setManualDrill('');
       setManualNextFocus('');
       setManualCoachNotes('');
+      setManualTimestamp(null);
+      setManualFaultTag('');
       queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
     },
   });
@@ -848,14 +929,34 @@ export default function AIReportPage() {
 
           {/* Video metadata */}
           {video && (
-            <div className="p-4 rounded-xl bg-card border border-border">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Source Video</div>
+            <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Coach Studio</div>
+                  <h2 className="text-sm font-bold text-foreground">Manual video analysis workspace</h2>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 max-w-2xl">
+                    Slow the video down, capture a timestamp, mark key frames, use Coach Draw, then add coach-created findings from verified video evidence.
+                  </p>
+                </div>
+                {manualTimestamp != null && (
+                  <div className="text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1">
+                    Finding timestamp: {Number(manualTimestamp).toFixed(2)}s
+                  </div>
+                )}
+              </div>
               <CoachDrawStudio
                 signedVideoUrl={signedVideoUrl}
                 signedVideoError={signedVideoError}
                 video={video}
                 canEdit={canEdit && !isReportFinalised}
                 saving={createAnnotation.isPending}
+                savingMarker={createStudioMarker.isPending}
+                findings={findings.filter(finding => finding.approval_status !== 'rejected')}
+                onCaptureTimestamp={(timestampSeconds) => {
+                  setManualTimestamp(timestampSeconds);
+                  if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
+                }}
+                onSaveMarker={(payload) => createStudioMarker.mutateAsync(payload)}
                 onSaveAnnotation={(payload) => createAnnotation.mutateAsync(payload)}
               />
               <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
@@ -976,9 +1077,9 @@ export default function AIReportPage() {
               <div className="flex items-start gap-2">
                 <Plus className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <div className="text-xs font-bold text-foreground uppercase tracking-wider">Add Coach Finding</div>
+                  <div className="text-xs font-bold text-foreground uppercase tracking-wider">Add Coach-Created Finding</div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Use this for manual review, especially when pose evidence was unreliable.
+                    Use the current Coach Studio timestamp, phase, fault tag, cue, and drill to build a report-ready finding.
                   </p>
                 </div>
               </div>
@@ -988,12 +1089,16 @@ export default function AIReportPage() {
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <input
+                <select
                   value={manualPhase}
                   onChange={e => setManualPhase(e.target.value)}
                   className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
-                  placeholder="Phase, e.g. Catch, Kick, Breathing"
-                />
+                >
+                  <option value="">Select stroke phase</option>
+                  {studioPhases.map(phase => (
+                    <option key={phase} value={phase}>{labelFromKey(phase)}</option>
+                  ))}
+                </select>
                 <select
                   value={manualSeverity}
                   onChange={e => setManualSeverity(e.target.value)}
@@ -1004,6 +1109,24 @@ export default function AIReportPage() {
                   <option value="high">High</option>
                   <option value="critical">Critical</option>
                 </select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select
+                  value={manualFaultTag}
+                  onChange={e => setManualFaultTag(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                >
+                  <option value="">Optional fault tag</option>
+                  {COACH_STUDIO_FAULT_TAGS.map(tag => (
+                    <option key={tag} value={tag}>{labelFromKey(tag)}</option>
+                  ))}
+                </select>
+                <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">Video timestamp</span>
+                  <span className="font-mono text-primary">
+                    {manualTimestamp != null ? `${Number(manualTimestamp).toFixed(2)}s` : 'Capture from Coach Studio'}
+                  </span>
+                </div>
               </div>
               <Textarea
                 value={manualObservation}

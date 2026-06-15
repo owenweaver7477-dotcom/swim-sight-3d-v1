@@ -1237,7 +1237,7 @@ export default function Analyse() {
                 onClick={() => createReview.mutate()}
                 disabled={createReview.isPending || !stroke || !angle || !videoUploadId}
               >
-                {createReview.isPending ? 'Opening...' : 'Continue Manual Review'}
+                {createReview.isPending ? 'Opening...' : 'Open Coach Studio'}
               </Button>
             </div>
           </div>

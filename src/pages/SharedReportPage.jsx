@@ -202,6 +202,11 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                           {finding.phase}
                         </span>
                       )}
+                      {finding.timestamp_seconds != null && (
+                        <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
+                          {formatTimestamp(finding.timestamp_seconds)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

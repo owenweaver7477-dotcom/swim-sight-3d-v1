@@ -110,6 +110,11 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
                       <span className="text-xs font-bold text-foreground">{f.finding_name}</span>
                       {f.severity && <SeverityBadge severity={f.severity} />}
                       {f.phase && <span className="text-[10px] text-primary">{f.phase}</span>}
+                      {f.timestamp_start != null && (
+                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                          {formatTimestamp(f.timestamp_start)}
+                        </span>
+                      )}
                     </div>
                     {f.coach_sees && (
                       <p className="text-[10px] text-muted-foreground leading-relaxed">

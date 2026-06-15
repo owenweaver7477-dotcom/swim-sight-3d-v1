@@ -22,7 +22,7 @@ const NEXT_ACTION_LABELS = {
   use_clearer_video: 'Try uploading a clearer or higher-quality video.',
   try_above_water_angle: 'Try adding an above-water angle for better visibility.',
   try_side_angle: 'A direct side-angle view works best for stroke analysis.',
-  manual_review_recommended: 'Open Manual Review to add findings directly.',
+  manual_review_recommended: 'Open Coach Studio to add verified findings from the video.',
   real_pose_review_ready: 'AI analysis is ready for coach review.',
 };
 
@@ -191,7 +191,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             </Button>
           )}
           <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => onStartReview(upload)}>
-            <Play className="w-3 h-3 mr-1" /> Continue Manual Review
+            <Play className="w-3 h-3 mr-1" /> Continue in Coach Studio
           </Button>
         </div>
       );
@@ -214,11 +214,11 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           {linkedReport ? (
             <Button size="sm" className="w-full h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white font-semibold"
               onClick={() => navigate(`/ai-review?report_id=${linkedReport.id}`)}>
-              <FileText className="w-3 h-3 mr-1.5" /> Open Manual Review
+              <FileText className="w-3 h-3 mr-1.5" /> Open Coach Studio
             </Button>
           ) : (
             <Button size="sm" className="w-full h-8 text-xs" variant="outline" onClick={() => onStartReview(upload)}>
-              <Play className="w-3 h-3 mr-1.5" /> Continue Manual Review
+              <Play className="w-3 h-3 mr-1.5" /> Continue in Coach Studio
             </Button>
           )}
           {canTriggerAI && (
@@ -440,7 +440,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <Button size="sm" variant="ghost"
           className="w-full h-7 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => onStartReview(upload)}>
-          <Play className="w-3 h-3 mr-1" /> Open Manual Review
+          <Play className="w-3 h-3 mr-1" /> Open Coach Studio
         </Button>
       )}
 
