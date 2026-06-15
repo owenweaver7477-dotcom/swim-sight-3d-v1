@@ -32,16 +32,19 @@ Do not claim:
 7. Send the video for AI Review.
 8. Open AI Reviews.
 9. Open the report when it appears.
-10. Approve, edit, reject, or add a manual finding.
-11. Pause the video and use Coach Draw to mark one frame.
-12. Include that annotation in the report.
-13. Link a drill if useful.
-14. Add coach summary and next focus.
-15. Finalise the report.
-16. Create a secure shared report link.
-17. Open the shared link logged out or on another device.
-18. Open AI Calibration and confirm feedback rows are captured after coach decisions.
-19. Open Pilot Readiness and save one pilot feedback note.
+10. Open Coach Studio and use the guided steps.
+11. Open Fullscreen Review.
+12. Slow the video, step approximately to a key moment, and save one key stamp.
+13. Use Finding from moment to create a coach-created finding.
+14. Pause the video and use Coach Draw to mark one frame.
+15. Include that annotation in the report.
+16. Link a drill if useful.
+17. Add coach summary and next focus.
+18. Finalise the report.
+19. Create a secure shared report link.
+20. Open the shared link logged out or on another device.
+21. Open AI Calibration and confirm feedback rows are captured after coach decisions.
+22. Open Pilot Readiness and save one pilot feedback note.
 
 ## iPad Install Steps
 
@@ -87,16 +90,19 @@ Then test:
 Use this even if AI returns findings, because Coach Studio is the coach-controlled analysis workflow.
 
 1. Open the report and find the Coach Studio source video panel.
-2. Set playback speed to 0.25x or 0.5x.
-3. Use the 1 second and Step approx controls to find a key moment.
-4. Choose Use timestamp for finding.
-5. Select stroke phase and optional fault tag.
-6. Add a coach-created observation, cue, drill, and next focus.
-7. Save the finding.
-8. Use Coach Draw on the same paused frame.
-9. Attach the drawing to the coach-created finding or leave it as a report annotation.
-10. Toggle Include in report for one safe annotation or marker.
-11. Finalise the report and confirm the shared report shows selected coach-created content only.
+2. Use the guided steps: Video Review, Key Stamps, Coach Draw, Findings + Drills, Summary, Finalise + Share.
+3. Tap Open Fullscreen Review.
+4. Set playback speed to 0.25x or 0.5x.
+5. Use the 1 second and Step approx controls to find a key moment.
+6. Save one key stamp and include it in the report.
+7. Choose Finding from moment.
+8. Select stroke phase and optional fault tag.
+9. Add a coach-created observation, cue, drill, and next focus.
+10. Save the finding.
+11. Use Coach Draw on the same paused frame.
+12. Attach the drawing to the coach-created finding or leave it as a report annotation.
+13. Toggle Include in report for one safe annotation or marker.
+14. Finalise the report and confirm the shared report shows selected coach-created content only.
 
 Say:
 

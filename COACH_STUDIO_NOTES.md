@@ -5,10 +5,12 @@ Coach Studio is the coach-controlled analysis workspace inside an AI Review repo
 ## What Coach Studio Does
 
 - Opens the private uploaded video through a short-lived signed preview.
+- Provides **Open Fullscreen Review** for a cleaner pool-deck workflow.
 - Lets the coach slow playback to 0.25x, 0.5x, 0.75x, or 1x.
 - Provides 1 second jump controls and approximate frame-step controls.
+- Shows timestamp and **Approx frame** while the coach plays, pauses, seeks, or steps.
 - Captures the current timestamp for a coach-created finding.
-- Saves key-frame markers with a label, note, and optional report inclusion.
+- Saves key stamps with a label, approximate frame context, note, and optional report inclusion.
 - Opens Coach Draw for Apple Pencil, stylus, finger, or mouse annotation.
 - Attaches saved annotations to findings when useful.
 - Sends only selected coach-created annotations to final/shared reports.
@@ -16,13 +18,31 @@ Coach Studio is the coach-controlled analysis workspace inside an AI Review repo
 ## Manual Analysis Flow
 
 1. Open an uploaded video or an AI Review report.
-2. Use Coach Studio controls to slow the video and find the key moment.
-3. Pause at the moment and choose **Use timestamp for finding**.
-4. Select stroke phase, optional fault tag, severity, observation, cue, drill, and next focus.
-5. Save the coach-created finding.
-6. Use Coach Draw to mark the frame if a visual cue would help.
-7. Toggle **Include in report** only for annotations that are safe and useful for the swimmer/parent.
-8. Finalise and share the report through the normal coach approval workflow.
+2. Use the guided steps: **Video Review**, **Key Stamps**, **Coach Draw**, **Findings + Drills**, **Summary**, then **Finalise + Share**.
+3. Open **Fullscreen Review** when working from the video.
+4. Slow the video, jump by 1 second, or use **Step approx** to find the key moment.
+5. Save a key stamp or choose **Finding from moment**.
+6. Select stroke phase, optional fault tag, severity, observation, cue, drill, and next focus.
+7. Save the coach-created finding.
+8. Use Coach Draw to mark the frame if a visual cue would help.
+9. Toggle **Include in report** only for annotations that are safe and useful for the swimmer/parent.
+10. Finalise and share the report through the normal coach approval workflow.
+
+## Fullscreen Review
+
+Fullscreen Review is designed for iPad and pool-deck use. It is a fullscreen-style overlay, not a separate public video page.
+
+Use it to:
+
+- play the private video large on screen
+- switch between 0.25x, 0.5x, 0.75x, and 1x speed
+- jump back/forward 1 second
+- step approximately one frame at a time
+- save a key stamp
+- open Coach Draw from the current moment
+- create a coach finding from the current moment
+
+Frame stepping is approximate because browser video playback does not guarantee certified frame-accurate stepping. Always verify the moment visually.
 
 ## When AI Recommends Manual Review
 

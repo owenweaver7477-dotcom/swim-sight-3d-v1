@@ -30,6 +30,7 @@ import { getDefaultDrills } from '@/lib/defaultDrills';
 import { drillSummary, suggestDrillsForFinding } from '@/lib/drillMatching';
 import CoachDrawStudio from '@/components/annotations/CoachDrawStudio';
 import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
+import { formatTimestamp } from '@/lib/annotationRender';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -83,6 +84,14 @@ const COACH_STUDIO_FAULT_TAGS = [
   'low_hips',
   'breath_timing',
   'recovery_timing',
+];
+const COACH_STUDIO_GUIDED_STEPS = [
+  { id: 'video', label: 'Video Review', helper: 'Open fullscreen, slow the clip down, and find the key moment.' },
+  { id: 'stamps', label: 'Key Stamps', helper: 'Save important timestamps with phase labels and notes.' },
+  { id: 'draw', label: 'Coach Draw', helper: 'Mark the paused frame with coach-created annotations.' },
+  { id: 'findings', label: 'Findings + Drills', helper: 'Create or approve findings, then attach cues and drills.' },
+  { id: 'summary', label: 'Summary', helper: 'Write the swimmer-facing coaching summary and next focus.' },
+  { id: 'finalise', label: 'Finalise + Share', helper: 'Review the report, finalise it, then create a secure share link.' },
 ];
 
 function labelFromKey(value = '') {
@@ -225,6 +234,67 @@ function HydrodynamicReviewPanel({ report, findings }) {
   );
 }
 
+function CoachStudioGuidedNav({
+  activeStep,
+  onStepChange,
+  completion,
+  onBack,
+  onNext,
+  canGoBack,
+  canGoNext,
+}) {
+  const current = COACH_STUDIO_GUIDED_STEPS.find(step => step.id === activeStep) || COACH_STUDIO_GUIDED_STEPS[0];
+  return (
+    <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Coach Studio</div>
+          <h2 className="text-base font-bold text-foreground">{current.label}</h2>
+          <p className="text-xs text-muted-foreground mt-1 max-w-2xl">{current.helper}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="h-9 text-xs" onClick={onBack} disabled={!canGoBack}>
+            Back
+          </Button>
+          <Button size="sm" className="h-9 text-xs bg-primary text-primary-foreground" onClick={onNext} disabled={!canGoNext}>
+            Next
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+        {COACH_STUDIO_GUIDED_STEPS.map((step, index) => {
+          const complete = completion[step.id];
+          const active = activeStep === step.id;
+          return (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => onStepChange(step.id)}
+              className={`text-left p-2.5 rounded-lg border transition-colors ${
+                active
+                  ? 'bg-primary/10 border-primary/30 text-foreground'
+                  : 'bg-secondary/30 border-border text-muted-foreground hover:border-primary/30'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Step {index + 1}</span>
+                {complete && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+              </div>
+              <div className="text-xs font-semibold mt-1">{step.label}</div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[10px] text-muted-foreground">
+        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Video reviewed: {completion.video ? 'started' : 'open fullscreen first'}</div>
+        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Key stamps: {completion.stamps ? 'saved' : 'optional but helpful'}</div>
+        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Findings: {completion.findings ? 'reviewed' : 'add or approve findings'}</div>
+        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Share: {completion.finalise ? 'ready' : 'finalise when complete'}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -253,6 +323,7 @@ export default function AIReportPage() {
   const [manualTimestamp, setManualTimestamp] = useState(null);
   const [manualFaultTag, setManualFaultTag] = useState('');
   const [manualLinkedDrill, setManualLinkedDrill] = useState(null);
+  const [coachStudioStep, setCoachStudioStep] = useState('video');
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -497,7 +568,7 @@ export default function AIReportPage() {
   });
 
   const createStudioMarker = useMutation({
-    mutationFn: ({ timestampSeconds, videoFrameTimeLabel, title, coachNote, includeInReport }) => entities.VideoAnnotation.create({
+    mutationFn: ({ timestampSeconds, videoFrameTimeLabel, approxFrame, title, coachNote, includeInReport }) => entities.VideoAnnotation.create({
       club_id: report.club_id,
       report_id: report.id,
       video_upload_id: report.video_upload_id,
@@ -506,13 +577,14 @@ export default function AIReportPage() {
       annotation_type: 'key_frame',
       timestamp_seconds: timestampSeconds,
       video_frame_time_label: videoFrameTimeLabel,
-      frame_label: videoFrameTimeLabel,
+      frame_label: approxFrame != null ? `${videoFrameTimeLabel} · Approx frame ~${approxFrame}` : videoFrameTimeLabel,
       canvas_width: 1280,
       canvas_height: 720,
       drawing_data: {
         version: 1,
         type: 'key_frame_marker',
         phase: manualPhase || null,
+        approx_frame: approxFrame ?? null,
         shapes: [
           {
             tool: 'text',
@@ -669,11 +741,40 @@ export default function AIReportPage() {
   const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
   const approvedFindings = findings.filter(f => f.approval_status === 'approved');
   const includedAnnotations = videoAnnotations.filter(annotation => annotation.include_in_report);
+  const keyStampCount = videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame').length;
+  const coachDrawCount = videoAnnotations.filter(annotation => ['coach_draw', 'body_line'].includes(annotation.annotation_type)).length;
+  const activeSharedLinks = sharedLinks.filter(link => link.status === 'active');
   const isReportFinalised = FINAL_REPORT_STATUSES.includes(report?.status);
   const isManualReviewReport = report?.analysis_mode === 'error'
     || report?.analysis_mode === 'placeholder'
     || report?.analysis_mode === 'manual_review'
     || report?.real_pose_detected === false;
+  const coachStudioStepIndex = COACH_STUDIO_GUIDED_STEPS.findIndex(step => step.id === coachStudioStep);
+  const currentStudioStepIndex = coachStudioStepIndex >= 0 ? coachStudioStepIndex : 0;
+  const studioCompletion = {
+    video: Boolean(video?.id),
+    stamps: keyStampCount > 0,
+    draw: coachDrawCount > 0,
+    findings: pendingCount === 0 && findings.length > 0,
+    summary: Boolean((coachSummary || report?.coach_summary || '').trim() || (nextFocus || report?.next_focus || '').trim()),
+    finalise: Boolean(isReportFinalised && activeSharedLinks.length > 0),
+  };
+  const goToStudioStep = (stepId) => {
+    setCoachStudioStep(stepId);
+    window.requestAnimationFrame(() => document.getElementById('section-coach-studio')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+  const goToNextStudioStep = () => {
+    const nextStep = COACH_STUDIO_GUIDED_STEPS[currentStudioStepIndex + 1]?.id;
+    if (nextStep) goToStudioStep(nextStep);
+  };
+  const goToPreviousStudioStep = () => {
+    const previousStep = COACH_STUDIO_GUIDED_STEPS[currentStudioStepIndex - 1]?.id;
+    if (previousStep) goToStudioStep(previousStep);
+  };
+
+  useEffect(() => {
+    if (isReportFinalised) setCoachStudioStep('finalise');
+  }, [isReportFinalised]);
 
   // Derive workflow step for stepper (safe — report may not be loaded yet)
   const workflowStep = !report ? 'ai' : (() => {
@@ -913,7 +1014,20 @@ export default function AIReportPage() {
 
           <HydrodynamicReviewPanel report={report} findings={findings} />
 
+          <div id="section-coach-studio">
+            <CoachStudioGuidedNav
+              activeStep={coachStudioStep}
+              onStepChange={goToStudioStep}
+              completion={studioCompletion}
+              onBack={goToPreviousStudioStep}
+              onNext={goToNextStudioStep}
+              canGoBack={currentStudioStepIndex > 0}
+              canGoNext={currentStudioStepIndex < COACH_STUDIO_GUIDED_STEPS.length - 1}
+            />
+          </div>
+
           {/* Coach summary / next focus */}
+          {coachStudioStep === 'summary' && (
           <div id="section-summary" className="p-4 rounded-xl bg-card border border-border space-y-3">
             <div>
               <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Summary</div>
@@ -948,9 +1062,10 @@ export default function AIReportPage() {
               </Button>
             )}
           </div>
+          )}
 
           {/* Video metadata */}
-          {video && (
+          {video && ['video', 'stamps', 'draw', 'findings'].includes(coachStudioStep) && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-3">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                 <div>
@@ -978,6 +1093,11 @@ export default function AIReportPage() {
                   setManualTimestamp(timestampSeconds);
                   if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
                 }}
+                onStartFindingFromMoment={(timestampSeconds) => {
+                  setManualTimestamp(timestampSeconds);
+                  if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
+                  goToStudioStep('findings');
+                }}
                 onSaveMarker={(payload) => createStudioMarker.mutateAsync(payload)}
                 onSaveAnnotation={(payload) => createAnnotation.mutateAsync(payload)}
               />
@@ -994,9 +1114,11 @@ export default function AIReportPage() {
             </div>
           )}
 
+          {['video', 'stamps', 'draw'].includes(coachStudioStep) && (
           <div className="p-3 rounded-xl bg-secondary/40 border border-border text-[10px] text-muted-foreground">
             Coach-created annotations are available for marked frames. Multi-angle review, drag risk, and 3D references remain limited while V1 coach review stays focused on verified video evidence.
           </div>
+          )}
 
           {/* Score + summary */}
           {(report.overall_score != null || report.technical_summary) && (
@@ -1063,6 +1185,7 @@ export default function AIReportPage() {
           )}
 
           {/* Navigation actions */}
+          {coachStudioStep === 'finalise' && (
           <ReportNavActions
             report={report}
             swimmer={swimmer}
@@ -1072,7 +1195,9 @@ export default function AIReportPage() {
             onScrollToShare={() => scrollTo('section-share')}
             onDownloadPDF={() => window.print()}
           />
+          )}
 
+          {['stamps', 'draw', 'finalise'].includes(coachStudioStep) && (
           <div id="section-annotations" className="p-4 rounded-xl bg-card border border-border space-y-3">
             <div>
               <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Annotations</div>
@@ -1093,8 +1218,9 @@ export default function AIReportPage() {
               </div>
             )}
           </div>
+          )}
 
-          {canEdit && !isReportFinalised && (
+          {coachStudioStep === 'findings' && canEdit && !isReportFinalised && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-3">
               <div className="flex items-start gap-2">
                 <Plus className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
@@ -1146,7 +1272,7 @@ export default function AIReportPage() {
                 <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs">
                   <span className="text-muted-foreground">Video timestamp</span>
                   <span className="font-mono text-primary">
-                    {manualTimestamp != null ? `${Number(manualTimestamp).toFixed(2)}s` : 'Capture from Coach Studio'}
+                    {manualTimestamp != null ? formatTimestamp(Number(manualTimestamp)) : 'Capture from Coach Studio'}
                   </span>
                 </div>
               </div>
@@ -1234,6 +1360,7 @@ export default function AIReportPage() {
           )}
 
           {/* AI Suggested Findings */}
+          {coachStudioStep === 'findings' && (
           <div id="section-ai-findings" className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-foreground uppercase tracking-wider">
@@ -1268,8 +1395,11 @@ export default function AIReportPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Approved Coach Report */}
+          {coachStudioStep === 'finalise' && (
+          <>
           <div id="section-final-report" className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
@@ -1360,6 +1490,8 @@ export default function AIReportPage() {
                 </Button>
               </div>
             </div>
+          )}
+          </>
           )}
 
           {/* Quality gate modal */}
