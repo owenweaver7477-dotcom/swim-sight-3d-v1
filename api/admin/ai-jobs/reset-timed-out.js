@@ -1,4 +1,14 @@
-import { ADMIN_ROLES, createServiceClient, handleApiError, readJsonBody, requireClubRole, requireUser, sendJson } from '../../_lib/server.js';
+import {
+  ADMIN_ROLES,
+  COACH_ROLES,
+  createServiceClient,
+  handleApiError,
+  readJsonBody,
+  requireClubRole,
+  requireUser,
+  sendJson,
+} from '../../_lib/server.js';
+import { dispatchNextQueuedAIJob, getAIQueueSummary } from '../../_lib/aiQueue.js';
 
 const ACTIVE_JOB_STATUSES = [
   'accepted',
@@ -29,18 +39,62 @@ function appendStageHistory(existing, entry) {
   return [...asArray(existing), entry].slice(-80);
 }
 
+function sanitizeDispatchForClub(result, clubId) {
+  const job = result?.job || null;
+  const canShowJob = job && job.club_id === clubId;
+
+  return {
+    queued: Boolean(result?.queued),
+    dispatched: Boolean(result?.dispatched),
+    failed: Boolean(result?.failed),
+    reason: result?.reason || null,
+    error: canShowJob ? result?.error || null : null,
+    job: canShowJob ? job : null,
+    job_visible: Boolean(canShowJob),
+    summary: result?.summary || null,
+  };
+}
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
+  if (!['GET', 'POST'].includes(req.method)) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   try {
     const { user } = await requireUser(req);
-    const { club_id, timeout_minutes = 10 } = await readJsonBody(req);
     const service = createServiceClient();
+    const body = req.method === 'POST' ? await readJsonBody(req) : {};
+    const action = body.action || req.query?.action || 'reset_timed_out';
+    const club_id = body.club_id || req.query?.club_id;
+    const timeout_minutes = body.timeout_minutes ?? 10;
 
     if (!club_id) {
       return sendJson(res, 400, { error: 'club_id is required for V1 reset tools' });
+    }
+
+    if (req.method === 'GET' || action === 'queue-status') {
+      await requireClubRole(service, club_id, user.id, COACH_ROLES);
+      const summary = await getAIQueueSummary(service, { clubId: club_id });
+      return sendJson(res, 200, { success: true, ...summary });
+    }
+
+    if (action === 'dispatch_next') {
+      await requireClubRole(service, club_id, user.id, COACH_ROLES);
+      const dispatchResult = await dispatchNextQueuedAIJob({
+        service,
+        req,
+        dispatcher: `manual:${user.id}`,
+      });
+      const summary = await getAIQueueSummary(service, { clubId: club_id });
+
+      return sendJson(res, 200, {
+        success: true,
+        ...sanitizeDispatchForClub({ ...dispatchResult, summary }, club_id),
+      });
+    }
+
+    if (action !== 'reset_timed_out') {
+      return sendJson(res, 400, { error: 'Unsupported AI jobs admin action' });
     }
 
     await requireClubRole(service, club_id, user.id, ADMIN_ROLES);

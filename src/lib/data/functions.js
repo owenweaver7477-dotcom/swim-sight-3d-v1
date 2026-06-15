@@ -107,11 +107,11 @@ export const functions = {
   },
 
   getAIQueueStatus(clubId) {
-    return getJson(`/api/admin/ai-jobs/dispatch-next?club_id=${encodeURIComponent(clubId)}`);
+    return getJson(`/api/admin/ai-jobs/reset-timed-out?action=queue-status&club_id=${encodeURIComponent(clubId)}`);
   },
 
   dispatchNextAIJob(payload) {
-    return postJson('/api/admin/ai-jobs/dispatch-next', payload);
+    return postJson('/api/admin/ai-jobs/reset-timed-out', { ...payload, action: 'dispatch_next' });
   },
 
   async getSharedReport(token) {
