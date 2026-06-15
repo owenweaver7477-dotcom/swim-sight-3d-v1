@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, Waves, ChevronsUpDown, Check, Brain,
-  ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3, ClipboardCheck
+  ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -39,12 +39,8 @@ const NAV_ADMIN = [
 
 const ADMIN_ROLES = ['owner', 'admin'];
 const CALIBRATION_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
-const PILOT_ROLES = ['owner', 'admin', 'coach'];
 const NAV_CALIBRATION = [
   { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
-];
-const NAV_PILOT = [
-  { to: '/pilot-readiness', label: 'Pilot QA', icon: ClipboardCheck },
 ];
 
 export default function Sidebar() {
@@ -69,7 +65,6 @@ export default function Sidebar() {
   const memberRole = club?._memberRole || getActiveRole();
   const isAdmin = ADMIN_ROLES.includes(memberRole) || user?.role === 'admin';
   const canViewCalibration = CALIBRATION_ROLES.includes(memberRole) || user?.role === 'admin';
-  const canViewPilot = PILOT_ROLES.includes(memberRole) || user?.role === 'admin';
 
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
@@ -224,7 +219,7 @@ export default function Sidebar() {
         </div>
 
         {/* — Internal tools — coach calibration plus owner/admin debug tools — */}
-        {(isAdmin || canViewCalibration || canViewPilot) && (
+        {(isAdmin || canViewCalibration) && (
           <div className="mt-2">
             <button
               onClick={() => setAdminOpen(!adminOpen)}
@@ -237,7 +232,6 @@ export default function Sidebar() {
             {adminOpen && (
               <div className="ml-2 pl-3 border-l border-[#1E4A6A] mt-0.5 space-y-0.5">
                 {canViewCalibration && NAV_CALIBRATION.map(item => <NavItem key={item.to} item={item} />)}
-                {canViewPilot && NAV_PILOT.map(item => <NavItem key={item.to} item={item} />)}
                 {isAdmin && NAV_ADMIN.map(item => <NavItem key={item.to} item={item} />)}
               </div>
             )}

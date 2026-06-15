@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle, Brain, Download, Layers, Eye, Zap, Send } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle, Brain, Download, Layers, Eye, Zap, Send, RotateCw } from 'lucide-react';
 
 export const JOB_STATUS_CONFIG = {
   // VideoUpload.processing_status
@@ -28,8 +28,9 @@ export const JOB_STATUS_CONFIG = {
   generating_outputs:     { label: 'Generating findings',                color: 'text-primary bg-primary/10 border-primary/20',   icon: Zap,          spin: true  },
   callback_sending:       { label: 'Sending results to Swim Sight 3D...', color: 'text-primary bg-primary/10 border-primary/20',   icon: Send,         spin: true  },
   manual_review_recommended: { label: 'Manual review recommended',       color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
+  retry_available:       { label: 'Retry available',                      color: 'text-orange-600 bg-orange-50 border-orange-200', icon: RotateCw,      spin: false },
   timed_out:              { label: 'Timed Out',                          color: 'text-red-600 bg-red-50 border-red-200',          icon: Clock,        spin: false },
-  unreliable_pose:        { label: 'Pose unreliable — manual review rec.',color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
+  cancelled:              { label: 'Cancelled',                          color: 'text-slate-600 bg-slate-50 border-slate-200',    icon: XCircle,      spin: false },
 };
 
 export default function AIJobStatusBadge({ status, jobStatus, size = 'sm', showIcon = true }) {

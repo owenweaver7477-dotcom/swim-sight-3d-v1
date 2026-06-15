@@ -25,8 +25,11 @@ const STATUS_CONFIG = {
   completed:           { label: 'Completed',         color: 'text-green-400 bg-green-900/20 border-green-700/30' },
   unreliable_pose:     { label: 'Unreliable Pose',   color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
   manual_review_recommended: { label: 'Manual Review', color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  manual_review:       { label: 'Manual Review',       color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  retry_available:     { label: 'Retry Available',     color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
   timed_out:           { label: 'Timed Out',         color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   error:               { label: 'Error',             color: 'text-red-400 bg-red-900/20 border-red-700/30' },
+  cancelled:           { label: 'Cancelled',         color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
 };
 
 const isTimedOut = (job) => job.status === 'timed_out' || (job.status === 'error' && job.stage === 'timed_out');
@@ -42,6 +45,7 @@ const FILTERS = [
   { key: 'all',            label: 'All Jobs' },
   { key: 'queued',         label: 'Queued' },
   { key: 'running',        label: 'Running' },
+  { key: 'retry_available', label: 'Retry' },
   { key: 'unreliable_pose',label: 'Unreliable Pose' },
   { key: 'completed',      label: 'Completed' },
   { key: 'error',          label: 'Error' },
@@ -78,7 +82,10 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
   const calibrationCounts = feedbackCounts(jobFeedback);
 
   const timedOut = isTimedOut(job);
-  const canRetry = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'].includes(job.status);
+  const canRetry = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'].includes(job.status)
+    && job.retryable !== false;
+  const attemptCount = job.attempt_count ?? ((job.retry_count || 0) + 1);
+  const maxAttempts = job.max_attempts || 3;
 
   return (
     <div className={`rounded-xl bg-card border overflow-hidden ${timedOut ? 'border-amber-500/40' : 'border-border'}`}>
@@ -129,7 +136,14 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             <div><span className="text-muted-foreground">Detection Ratio</span><div className="text-foreground">{job.detection_ratio != null ? `${(job.detection_ratio * 100).toFixed(0)}%` : '—'}</div></div>
             <div><span className="text-muted-foreground">Analysis Mode</span><div className="text-foreground capitalize">{job.analysis_mode || '—'}</div></div>
             <div><span className="text-muted-foreground">Callback Received</span><div className={job.callback_received ? 'text-green-400' : 'text-muted-foreground'}>{job.callback_received ? 'Yes' : 'No'}</div></div>
-            <div><span className="text-muted-foreground">Retry Count</span><div className="text-foreground">{job.retry_count ?? 0}</div></div>
+            <div><span className="text-muted-foreground">Attempts</span><div className="text-foreground">{attemptCount}/{maxAttempts}</div></div>
+            <div><span className="text-muted-foreground">Render Acceptance</span><div className="text-foreground">{job.render_acceptance_status || '—'}</div></div>
+            <div><span className="text-muted-foreground">Callback Status</span><div className="text-foreground">{job.callback_status || (job.callback_received ? 'received' : '—')}</div></div>
+            <div><span className="text-muted-foreground">Retryable</span><div className={job.retryable === false ? 'text-amber-400' : 'text-green-400'}>{job.retryable === false ? 'No' : 'Yes'}</div></div>
+            {job.accepted_at && <div><span className="text-muted-foreground">Accepted</span><div className="text-foreground">{format(new Date(job.accepted_at), 'dd MMM, HH:mm')}</div></div>}
+            {job.started_at && <div><span className="text-muted-foreground">Started</span><div className="text-foreground">{format(new Date(job.started_at), 'dd MMM, HH:mm')}</div></div>}
+            {job.failed_at && <div><span className="text-muted-foreground">Failed</span><div className="text-foreground">{format(new Date(job.failed_at), 'dd MMM, HH:mm')}</div></div>}
+            {job.timed_out_at && <div><span className="text-muted-foreground">Timed out</span><div className="text-foreground">{format(new Date(job.timed_out_at), 'dd MMM, HH:mm')}</div></div>}
             {job.completed_at && <div><span className="text-muted-foreground">Completed</span><div className="text-foreground">{format(new Date(job.completed_at), 'dd MMM, HH:mm')}</div></div>}
             {job.processing_duration_seconds && <div><span className="text-muted-foreground">Duration</span><div className="text-foreground">{job.processing_duration_seconds.toFixed(1)}s</div></div>}
           </div>
@@ -174,9 +188,9 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             </div>
           )}
 
-          {job.error_message && (
+          {(job.last_error || job.error_message) && (
             <div className="p-2.5 rounded-lg bg-red-900/10 border border-red-700/20 text-[10px] text-red-400">
-              <span className="font-semibold">Error: </span>{job.error_message}
+              <span className="font-semibold">{job.error_code ? `${job.error_code}: ` : 'Error: '}</span>{job.last_error || job.error_message}
             </div>
           )}
 
@@ -205,6 +219,11 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
                 <FileText className="w-3 h-3 mr-1" /> Open Report
               </Button>
             )}
+            {video?.id && !job.report_id && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/analyse')}>
+                <FileText className="w-3 h-3 mr-1" /> Continue Manual Review
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -222,11 +241,12 @@ export default function AIJobMonitor() {
 
   const memberRole = club?._memberRole || 'coach';
   const isAdmin = ['owner', 'admin'].includes(memberRole);
+  const canViewJobs = ['owner', 'admin', 'coach', 'assistant_coach'].includes(memberRole);
 
   const { data: jobs = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['ai-jobs', club?.id],
     queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100),
-    enabled: !!club?.id && isAdmin,
+    enabled: !!club?.id && canViewJobs,
     staleTime: 30 * 1000,
     refetchInterval: 30 * 1000,
   });
@@ -248,7 +268,7 @@ export default function AIJobMonitor() {
   const { data: feedback = [] } = useQuery({
     queryKey: ['ai-job-feedback', club?.id],
     queryFn: () => entities.AIFindingFeedback.list('-created_at', 500),
-    enabled: !!club?.id && isAdmin,
+    enabled: !!club?.id && canViewJobs,
     staleTime: 60 * 1000,
   });
 
@@ -275,12 +295,12 @@ export default function AIJobMonitor() {
     }
   };
 
-  if (!isAdmin) {
+  if (!canViewJobs) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <ShieldAlert className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-        <div className="text-sm font-medium text-foreground">Admin access required</div>
-        <p className="text-xs text-muted-foreground mt-1">Only owners and admins can view the AI Job Monitor.</p>
+        <div className="text-sm font-medium text-foreground">Coach access required</div>
+        <p className="text-xs text-muted-foreground mt-1">Only coaching staff can view the AI Job Monitor.</p>
       </div>
     );
   }
@@ -288,6 +308,7 @@ export default function AIJobMonitor() {
   const filteredJobs = jobs.filter(j => {
     if (filter === 'all') return true;
     if (filter === 'running') return RUNNING_STATUSES.includes(j.status);
+    if (filter === 'retry_available') return ['retry_available', 'timed_out', 'error'].includes(j.status) && j.retryable !== false;
     if (filter === 'unreliable_pose') return ['unreliable_pose', 'manual_review_recommended'].includes(j.status);
     if (filter === 'error') return ['error', 'timed_out'].includes(j.status);
     return j.status === filter;
@@ -298,6 +319,7 @@ export default function AIJobMonitor() {
     all: jobs.length,
     queued: jobs.filter(j => j.status === 'queued').length,
     running: jobs.filter(j => RUNNING_STATUSES.includes(j.status)).length,
+    retry_available: jobs.filter(j => ['retry_available', 'timed_out', 'error'].includes(j.status) && j.retryable !== false).length,
     unreliable_pose: jobs.filter(j => ['unreliable_pose', 'manual_review_recommended'].includes(j.status)).length,
     completed: jobs.filter(j => j.status === 'completed').length,
     error: jobs.filter(j => ['error', 'timed_out'].includes(j.status)).length,
@@ -311,16 +333,18 @@ export default function AIJobMonitor() {
         subtitle="Monitor AI processing jobs, debug the pose analysis pipeline, and review callback flow."
         action={
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-              onClick={handleResetTimedOut}
-              disabled={resetting}
-            >
-              {resetting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <AlertTriangle className="w-3 h-3 mr-1" />}
-              Reset Timed-Out Jobs
-            </Button>
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={handleResetTimedOut}
+                disabled={resetting}
+              >
+                {resetting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <AlertTriangle className="w-3 h-3 mr-1" />}
+                Reset Timed-Out Jobs
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"

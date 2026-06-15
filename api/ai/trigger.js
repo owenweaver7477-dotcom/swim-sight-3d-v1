@@ -21,11 +21,47 @@ const ACTIVE_JOB_STATUSES = [
   'generating_outputs',
   'callback_sending',
 ];
-const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'unreliable_pose', 'manual_review_recommended'];
+const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'];
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
 const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
+const DEFAULT_MAX_ATTEMPTS = 3;
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function stageEntry(stage, extra = {}) {
+  return { stage, at: nowIso(), ...extra };
+}
+
+function appendStageHistory(existing, entry) {
+  return [...asArray(existing), entry].slice(-80);
+}
+
+function maxExistingAttempt(existingJobs = []) {
+  return Math.max(
+    0,
+    ...existingJobs.map((existingJob) => Number(
+      existingJob.attempt_count
+      ?? (existingJob.retry_count != null ? existingJob.retry_count + 1 : 0)
+    ) || 0)
+  );
+}
 
 function safeVideoState(upload, storageReady = false) {
   return {
@@ -43,6 +79,8 @@ export default async function handler(req, res) {
 
   let job;
   let upload;
+  let attemptCount = 0;
+  let maxAttempts = DEFAULT_MAX_ATTEMPTS;
 
   try {
     const { user } = await requireUser(req);
@@ -90,7 +128,7 @@ export default async function handler(req, res) {
 
     const { data: existingJobs, error: activeError } = await service
       .from('ai_processing_jobs')
-      .select('id,status,stage,progress_percent,server_job_id,retry_count,created_at')
+      .select('*')
       .eq('video_upload_id', upload.id)
       .order('created_at', { ascending: false });
 
@@ -113,6 +151,7 @@ export default async function handler(req, res) {
         processing_status: 'pending_ai',
         stage: activeJob.stage || activeJob.status,
         retry_count: activeJob.retry_count || 0,
+        attempt_count: activeJob.attempt_count ?? ((activeJob.retry_count || 0) + 1),
       });
     }
 
@@ -124,6 +163,9 @@ export default async function handler(req, res) {
     }
 
     const latestJob = existingJobs?.[0] || null;
+    const latestAttemptCount = maxExistingAttempt(existingJobs || []);
+    maxAttempts = Number(latestJob?.max_attempts || DEFAULT_MAX_ATTEMPTS);
+
     if (latestJob && !RETRYABLE_JOB_STATUSES.includes(latestJob.status) && upload.processing_status !== 'uploaded') {
       return sendJson(res, 409, {
         error: 'The latest AI job is not retryable yet. Wait for it to finish or reset timed-out jobs.',
@@ -132,18 +174,18 @@ export default async function handler(req, res) {
       });
     }
 
-    const retryCount = Math.max(0, ...((existingJobs || []).map((existingJob) => existingJob.retry_count || 0))) + (existingJobs?.length ? 1 : 0);
-
-    const { data: signed, error: signError } = await service
-      .storage
-      .from(storageBucket)
-      .createSignedUrl(storagePath, PYTHON_SIGNED_URL_TTL_SECONDS);
-
-    if (signError) {
-      const error = new Error(`Could not create secure video URL for AI processing: ${signError.message}`);
-      error.qualityFlags = ['signed_url_expired'];
-      throw error;
+    if (latestJob && RETRYABLE_JOB_STATUSES.includes(latestJob.status) && latestAttemptCount >= maxAttempts) {
+      return sendJson(res, 409, {
+        error: `AI Review has reached ${maxAttempts} attempts for this video. Continue with manual review, or ask an owner/admin to inspect the job history.`,
+        job: latestJob,
+        retryable: false,
+        ...safeVideoState(upload, true),
+      });
     }
+
+    attemptCount = latestAttemptCount + 1;
+    const retryCount = Math.max(0, attemptCount - 1);
+    const queuedAt = nowIso();
 
     const { data: createdJob, error: createJobError } = await service
       .from('ai_processing_jobs')
@@ -153,9 +195,19 @@ export default async function handler(req, res) {
         status: 'queued',
         stage: 'queued',
         progress_percent: 0,
-        stage_history: [{ stage: 'queued', at: new Date().toISOString() }],
+        stage_history: [stageEntry('queued', { attempt_count: attemptCount })],
         recommended_next_action: null,
         retry_count: retryCount,
+        attempt_count: attemptCount,
+        max_attempts: maxAttempts,
+        last_attempt_at: queuedAt,
+        retryable: true,
+        callback_status: 'waiting',
+        render_acceptance_status: 'pending',
+        last_error: null,
+        error_code: null,
+        failed_at: null,
+        timed_out_at: null,
         created_by: user.id,
       })
       .select('*')
@@ -168,6 +220,18 @@ export default async function handler(req, res) {
       .from('video_uploads')
       .update({ processing_status: 'pending_ai', ai_error_message: null })
       .eq('id', upload.id);
+
+    const { data: signed, error: signError } = await service
+      .storage
+      .from(storageBucket)
+      .createSignedUrl(storagePath, PYTHON_SIGNED_URL_TTL_SECONDS);
+
+    if (signError) {
+      const error = new Error(`Could not create secure video URL for AI processing: ${signError.message}`);
+      error.qualityFlags = ['signed_url_failed'];
+      error.errorCode = 'signed_url_failed';
+      throw error;
+    }
 
     const aiProcessUrl = normaliseAiServerUrl();
     const callbackUrl = `${getPublicAppUrl(req)}/api/ai/callback`;
@@ -201,8 +265,13 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       if (error?.name === 'AbortError') {
-        throw new Error('AI server did not accept the job within 20 seconds. The uploaded video is saved; retry AI Review or continue manual review.');
+        const timeoutError = new Error('AI server did not accept the job within 20 seconds. The uploaded video is saved; retry AI Review or continue manual review.');
+        timeoutError.errorCode = 'render_acceptance_timeout';
+        timeoutError.qualityFlags = ['render_acceptance_timeout'];
+        throw timeoutError;
       }
+      error.errorCode = error.errorCode || 'render_acceptance_failed';
+      error.qualityFlags = error.qualityFlags || ['render_acceptance_failed'];
       throw error;
     } finally {
       clearTimeout(timeout);
@@ -217,11 +286,20 @@ export default async function handler(req, res) {
 
     if (!aiResponse.ok || aiData?.accepted === false) {
       const message = `AI server rejected job (HTTP ${aiResponse.status}): ${aiData?.error || aiData?.detail || 'Unknown error'}`;
+      const retryable = attemptCount < maxAttempts;
       await service.from('ai_processing_jobs').update({
-        status: 'error',
-        stage: 'AI server rejected job',
+        status: retryable ? 'retry_available' : 'error',
+        stage: 'render_rejected',
         error_message: message,
-        completed_at: new Date().toISOString(),
+        last_error: message,
+        error_code: 'render_rejected',
+        retryable,
+        render_acceptance_status: `rejected:${aiResponse.status}`,
+        recommended_next_action: retryable ? 'retry_ai_review_or_manual_review' : 'manual_review_recommended',
+        quality_flags: ['render_rejected'],
+        failed_at: nowIso(),
+        completed_at: nowIso(),
+        stage_history: appendStageHistory(job.stage_history, stageEntry('render_rejected', { http_status: aiResponse.status })),
       }).eq('id', job.id);
       await service.from('video_uploads').update({
         processing_status: 'error',
@@ -238,11 +316,15 @@ export default async function handler(req, res) {
         server_job_id: serverJobId,
         stage: 'accepted',
         progress_percent: 5,
-        stage_history: [
-          ...(Array.isArray(job.stage_history) ? job.stage_history : []),
-          { stage: 'accepted', at: new Date().toISOString(), server_job_id: serverJobId },
-        ],
-        started_at: new Date().toISOString(),
+        stage_history: appendStageHistory(job.stage_history, stageEntry('accepted', {
+          server_job_id: serverJobId,
+          attempt_count: attemptCount,
+        })),
+        accepted_at: nowIso(),
+        started_at: nowIso(),
+        render_acceptance_status: 'accepted',
+        callback_status: 'waiting',
+        retryable: attemptCount < maxAttempts,
       })
       .eq('id', job.id)
       .select('*')
@@ -263,19 +345,31 @@ export default async function handler(req, res) {
       processing_status: 'processing_ai',
       stage: updatedJob.stage,
       retry_count: updatedJob.retry_count,
+      attempt_count: updatedJob.attempt_count,
     });
   } catch (error) {
     if (job?.id || upload?.id) {
       try {
         const service = createServiceClient();
         if (job?.id) {
+          const retryable = (job.attempt_count ?? attemptCount) < (job.max_attempts ?? maxAttempts);
+          const errorCode = error.errorCode || (error.qualityFlags?.includes('signed_url_failed') ? 'signed_url_failed' : 'trigger_failed');
           await service.from('ai_processing_jobs').update({
-            status: 'error',
-            stage: error.qualityFlags?.includes('signed_url_expired') ? 'signed_url_expired' : 'error',
+            status: retryable ? 'retry_available' : 'error',
+            stage: errorCode,
             quality_flags: error.qualityFlags || ['processing_error'],
-            recommended_next_action: 'manual_review_recommended',
+            recommended_next_action: retryable ? 'retry_ai_review_or_manual_review' : 'manual_review_recommended',
             error_message: error.message,
-            completed_at: new Date().toISOString(),
+            last_error: error.message,
+            error_code: errorCode,
+            retryable,
+            render_acceptance_status: errorCode.startsWith('render_') ? 'failed' : job.render_acceptance_status || null,
+            failed_at: nowIso(),
+            completed_at: nowIso(),
+            stage_history: appendStageHistory(job.stage_history, stageEntry(errorCode, {
+              error_code: errorCode,
+              retryable,
+            })),
           }).eq('id', job.id);
         }
         if (upload?.id) {

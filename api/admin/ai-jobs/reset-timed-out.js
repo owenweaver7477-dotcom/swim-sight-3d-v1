@@ -1,5 +1,34 @@
 import { ADMIN_ROLES, createServiceClient, handleApiError, readJsonBody, requireClubRole, requireUser, sendJson } from '../../_lib/server.js';
 
+const ACTIVE_JOB_STATUSES = [
+  'queued',
+  'accepted',
+  'running',
+  'downloading_video',
+  'extracting_frames',
+  'running_pose_detection',
+  'analysing_stroke',
+  'generating_outputs',
+  'callback_sending',
+];
+
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function appendStageHistory(existing, entry) {
+  return [...asArray(existing), entry].slice(-80);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return sendJson(res, 405, { error: 'Method not allowed' });
@@ -21,7 +50,7 @@ export default async function handler(req, res) {
       .from('ai_processing_jobs')
       .select('*')
       .eq('club_id', club_id)
-      .in('status', ['queued', 'running'])
+      .in('status', ACTIVE_JOB_STATUSES)
       .lt('updated_at', cutoff);
 
     if (jobsError) throw jobsError;
@@ -31,14 +60,27 @@ export default async function handler(req, res) {
     const details = [];
 
     for (const job of jobs) {
+      const retryable = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) < Number(job.max_attempts || 3);
       await service.from('ai_processing_jobs').update({
         status: 'timed_out',
         stage: 'timed_out',
         progress_percent: 100,
         error_message: 'AI server did not return a callback before timeout.',
+        last_error: 'AI server did not return a callback before timeout.',
+        error_code: 'callback_timeout',
+        retryable,
+        timed_out_at: now,
         recommended_next_action: 'manual_review_recommended',
         quality_flags: ['callback_timeout'],
+        callback_status: 'timed_out',
         completed_at: now,
+        stage_history: appendStageHistory(job.stage_history, {
+          stage: 'timed_out',
+          status: 'timed_out',
+          at: now,
+          timeout_minutes: Number(timeout_minutes),
+          retryable,
+        }),
       }).eq('id', job.id);
 
       await service.from('video_uploads').update({

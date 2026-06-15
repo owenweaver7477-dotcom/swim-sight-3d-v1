@@ -111,6 +111,16 @@ function appendStageHistory(existing, entry) {
   return [...history, entry].slice(-50);
 }
 
+function callbackStageEntry(payload, status, extra = {}) {
+  return {
+    stage: payload.stage || status,
+    status,
+    progress_percent: payload.progress_percent ?? null,
+    at: new Date().toISOString(),
+    ...extra,
+  };
+}
+
 function buildQualityFlags(payload, callbackError, quality) {
   const flags = new Set(normaliseArray(payload.quality_flags));
   const findings = Array.isArray(payload.findings) ? payload.findings : [];
@@ -188,6 +198,16 @@ async function findJob(service, payload) {
     if (data) return data;
   }
 
+  if (payload.server_job_id) {
+    const { data, error } = await service
+      .from('ai_processing_jobs')
+      .select('*')
+      .eq('server_job_id', payload.server_job_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  }
+
   if (payload.video_upload_id) {
     const { data, error } = await service
       .from('ai_processing_jobs')
@@ -223,6 +243,14 @@ export default async function handler(req, res) {
 
     const videoUploadId = payload.video_upload_id || job?.video_upload_id;
     if (!videoUploadId) return sendJson(res, 400, { error: 'video_upload_id is required' });
+
+    if (!job) {
+      console.warn('AI callback received without matching job', {
+        video_upload_id: videoUploadId,
+        has_job_id: Boolean(payload.job_id || payload.app_job_id || payload.server_job_id),
+        status: payload.status || null,
+      });
+    }
 
     const { data: upload, error: uploadError } = await service
       .from('video_uploads')
@@ -268,14 +296,12 @@ export default async function handler(req, res) {
         detection_ratio: payload.detection_ratio ?? job.detection_ratio ?? null,
         frame_count_processed: payload.frame_count_processed ?? job.frame_count_processed ?? null,
         detected_keypoints_count: payload.detected_keypoints_count ?? job.detected_keypoints_count ?? null,
-        stage_history: appendStageHistory(job.stage_history, {
-          stage: payload.stage || callbackStatus,
-          progress_percent: payload.progress_percent ?? null,
-          at: now,
-        }),
+        stage_history: appendStageHistory(job.stage_history, callbackStageEntry(payload, callbackStatus)),
         analysis_mode: payload.analysis_mode || job.analysis_mode || null,
         video_duration_seconds: payload.video_duration_seconds ?? job.video_duration_seconds ?? null,
         video_fps: payload.video_fps ?? job.video_fps ?? null,
+        started_at: job.started_at || now,
+        callback_status: 'progress',
       }).eq('id', job.id);
 
       await service.from('video_uploads').update({
@@ -297,6 +323,14 @@ export default async function handler(req, res) {
     }).eq('id', upload.id);
 
     if (job) {
+      const finalCallbackStatus = callbackError
+        ? 'error'
+        : qualityPass
+        ? 'completed'
+        : 'manual_review';
+      const attemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
+      const maxAttempts = Number(job.max_attempts || 3) || 3;
+      const retryable = !qualityPass && attemptCount < maxAttempts;
       await service.from('ai_processing_jobs').update({
         status: jobStatus,
         stage: callbackError
@@ -311,14 +345,20 @@ export default async function handler(req, res) {
         detection_ratio: payload.detection_ratio ?? null,
         frame_count_processed: payload.frame_count_processed ?? null,
         detected_keypoints_count: payload.detected_keypoints_count ?? null,
-        stage_history: appendStageHistory(payload.stage_history || job.stage_history, {
-          stage: callbackError ? 'error' : qualityPass ? 'completed' : 'manual_review_recommended',
-          at: now,
-        }),
+        stage_history: appendStageHistory(payload.stage_history || job.stage_history, callbackStageEntry(
+          payload,
+          callbackError ? 'error' : qualityPass ? 'completed' : 'manual_review_recommended',
+          { quality_gate_passed: qualityPass }
+        )),
         error_message: unreliableMessage,
+        last_error: callbackError ? unreliableMessage : null,
+        error_code: callbackError ? (payload.error_code || 'worker_callback_error') : null,
+        retryable,
         callback_received: true,
         callback_received_at: now,
+        callback_status: finalCallbackStatus,
         completed_at: now,
+        failed_at: callbackError ? now : null,
         processing_duration_seconds: payload.processing_duration_seconds ?? null,
         analysis_mode: analysisMode,
         video_duration_seconds: payload.video_duration_seconds ?? null,
