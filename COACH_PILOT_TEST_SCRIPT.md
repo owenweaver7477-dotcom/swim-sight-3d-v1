@@ -34,17 +34,19 @@ Do not claim:
 9. Open the report when it appears.
 10. Open Coach Studio and use the guided steps.
 11. Open Fullscreen Review.
-12. Slow the video, step approximately to a key moment, and save one key stamp.
-13. Use Finding from moment to create a coach-created finding.
-14. Pause the video and use Coach Draw to mark one frame.
-15. Include that annotation in the report.
-16. Link a drill if useful.
-17. Add coach summary and next focus.
-18. Finalise the report.
-19. Create a secure shared report link.
-20. Open the shared link logged out or on another device.
-21. Open AI Calibration and confirm feedback rows are captured after coach decisions.
-22. Open Pilot Readiness and save one pilot feedback note.
+12. Slow the video, step approximately to key moments, and save two key stamps.
+13. Open Key Moment Gallery.
+14. Approve one key stamp for the report and leave one unapproved.
+15. Use Create Finding from a key stamp to create a coach-created finding.
+16. Open Coach Draw from a key stamp and mark one frame.
+17. Include that annotation in the report.
+18. Link a drill if useful.
+19. Add coach summary and next focus.
+20. Finalise the report.
+21. Create a secure shared report link.
+22. Open the shared link logged out or on another device.
+23. Open AI Calibration and confirm feedback rows are captured after coach decisions.
+24. Open Pilot Readiness and save one pilot feedback note.
 
 ## iPad Install Steps
 
@@ -94,15 +96,18 @@ Use this even if AI returns findings, because Coach Studio is the coach-controll
 3. Tap Open Fullscreen Review.
 4. Set playback speed to 0.25x or 0.5x.
 5. Use the 1 second and Step approx controls to find a key moment.
-6. Save one key stamp and include it in the report.
-7. Choose Finding from moment.
-8. Select stroke phase and optional fault tag.
-9. Add a coach-created observation, cue, drill, and next focus.
-10. Save the finding.
-11. Use Coach Draw on the same paused frame.
-12. Attach the drawing to the coach-created finding or leave it as a report annotation.
-13. Toggle Include in report for one safe annotation or marker.
-14. Finalise the report and confirm the shared report shows selected coach-created content only.
+6. Save two key stamps.
+7. Go to Key Moment Gallery.
+8. Edit one label/note if needed.
+9. Approve one key stamp for the report.
+10. Choose Finding from a key stamp.
+11. Select stroke phase and optional fault tag.
+12. Add a coach-created observation, cue, drill, and next focus.
+13. Save the finding.
+14. Use Coach Draw from the same key stamp.
+15. Attach the drawing to the coach-created finding or leave it as a report annotation.
+16. Toggle Include in report for one safe annotation or marker.
+17. Finalise the report and confirm the shared report shows selected coach-created content only.
 
 Say:
 

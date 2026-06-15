@@ -4,20 +4,28 @@ import { CheckCircle2, Star, Activity, Target, PencilLine } from 'lucide-react';
 import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
 
 function AnnotationCard({ annotation, linkedFinding }) {
+  const safeThumbnail = typeof annotation.thumbnail_data_url === 'string' && annotation.thumbnail_data_url.startsWith('data:image/')
+    ? annotation.thumbnail_data_url
+    : null;
+  const label = annotation.annotation_type === 'key_frame' ? 'Coach-selected key moment' : 'Coach-created annotation';
   return (
     <div className="rounded-lg bg-card border border-border overflow-hidden">
-      <div
-        className="bg-slate-950"
-        style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
-        dangerouslySetInnerHTML={{
-          __html: drawingToSvg(annotation.drawing_data, {
-            width: annotation.canvas_width,
-            height: annotation.canvas_height,
-          }),
-        }}
-      />
+      {safeThumbnail ? (
+        <img src={safeThumbnail} alt={annotation.title || label} className="w-full bg-slate-950 object-contain" />
+      ) : (
+        <div
+          className="bg-slate-950"
+          style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+          dangerouslySetInnerHTML={{
+            __html: drawingToSvg(annotation.drawing_data, {
+              width: annotation.canvas_width,
+              height: annotation.canvas_height,
+            }),
+          }}
+        />
+      )}
       <div className="p-2.5">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">Coach-created annotation</div>
+        <div className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">{label}</div>
         <div className="text-xs font-semibold text-foreground">{annotation.title || 'Marked frame'}</div>
         <div className="text-[10px] text-muted-foreground">
           Frame {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}

@@ -11,6 +11,7 @@ Coach Studio is the coach-controlled analysis workspace inside an AI Review repo
 - Shows timestamp and **Approx frame** while the coach plays, pauses, seeks, or steps.
 - Captures the current timestamp for a coach-created finding.
 - Saves key stamps with a label, approximate frame context, note, and optional report inclusion.
+- Shows saved key stamps in a **Key Moment Gallery** where the coach approves, edits, links, or deletes each timestamp.
 - Opens Coach Draw for Apple Pencil, stylus, finger, or mouse annotation.
 - Attaches saved annotations to findings when useful.
 - Sends only selected coach-created annotations to final/shared reports.
@@ -22,11 +23,38 @@ Coach Studio is the coach-controlled analysis workspace inside an AI Review repo
 3. Open **Fullscreen Review** when working from the video.
 4. Slow the video, jump by 1 second, or use **Step approx** to find the key moment.
 5. Save a key stamp or choose **Finding from moment**.
-6. Select stroke phase, optional fault tag, severity, observation, cue, drill, and next focus.
-7. Save the coach-created finding.
-8. Use Coach Draw to mark the frame if a visual cue would help.
-9. Toggle **Include in report** only for annotations that are safe and useful for the swimmer/parent.
-10. Finalise and share the report through the normal coach approval workflow.
+6. Open **Key Moment Gallery** to approve selected timestamps for the report.
+7. Create a finding from a key stamp when that moment needs a technical note.
+8. Select stroke phase, optional fault tag, severity, observation, cue, drill, and next focus.
+9. Save the coach-created finding.
+10. Use Coach Draw from the key stamp or paused video moment if a visual cue would help.
+11. Toggle **Include in report** only for annotations that are safe and useful for the swimmer/parent.
+12. Finalise and share the report through the normal coach approval workflow.
+
+## Key Moment Gallery
+
+Use Key Moment Gallery after saving timestamps in Fullscreen Review.
+
+Each key moment card can show:
+
+- thumbnail/screenshot if the browser allowed safe frame capture
+- timestamp and approximate frame
+- label
+- stroke phase
+- coach note
+- linked finding
+- report approval status
+
+Coach actions:
+
+- approve/remove the key moment from the report
+- edit the label or note
+- attach it to a finding
+- create a coach finding from the timestamp
+- open Coach Draw from the same moment
+- delete the key stamp
+
+If thumbnail capture fails, the key stamp still saves with timestamp, label, note, and approval controls.
 
 ## Fullscreen Review
 
@@ -39,6 +67,7 @@ Use it to:
 - jump back/forward 1 second
 - step approximately one frame at a time
 - save a key stamp
+- return to Key Moment Gallery to approve selected timestamps
 - open Coach Draw from the current moment
 - create a coach finding from the current moment
 

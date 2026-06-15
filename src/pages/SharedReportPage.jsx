@@ -28,11 +28,12 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
     && annotation.thumbnail_data_url.startsWith('data:image/')
     ? annotation.thumbnail_data_url
     : null;
+  const label = annotation.annotation_type === 'key_frame' ? 'Coach-selected key moment' : 'Coach annotation';
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
       {safeThumbnail ? (
-        <img src={safeThumbnail} alt={annotation.title || 'Coach annotation'} className="w-full bg-slate-950 object-contain" />
+        <img src={safeThumbnail} alt={annotation.title || label} className="w-full bg-slate-950 object-contain" />
       ) : (
         <div
           className="bg-slate-950"
@@ -47,7 +48,7 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
       )}
       <div className="p-3">
         <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700 mb-1 flex items-center gap-1.5">
-          <PencilLine className="w-3 h-3" /> Coach annotation
+          <PencilLine className="w-3 h-3" /> {label}
         </div>
         <div className="text-sm font-bold text-slate-900">{annotation.title || 'Marked frame'}</div>
         <div className="text-[10px] font-mono text-blue-600 mt-0.5">

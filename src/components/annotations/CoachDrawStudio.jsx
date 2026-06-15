@@ -20,6 +20,7 @@ import {
 
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1];
 const APPROX_FRAME_STEP = 1 / 30;
+const THUMBNAIL_MAX_WIDTH = 480;
 const QUICK_LABELS_BY_STROKE = {
   breaststroke: ['Catch', 'Breath', 'Kick setup', 'Kick drive', 'Line reset'],
   freestyle: ['Entry', 'Catch setup', 'Pull', 'Breath', 'Recovery', 'Body line'],
@@ -32,6 +33,23 @@ function estimateFps(video = {}) {
   return Number.isFinite(value) && value > 0 ? value : 30;
 }
 
+function captureVideoThumbnail(videoNode) {
+  try {
+    if (!videoNode?.videoWidth || !videoNode?.videoHeight) return null;
+    const scale = Math.min(1, THUMBNAIL_MAX_WIDTH / videoNode.videoWidth);
+    const width = Math.max(1, Math.round(videoNode.videoWidth * scale));
+    const height = Math.max(1, Math.round(videoNode.videoHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    context.drawImage(videoNode, 0, 0, width, height);
+    return canvas.toDataURL('image/jpeg', 0.68);
+  } catch {
+    return null;
+  }
+}
+
 export default function CoachDrawStudio({
   signedVideoUrl,
   signedVideoError,
@@ -40,6 +58,8 @@ export default function CoachDrawStudio({
   onCaptureTimestamp,
   onStartFindingFromMoment,
   onSaveMarker,
+  seekRequest,
+  drawRequest,
   savingMarker,
   findings = [],
   canEdit = true,
@@ -80,6 +100,27 @@ export default function CoachDrawStudio({
       target.currentTime = timestamp;
     }
   }, [fullscreenOpen, playbackRate, signedVideoUrl]);
+
+  useEffect(() => {
+    if (!seekRequest || !Number.isFinite(Number(seekRequest.timestampSeconds))) return;
+    const current = activeVideo();
+    if (!current) return;
+    current.pause();
+    current.currentTime = Math.max(0, Number(seekRequest.timestampSeconds));
+    syncTimestamp(current);
+  }, [seekRequest?.nonce]);
+
+  useEffect(() => {
+    if (!drawRequest || !Number.isFinite(Number(drawRequest.timestampSeconds))) return;
+    const current = activeVideo();
+    if (current) {
+      current.pause();
+      current.currentTime = Math.max(0, Number(drawRequest.timestampSeconds));
+      syncTimestamp(current);
+    }
+    setPendingDrawing(null);
+    setDrawing(true);
+  }, [drawRequest?.nonce]);
 
   const activeVideo = () => (fullscreenOpen ? fullscreenVideoRef.current : inlineVideoRef.current);
 
@@ -151,7 +192,8 @@ export default function CoachDrawStudio({
 
   const saveMarker = async () => {
     if (!onSaveMarker) return;
-    const currentTime = activeVideo()?.currentTime || timestamp || 0;
+    const current = activeVideo();
+    const currentTime = current?.currentTime || timestamp || 0;
     await onSaveMarker({
       timestampSeconds: currentTime,
       videoFrameTimeLabel: formatTimestamp(currentTime),
@@ -159,6 +201,7 @@ export default function CoachDrawStudio({
       title: markerLabel || 'Key frame',
       coachNote: markerNote || null,
       includeInReport: markerIncludeInReport,
+      thumbnailDataUrl: captureVideoThumbnail(current),
     });
     setMarkerLabel('Key frame');
     setMarkerNote('');
@@ -183,6 +226,7 @@ export default function CoachDrawStudio({
         <video
           ref={ref}
           src={signedVideoUrl}
+          crossOrigin="anonymous"
           controls={!drawing}
           className="w-full h-full object-contain"
           onTimeUpdate={(event) => syncTimestamp(event.currentTarget)}

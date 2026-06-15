@@ -30,6 +30,7 @@ import { getDefaultDrills } from '@/lib/defaultDrills';
 import { drillSummary, suggestDrillsForFinding } from '@/lib/drillMatching';
 import CoachDrawStudio from '@/components/annotations/CoachDrawStudio';
 import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
+import KeyStampGallery from '@/components/annotations/KeyStampGallery';
 import { formatTimestamp } from '@/lib/annotationRender';
 
 function PhaseBar({ label, score }) {
@@ -87,7 +88,7 @@ const COACH_STUDIO_FAULT_TAGS = [
 ];
 const COACH_STUDIO_GUIDED_STEPS = [
   { id: 'video', label: 'Video Review', helper: 'Open fullscreen, slow the clip down, and find the key moment.' },
-  { id: 'stamps', label: 'Key Stamps', helper: 'Save important timestamps with phase labels and notes.' },
+  { id: 'stamps', label: 'Key Moment Gallery', helper: 'Review, approve, attach, and organise saved key stamps.' },
   { id: 'draw', label: 'Coach Draw', helper: 'Mark the paused frame with coach-created annotations.' },
   { id: 'findings', label: 'Findings + Drills', helper: 'Create or approve findings, then attach cues and drills.' },
   { id: 'summary', label: 'Summary', helper: 'Write the swimmer-facing coaching summary and next focus.' },
@@ -324,6 +325,9 @@ export default function AIReportPage() {
   const [manualFaultTag, setManualFaultTag] = useState('');
   const [manualLinkedDrill, setManualLinkedDrill] = useState(null);
   const [coachStudioStep, setCoachStudioStep] = useState('video');
+  const [pendingKeyStampLinkId, setPendingKeyStampLinkId] = useState(null);
+  const [studioSeekRequest, setStudioSeekRequest] = useState(null);
+  const [studioDrawRequest, setStudioDrawRequest] = useState(null);
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -568,7 +572,7 @@ export default function AIReportPage() {
   });
 
   const createStudioMarker = useMutation({
-    mutationFn: ({ timestampSeconds, videoFrameTimeLabel, approxFrame, title, coachNote, includeInReport }) => entities.VideoAnnotation.create({
+    mutationFn: ({ timestampSeconds, videoFrameTimeLabel, approxFrame, title, coachNote, includeInReport, thumbnailDataUrl }) => entities.VideoAnnotation.create({
       club_id: report.club_id,
       report_id: report.id,
       video_upload_id: report.video_upload_id,
@@ -602,6 +606,7 @@ export default function AIReportPage() {
           }] : []),
         ],
       },
+      thumbnail_data_url: thumbnailDataUrl || null,
       title: title || 'Key frame',
       coach_note: coachNote || null,
       include_in_report: includeInReport,
@@ -656,6 +661,17 @@ export default function AIReportPage() {
       created_by: user?.id,
     }),
     onSuccess: async (createdFinding) => {
+      if (pendingKeyStampLinkId) {
+        try {
+          await entities.VideoAnnotation.update(pendingKeyStampLinkId, {
+            finding_id: createdFinding.id,
+            include_in_report: true,
+            is_public: true,
+          });
+        } catch (error) {
+          console.warn('Key stamp link was not saved; finding was still created.', error?.message || error);
+        }
+      }
       await logFeedback(createdFinding, 'manual_added', {
         phase: manualPhase || createdFinding.stroke_phase || null,
         fault_tag: createdFinding.fault_tag || null,
@@ -675,7 +691,9 @@ export default function AIReportPage() {
       setManualTimestamp(null);
       setManualFaultTag('');
       setManualLinkedDrill(null);
+      setPendingKeyStampLinkId(null);
       queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
+      queryClient.invalidateQueries({ queryKey: ['video-annotations', reportId, report?.video_upload_id] });
     },
   });
 
@@ -770,6 +788,24 @@ export default function AIReportPage() {
   const goToPreviousStudioStep = () => {
     const previousStep = COACH_STUDIO_GUIDED_STEPS[currentStudioStepIndex - 1]?.id;
     if (previousStep) goToStudioStep(previousStep);
+  };
+  const prepareFindingFromKeyStamp = (stamp) => {
+    const phase = stamp?.drawing_data?.phase || manualPhase || studioPhases[0] || '';
+    setManualTimestamp(Number(stamp.timestamp_seconds || 0));
+    setManualPhase(phase);
+    setManualObservation(stamp.title || stamp.coach_note || 'Coach-created key moment');
+    setManualWhy(stamp.coach_note || manualWhy);
+    setManualFaultTag('');
+    setPendingKeyStampLinkId(stamp.id);
+    goToStudioStep('findings');
+  };
+  const openDrawFromKeyStamp = (stamp) => {
+    const timestampSeconds = Number(stamp.timestamp_seconds || 0);
+    setManualTimestamp(timestampSeconds);
+    if (stamp?.drawing_data?.phase && !manualPhase) setManualPhase(stamp.drawing_data.phase);
+    setStudioSeekRequest({ timestampSeconds, nonce: Date.now() });
+    setStudioDrawRequest({ timestampSeconds, nonce: Date.now() });
+    goToStudioStep('draw');
   };
 
   useEffect(() => {
@@ -1088,6 +1124,8 @@ export default function AIReportPage() {
                 canEdit={canEdit && !isReportFinalised}
                 saving={createAnnotation.isPending}
                 savingMarker={createStudioMarker.isPending}
+                seekRequest={studioSeekRequest}
+                drawRequest={studioDrawRequest}
                 findings={findings.filter(finding => finding.approval_status !== 'rejected')}
                 onCaptureTimestamp={(timestampSeconds) => {
                   setManualTimestamp(timestampSeconds);
@@ -1199,19 +1237,48 @@ export default function AIReportPage() {
 
           {['stamps', 'draw', 'finalise'].includes(coachStudioStep) && (
           <div id="section-annotations" className="p-4 rounded-xl bg-card border border-border space-y-3">
-            <div>
-              <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Annotations</div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Coach-created frame marks only. Include selected annotations in final/shared reports when they are public-safe.
-              </p>
-            </div>
-            <AnnotationTimeline
-              annotations={videoAnnotations}
-              findings={findings}
-              canEdit={canEdit && !isReportFinalised}
-              onUpdate={(annotation, patch) => updateAnnotation.mutateAsync({ annotation, patch })}
-              onDelete={(annotation) => deleteAnnotation.mutateAsync(annotation)}
-            />
+            {coachStudioStep === 'stamps' ? (
+              <KeyStampGallery
+                annotations={videoAnnotations}
+                findings={findings}
+                canEdit={canEdit && !isReportFinalised}
+                onUpdate={(annotation, patch) => updateAnnotation.mutateAsync({ annotation, patch })}
+                onDelete={(annotation) => deleteAnnotation.mutateAsync(annotation)}
+                onCreateFinding={prepareFindingFromKeyStamp}
+                onOpenDraw={openDrawFromKeyStamp}
+              />
+            ) : (
+              <>
+                <div>
+                  <div className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    {coachStudioStep === 'finalise' ? 'Report Key Moments + Coach Annotations' : 'Coach Annotations'}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Coach-created frame marks only. Include selected annotations in final/shared reports when they are public-safe.
+                  </p>
+                </div>
+                {coachStudioStep === 'finalise' && (
+                  <KeyStampGallery
+                    annotations={videoAnnotations}
+                    findings={findings}
+                    canEdit={canEdit && !isReportFinalised}
+                    onUpdate={(annotation, patch) => updateAnnotation.mutateAsync({ annotation, patch })}
+                    onDelete={(annotation) => deleteAnnotation.mutateAsync(annotation)}
+                    onCreateFinding={prepareFindingFromKeyStamp}
+                    onOpenDraw={openDrawFromKeyStamp}
+                  />
+                )}
+                {coachStudioStep === 'draw' && (
+                  <AnnotationTimeline
+                    annotations={videoAnnotations.filter(annotation => annotation.annotation_type !== 'key_frame')}
+                    findings={findings}
+                    canEdit={canEdit && !isReportFinalised}
+                    onUpdate={(annotation, patch) => updateAnnotation.mutateAsync({ annotation, patch })}
+                    onDelete={(annotation) => deleteAnnotation.mutateAsync(annotation)}
+                  />
+                )}
+              </>
+            )}
             {videoAnnotations.length > 0 && includedAnnotations.length === 0 && (
               <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[10px] text-muted-foreground">
                 No coach annotations selected for this report yet. Mark a saved frame as “Include in report” when it is ready for the final/shared report.
