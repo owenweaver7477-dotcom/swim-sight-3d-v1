@@ -1,39 +1,71 @@
-**Welcome to your Base44 project** 
+# Swim Sight 3D
 
-**About**
+Swim Sight 3D is a coach-led swim analysis platform for controlled club testing.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+The V1 stack is:
 
-This project contains everything you need to run your app locally.
+- Vite React frontend
+- Vercel hosting and API routes
+- Supabase Auth, database, row-level security, and private storage
+- External Python pose-analysis server on Render
 
-**Edit the code in your local development environment**
+## Safety Principles
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+- AI output is draft evidence only.
+- Coaches must approve, edit, or reject findings before report inclusion.
+- Weak or unreliable pose becomes manual review with zero fake findings.
+- Private videos stay in private storage.
+- Public shared reports use secure tokens and sanitized data only.
+- No exact drag-force, medical, race-prediction, or formal SwimPro relationship claims are made.
 
-**Prerequisites:** 
+## Local Development
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+Install dependencies:
 
+```bash
+npm install
 ```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
+Run locally:
+
+```bash
+npm run dev
 ```
 
-Run the app: `npm run dev`
+Build:
 
-**Publish your changes**
+```bash
+npm run build
+```
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+## Environment Variables
 
-**Docs & Support**
+Frontend-safe:
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+```bash
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_APP_BASE_URL=
+VITE_AI_SERVER_URL=https://swim-sight-ai-server.onrender.com
+```
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Server-only:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=
+AI_SERVER_URL=https://swim-sight-ai-server.onrender.com
+AI_WEBHOOK_SECRET=
+PUBLIC_APP_URL=
+```
+
+Never commit `.env` files or real secrets.
+
+## Setup Docs
+
+Read these before testing or deploying:
+
+- `SUPABASE_SETUP.md`
+- `VERCEL_DEPLOYMENT.md`
+- `INFRASTRUCTURE_LIMITS.md`
+- `AI_JOB_ENGINE_TEST_PLAN.md`
+- `COACH_PILOT_TEST_SCRIPT.md`
