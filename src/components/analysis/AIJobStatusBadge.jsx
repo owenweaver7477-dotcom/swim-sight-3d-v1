@@ -19,6 +19,8 @@ export const JOB_STATUS_CONFIG = {
 
   // AIProcessingJob.status
   queued:                 { label: 'Queued for pose-assisted review',    color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
+  dispatching:            { label: 'Sending to AI worker',               color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Loader2,      spin: true  },
+  dispatched:             { label: 'Sent to AI worker',                  color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: CheckCircle2, spin: false },
   accepted:               { label: 'AI server accepted job',             color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: CheckCircle2, spin: false },
   running:                { label: 'AI-assisted review running',         color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true  },
   downloading_video:      { label: 'Downloading video securely',         color: 'text-primary bg-primary/10 border-primary/20',   icon: Download,     spin: true  },
@@ -29,6 +31,7 @@ export const JOB_STATUS_CONFIG = {
   callback_sending:       { label: 'Sending results to Swim Sight 3D...', color: 'text-primary bg-primary/10 border-primary/20',   icon: Send,         spin: true  },
   manual_review_recommended: { label: 'Manual review recommended',       color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   retry_available:       { label: 'Retry available',                      color: 'text-orange-600 bg-orange-50 border-orange-200', icon: RotateCw,      spin: false },
+  failed:                { label: 'Dispatch failed',                      color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
   timed_out:              { label: 'Timed Out',                          color: 'text-red-600 bg-red-50 border-red-200',          icon: Clock,        spin: false },
   cancelled:              { label: 'Cancelled',                          color: 'text-slate-600 bg-slate-50 border-slate-200',    icon: XCircle,      spin: false },
 };

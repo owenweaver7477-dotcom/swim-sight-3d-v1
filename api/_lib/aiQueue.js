@@ -1,0 +1,417 @@
+import { getPublicAppUrl, normaliseAiServerUrl } from './server.js';
+
+export const RENDER_ACTIVE_JOB_STATUSES = [
+  'accepted',
+  'running',
+  'downloading_video',
+  'extracting_frames',
+  'running_pose_detection',
+  'analysing_stroke',
+  'generating_outputs',
+  'callback_sending',
+];
+
+export const DUPLICATE_BLOCKING_JOB_STATUSES = [
+  'queued',
+  ...RENDER_ACTIVE_JOB_STATUSES,
+];
+
+export const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing'];
+export const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'];
+
+const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
+const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
+const DEFAULT_MAX_ACTIVE_AI_JOBS = 1;
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+export function appendStageHistory(existing, entry) {
+  return [...asArray(existing), entry].slice(-80);
+}
+
+export function stageEntry(stage, extra = {}) {
+  return { stage, at: nowIso(), ...extra };
+}
+
+export function getMaxActiveAIJobs() {
+  const parsed = Number.parseInt(process.env.MAX_ACTIVE_AI_JOBS || '', 10);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return DEFAULT_MAX_ACTIVE_AI_JOBS;
+}
+
+function publicJob(job) {
+  if (!job) return null;
+  return {
+    id: job.id,
+    club_id: job.club_id,
+    video_upload_id: job.video_upload_id,
+    report_id: job.report_id || null,
+    server_job_id: job.server_job_id || null,
+    status: job.status,
+    queue_status: job.queue_status || null,
+    queue_position: job.queue_position ?? null,
+    stage: job.stage || null,
+    progress_percent: job.progress_percent ?? 0,
+    retry_count: job.retry_count ?? 0,
+    attempt_count: job.attempt_count ?? null,
+    max_attempts: job.max_attempts ?? null,
+    retryable: job.retryable !== false,
+    render_acceptance_status: job.render_acceptance_status || null,
+    callback_status: job.callback_status || null,
+    dispatch_error: job.dispatch_error || null,
+    error_message: job.error_message || null,
+  };
+}
+
+async function refreshQueuePositions(service) {
+  const { error } = await service.rpc('refresh_ai_queue_positions');
+  if (error) throw error;
+}
+
+async function activeJobIds(service) {
+  const ids = new Set();
+
+  const { data: queueActive, error: queueError } = await service
+    .from('ai_processing_jobs')
+    .select('id')
+    .in('queue_status', ACTIVE_QUEUE_STATUSES);
+  if (queueError) throw queueError;
+  (queueActive || []).forEach((row) => ids.add(row.id));
+
+  const { data: statusActive, error: statusError } = await service
+    .from('ai_processing_jobs')
+    .select('id')
+    .in('status', RENDER_ACTIVE_JOB_STATUSES);
+  if (statusError) throw statusError;
+  (statusActive || []).forEach((row) => ids.add(row.id));
+
+  return ids;
+}
+
+export async function getAIQueueSummary(service, { clubId } = {}) {
+  await refreshQueuePositions(service);
+  const activeIds = await activeJobIds(service);
+
+  const { count: globalQueuedCount, error: queuedError } = await service
+    .from('ai_processing_jobs')
+    .select('id', { count: 'exact', head: true })
+    .eq('queue_status', 'queued')
+    .eq('status', 'queued');
+  if (queuedError) throw queuedError;
+
+  let clubQueuedCount = 0;
+  let clubActiveCount = 0;
+  let nextQueuedJob = null;
+
+  if (clubId) {
+    const { count, error } = await service
+      .from('ai_processing_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('club_id', clubId)
+      .eq('queue_status', 'queued')
+      .eq('status', 'queued');
+    if (error) throw error;
+    clubQueuedCount = count || 0;
+
+    const clubActiveIds = new Set();
+    const { data: clubQueueActive, error: clubQueueActiveError } = await service
+      .from('ai_processing_jobs')
+      .select('id')
+      .eq('club_id', clubId)
+      .in('queue_status', ACTIVE_QUEUE_STATUSES);
+    if (clubQueueActiveError) throw clubQueueActiveError;
+    (clubQueueActive || []).forEach((row) => clubActiveIds.add(row.id));
+
+    const { data: clubStatusActive, error: clubStatusActiveError } = await service
+      .from('ai_processing_jobs')
+      .select('id')
+      .eq('club_id', clubId)
+      .in('status', RENDER_ACTIVE_JOB_STATUSES);
+    if (clubStatusActiveError) throw clubStatusActiveError;
+    (clubStatusActive || []).forEach((row) => clubActiveIds.add(row.id));
+
+    clubActiveCount = clubActiveIds.size;
+
+    const { data: nextJob, error: nextError } = await service
+      .from('ai_processing_jobs')
+      .select('id, video_upload_id, status, queue_status, queue_position, priority, queued_at, created_at')
+      .eq('club_id', clubId)
+      .eq('queue_status', 'queued')
+      .eq('status', 'queued')
+      .order('priority', { ascending: true })
+      .order('queued_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (nextError) throw nextError;
+    nextQueuedJob = nextJob ? publicJob(nextJob) : null;
+  }
+
+  return {
+    max_active_ai_jobs: getMaxActiveAIJobs(),
+    global_active_jobs: activeIds.size,
+    global_queued_jobs: globalQueuedCount || 0,
+    club_active_jobs: clubActiveCount,
+    club_queued_jobs: clubQueuedCount,
+    next_queued_job: nextQueuedJob,
+  };
+}
+
+async function fetchJobAndUpload(service, jobId) {
+  const { data: job, error: jobError } = await service
+    .from('ai_processing_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .maybeSingle();
+  if (jobError) throw jobError;
+  if (!job) return { job: null, upload: null };
+
+  const { data: upload, error: uploadError } = await service
+    .from('video_uploads')
+    .select('*')
+    .eq('id', job.video_upload_id)
+    .maybeSingle();
+  if (uploadError) throw uploadError;
+  return { job, upload };
+}
+
+async function failDispatch(service, job, upload, error, errorCode = 'dispatch_failed') {
+  const attemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
+  const maxAttempts = Number(job.max_attempts || 3) || 3;
+  const retryable = attemptCount < maxAttempts;
+  const message = error?.message || 'AI dispatch failed before the worker accepted the job.';
+  const now = nowIso();
+
+  const { data: updatedJob, error: updateError } = await service
+    .from('ai_processing_jobs')
+    .update({
+      status: retryable ? 'retry_available' : 'error',
+      queue_status: retryable ? 'retry_available' : 'failed',
+      stage: errorCode,
+      progress_percent: 100,
+      dispatch_error: message,
+      error_message: message,
+      last_error: message,
+      error_code: errorCode,
+      retryable,
+      render_acceptance_status: 'failed',
+      recommended_next_action: retryable ? 'retry_ai_review_or_manual_review' : 'manual_review_recommended',
+      quality_flags: [errorCode],
+      failed_at: now,
+      completed_at: now,
+      active_slot_claimed_at: null,
+      lease_owner: null,
+      lease_expires_at: null,
+      stage_history: appendStageHistory(job.stage_history, stageEntry(errorCode, {
+        error_code: errorCode,
+        retryable,
+      })),
+    })
+    .eq('id', job.id)
+    .select('*')
+    .single();
+  if (updateError) throw updateError;
+
+  if (upload?.id) {
+    await service.from('video_uploads').update({
+      processing_status: 'error',
+      ai_error_message: message,
+    }).eq('id', upload.id);
+  }
+
+  await refreshQueuePositions(service);
+
+  return {
+    dispatched: false,
+    failed: true,
+    job: publicJob(updatedJob),
+    error: message,
+    retryable,
+  };
+}
+
+async function dispatchClaimedJob({ service, req, job, upload }) {
+  if (!job || !upload) {
+    return { dispatched: false, failed: true, error: 'Queued AI job is missing its video upload.' };
+  }
+
+  const storageBucket = upload.file_bucket || upload.storage_bucket;
+  const storagePath = upload.file_path || upload.storage_path;
+  if (!storageBucket || !storagePath) {
+    return failDispatch(
+      service,
+      job,
+      upload,
+      new Error('This video is missing its private storage location. Retry the upload before sending it for AI Review.'),
+      'missing_private_storage'
+    );
+  }
+
+  const { data: signed, error: signError } = await service
+    .storage
+    .from(storageBucket)
+    .createSignedUrl(storagePath, PYTHON_SIGNED_URL_TTL_SECONDS);
+
+  if (signError) {
+    return failDispatch(
+      service,
+      job,
+      upload,
+      new Error(`Could not create secure video URL for AI processing: ${signError.message}`),
+      'signed_url_failed'
+    );
+  }
+
+  const aiProcessUrl = normaliseAiServerUrl();
+  const callbackUrl = `${getPublicAppUrl(req)}/api/ai/callback`;
+  const payload = {
+    job_id: job.id,
+    app_job_id: job.id,
+    video_upload_id: upload.id,
+    club_id: upload.club_id,
+    swimmer_id: upload.swimmer_id,
+    uploaded_by_user_id: upload.created_by,
+    signed_video_url: signed.signedUrl,
+    stroke_type: upload.stroke_type,
+    analysis_type: upload.analysis_type || 'Technique Review',
+    camera_angle: upload.camera_angle || 'Side',
+    capture_source: upload.capture_source || null,
+    review_context: upload.review_context || {},
+    callback_url: callbackUrl,
+    max_sampled_frames: 100,
+    downscale_frames: true,
+  };
+
+  await service.from('ai_processing_jobs').update({
+    queue_status: 'dispatching',
+    dispatch_attempted_at: nowIso(),
+    dispatch_error: null,
+    stage: 'dispatching',
+    stage_history: appendStageHistory(job.stage_history, stageEntry('dispatching')),
+  }).eq('id', job.id);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_SERVER_TRIGGER_TIMEOUT_MS);
+  let aiResponse;
+  try {
+    aiResponse = await fetch(aiProcessUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const errorCode = error?.name === 'AbortError'
+      ? 'render_acceptance_timeout'
+      : 'render_acceptance_failed';
+    const message = error?.name === 'AbortError'
+      ? 'AI server did not accept the job within 20 seconds. The uploaded video is saved; retry AI Review or continue manual review.'
+      : error.message;
+    return failDispatch(service, job, upload, new Error(message), errorCode);
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const responseText = await aiResponse.text();
+  let aiData;
+  try {
+    aiData = JSON.parse(responseText);
+  } catch {
+    aiData = { raw: responseText };
+  }
+
+  if (!aiResponse.ok || aiData?.accepted === false) {
+    const message = `AI server rejected job (HTTP ${aiResponse.status}): ${aiData?.error || aiData?.detail || 'Unknown error'}`;
+    return failDispatch(service, job, upload, new Error(message), 'render_rejected');
+  }
+
+  const serverJobId = aiData?.job_id || aiData?.server_job_id || null;
+  const now = nowIso();
+  const { data: updatedJob, error: updateError } = await service
+    .from('ai_processing_jobs')
+    .update({
+      status: 'accepted',
+      queue_status: 'dispatched',
+      server_job_id: serverJobId,
+      stage: 'accepted',
+      progress_percent: 5,
+      dispatch_error: null,
+      dispatched_at: now,
+      accepted_at: now,
+      started_at: now,
+      render_acceptance_status: 'accepted',
+      callback_status: 'waiting',
+      retryable: Number(job.attempt_count ?? 1) < Number(job.max_attempts || 3),
+      stage_history: appendStageHistory(job.stage_history, stageEntry('accepted', {
+        server_job_id: serverJobId,
+        attempt_count: job.attempt_count,
+      })),
+    })
+    .eq('id', job.id)
+    .select('*')
+    .single();
+  if (updateError) throw updateError;
+
+  await service
+    .from('video_uploads')
+    .update({ processing_status: 'processing_ai', ai_error_message: null })
+    .eq('id', upload.id);
+
+  await refreshQueuePositions(service);
+
+  return {
+    dispatched: true,
+    failed: false,
+    job: publicJob(updatedJob),
+    server_job_id: serverJobId,
+  };
+}
+
+export async function dispatchNextQueuedAIJob({ service, req, dispatcher = 'vercel' }) {
+  const maxActive = getMaxActiveAIJobs();
+  const { data: claimedJobId, error: claimError } = await service.rpc('claim_next_ai_job', {
+    p_max_active: maxActive,
+    p_dispatcher: dispatcher,
+  });
+
+  if (claimError) throw claimError;
+
+  if (!claimedJobId) {
+    const summary = await getAIQueueSummary(service);
+    return {
+      queued: summary.global_queued_jobs > 0,
+      dispatched: false,
+      failed: false,
+      reason: summary.global_active_jobs >= maxActive ? 'capacity_full' : 'no_queued_jobs',
+      summary,
+    };
+  }
+
+  const { job, upload } = await fetchJobAndUpload(service, claimedJobId);
+  return dispatchClaimedJob({ service, req, job, upload });
+}
+
+export async function markJobQueueComplete(service, job, queueStatus) {
+  if (!job?.id) return;
+  await service.from('ai_processing_jobs').update({
+    queue_status: queueStatus,
+    active_slot_claimed_at: null,
+    lease_owner: null,
+    lease_expires_at: null,
+  }).eq('id', job.id);
+  await refreshQueuePositions(service);
+}

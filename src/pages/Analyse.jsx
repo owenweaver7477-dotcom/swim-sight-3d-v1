@@ -500,7 +500,10 @@ export default function Analyse() {
 
       const res = await functions.triggerPoseAnalysis(videoUploadId);
       setUploadStatus(res.data?.processing_status || 'processing_ai');
-      setStartAiMessage('AI Review started. Open AI Reviews or AI Jobs to watch progress.');
+      setStartAiMessage(res.data?.queued && !res.data?.dispatched
+        ? `Queued for AI Review${res.data?.queue_position ? ` — position ${res.data.queue_position}` : ''}. Open AI Jobs to watch the queue.`
+        : 'AI Review started. Open AI Reviews or AI Jobs to watch progress.'
+      );
       queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
       queryClient.invalidateQueries({ queryKey: ['ai-jobs-active', club?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-reports', club?.id] });

@@ -1,56 +1,27 @@
 import {
   COACH_ROLES,
   createServiceClient,
-  getPublicAppUrl,
   handleApiError,
-  normaliseAiServerUrl,
   readJsonBody,
   requireClubRole,
   requireUser,
   sendJson,
 } from '../_lib/server.js';
+import {
+  DUPLICATE_BLOCKING_JOB_STATUSES,
+  RETRYABLE_JOB_STATUSES,
+  appendStageHistory,
+  dispatchNextQueuedAIJob,
+  getAIQueueSummary,
+  stageEntry,
+} from '../_lib/aiQueue.js';
 
-const ACTIVE_JOB_STATUSES = [
-  'queued',
-  'accepted',
-  'running',
-  'downloading_video',
-  'extracting_frames',
-  'running_pose_detection',
-  'analysing_stroke',
-  'generating_outputs',
-  'callback_sending',
-];
-const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'];
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
-const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
-const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function asArray(value) {
-  if (Array.isArray(value)) return value;
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      return value.split(',').map((item) => item.trim()).filter(Boolean);
-    }
-  }
-  return [];
-}
-
-function stageEntry(stage, extra = {}) {
-  return { stage, at: nowIso(), ...extra };
-}
-
-function appendStageHistory(existing, entry) {
-  return [...asArray(existing), entry].slice(-80);
 }
 
 function maxExistingAttempt(existingJobs = []) {
@@ -133,7 +104,10 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false });
 
     if (activeError) throw activeError;
-    const activeJobs = (existingJobs || []).filter((existingJob) => ACTIVE_JOB_STATUSES.includes(existingJob.status));
+    const activeJobs = (existingJobs || []).filter((existingJob) => (
+      DUPLICATE_BLOCKING_JOB_STATUSES.includes(existingJob.status)
+      || ['queued', 'dispatching', 'dispatched', 'processing'].includes(existingJob.queue_status)
+    ));
     if (activeJobs?.length) {
       const activeJob = activeJobs[0];
       await service
@@ -143,13 +117,19 @@ export default async function handler(req, res) {
 
       return sendJson(res, 200, {
         success: true,
+        queued: activeJob.queue_status === 'queued' || activeJob.status === 'queued',
+        dispatched: ['accepted', 'running'].includes(activeJob.status) || ['dispatching', 'dispatched', 'processing'].includes(activeJob.queue_status),
         duplicate_active_job: true,
-        message: 'AI Review is already in progress for this video.',
+        message: activeJob.queue_status === 'queued' || activeJob.status === 'queued'
+          ? 'This video is already queued for AI Review.'
+          : 'AI Review is already in progress for this video.',
         job: activeJob,
         server_job_id: activeJob.server_job_id || null,
         video_upload_id: upload.id,
         processing_status: 'pending_ai',
         stage: activeJob.stage || activeJob.status,
+        queue_status: activeJob.queue_status || null,
+        queue_position: activeJob.queue_position ?? null,
         retry_count: activeJob.retry_count || 0,
         attempt_count: activeJob.attempt_count ?? ((activeJob.retry_count || 0) + 1),
       });
@@ -204,6 +184,11 @@ export default async function handler(req, res) {
         retryable: true,
         callback_status: 'waiting',
         render_acceptance_status: 'pending',
+        queue_status: 'queued',
+        priority: 5,
+        queued_at: queuedAt,
+        queued_reason: retryCount > 0 ? 'coach_retry_requested' : 'coach_requested_ai_review',
+        concurrency_group: 'default',
         last_error: null,
         error_code: null,
         failed_at: null,
@@ -221,131 +206,55 @@ export default async function handler(req, res) {
       .update({ processing_status: 'pending_ai', ai_error_message: null })
       .eq('id', upload.id);
 
-    const { data: signed, error: signError } = await service
-      .storage
-      .from(storageBucket)
-      .createSignedUrl(storagePath, PYTHON_SIGNED_URL_TTL_SECONDS);
+    const dispatchResult = await dispatchNextQueuedAIJob({
+      service,
+      req,
+      dispatcher: `trigger:${job.id}`,
+    });
 
-    if (signError) {
-      const error = new Error(`Could not create secure video URL for AI processing: ${signError.message}`);
-      error.qualityFlags = ['signed_url_failed'];
-      error.errorCode = 'signed_url_failed';
-      throw error;
-    }
-
-    const aiProcessUrl = normaliseAiServerUrl();
-    const callbackUrl = `${getPublicAppUrl(req)}/api/ai/callback`;
-    const payload = {
-      job_id: job.id,
-      app_job_id: job.id,
-      video_upload_id: upload.id,
-      club_id: upload.club_id,
-      swimmer_id: upload.swimmer_id,
-      uploaded_by_user_id: upload.created_by,
-      signed_video_url: signed.signedUrl,
-      stroke_type: upload.stroke_type,
-      analysis_type: upload.analysis_type || 'Technique Review',
-      camera_angle: upload.camera_angle || 'Side',
-      capture_source: upload.capture_source || null,
-      review_context: upload.review_context || {},
-      callback_url: callbackUrl,
-      max_sampled_frames: 100,
-      downscale_frames: true,
-    };
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), AI_SERVER_TRIGGER_TIMEOUT_MS);
-    let aiResponse;
-    try {
-      aiResponse = await fetch(aiProcessUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (error?.name === 'AbortError') {
-        const timeoutError = new Error('AI server did not accept the job within 20 seconds. The uploaded video is saved; retry AI Review or continue manual review.');
-        timeoutError.errorCode = 'render_acceptance_timeout';
-        timeoutError.qualityFlags = ['render_acceptance_timeout'];
-        throw timeoutError;
-      }
-      error.errorCode = error.errorCode || 'render_acceptance_failed';
-      error.qualityFlags = error.qualityFlags || ['render_acceptance_failed'];
-      throw error;
-    } finally {
-      clearTimeout(timeout);
-    }
-    const responseText = await aiResponse.text();
-    let aiData;
-    try {
-      aiData = JSON.parse(responseText);
-    } catch {
-      aiData = { raw: responseText };
-    }
-
-    if (!aiResponse.ok || aiData?.accepted === false) {
-      const message = `AI server rejected job (HTTP ${aiResponse.status}): ${aiData?.error || aiData?.detail || 'Unknown error'}`;
-      const retryable = attemptCount < maxAttempts;
-      await service.from('ai_processing_jobs').update({
-        status: retryable ? 'retry_available' : 'error',
-        stage: 'render_rejected',
-        error_message: message,
-        last_error: message,
-        error_code: 'render_rejected',
-        retryable,
-        render_acceptance_status: `rejected:${aiResponse.status}`,
-        recommended_next_action: retryable ? 'retry_ai_review_or_manual_review' : 'manual_review_recommended',
-        quality_flags: ['render_rejected'],
-        failed_at: nowIso(),
-        completed_at: nowIso(),
-        stage_history: appendStageHistory(job.stage_history, stageEntry('render_rejected', { http_status: aiResponse.status })),
-      }).eq('id', job.id);
-      await service.from('video_uploads').update({
-        processing_status: 'error',
-        ai_error_message: message,
-      }).eq('id', upload.id);
-      return sendJson(res, 502, { error: message });
-    }
-
-    const serverJobId = aiData?.job_id || aiData?.server_job_id || null;
-    const { data: updatedJob, error: updateJobError } = await service
+    const { data: currentJob, error: currentJobError } = await service
       .from('ai_processing_jobs')
-      .update({
-        status: 'accepted',
-        server_job_id: serverJobId,
-        stage: 'accepted',
-        progress_percent: 5,
-        stage_history: appendStageHistory(job.stage_history, stageEntry('accepted', {
-          server_job_id: serverJobId,
-          attempt_count: attemptCount,
-        })),
-        accepted_at: nowIso(),
-        started_at: nowIso(),
-        render_acceptance_status: 'accepted',
-        callback_status: 'waiting',
-        retryable: attemptCount < maxAttempts,
-      })
-      .eq('id', job.id)
       .select('*')
+      .eq('id', job.id)
       .single();
+    if (currentJobError) throw currentJobError;
 
-    if (updateJobError) throw updateJobError;
+    if (dispatchResult.failed && dispatchResult.job?.id === job.id) {
+      return sendJson(res, 502, {
+        error: dispatchResult.error || 'AI dispatch failed before the worker accepted the job.',
+        queued: false,
+        dispatched: false,
+        job: currentJob,
+        video_upload_id: upload.id,
+        processing_status: 'error',
+        queue_status: currentJob.queue_status || null,
+        retryable: currentJob.retryable !== false,
+      });
+    }
 
-    await service
-      .from('video_uploads')
-      .update({ processing_status: 'processing_ai' })
-      .eq('id', upload.id);
+    const queued = currentJob.queue_status === 'queued' || currentJob.status === 'queued';
+    const dispatched = dispatchResult.dispatched && dispatchResult.job?.id === job.id;
+    const summary = await getAIQueueSummary(service, { clubId: upload.club_id });
 
     return sendJson(res, 200, {
       success: true,
-      job: updatedJob,
-      server_job_id: serverJobId,
+      queued,
+      dispatched,
+      message: dispatched
+        ? 'AI Review started.'
+        : 'Queued for AI Review. Swim Sight 3D will send this video when the AI worker has capacity.',
+      job: currentJob,
+      server_job_id: currentJob.server_job_id || null,
       video_upload_id: upload.id,
-      processing_status: 'processing_ai',
-      stage: updatedJob.stage,
-      retry_count: updatedJob.retry_count,
-      attempt_count: updatedJob.attempt_count,
+      processing_status: dispatched ? 'processing_ai' : 'pending_ai',
+      stage: currentJob.stage,
+      queue_status: currentJob.queue_status || null,
+      queue_position: currentJob.queue_position ?? null,
+      retry_count: currentJob.retry_count,
+      attempt_count: currentJob.attempt_count,
+      max_active_ai_jobs: summary.max_active_ai_jobs,
+      global_active_jobs: summary.global_active_jobs,
+      global_queued_jobs: summary.global_queued_jobs,
     });
   } catch (error) {
     if (job?.id || upload?.id) {
@@ -356,16 +265,21 @@ export default async function handler(req, res) {
           const errorCode = error.errorCode || (error.qualityFlags?.includes('signed_url_failed') ? 'signed_url_failed' : 'trigger_failed');
           await service.from('ai_processing_jobs').update({
             status: retryable ? 'retry_available' : 'error',
+            queue_status: retryable ? 'retry_available' : 'failed',
             stage: errorCode,
             quality_flags: error.qualityFlags || ['processing_error'],
             recommended_next_action: retryable ? 'retry_ai_review_or_manual_review' : 'manual_review_recommended',
             error_message: error.message,
             last_error: error.message,
             error_code: errorCode,
+            dispatch_error: error.message,
             retryable,
             render_acceptance_status: errorCode.startsWith('render_') ? 'failed' : job.render_acceptance_status || null,
             failed_at: nowIso(),
             completed_at: nowIso(),
+            active_slot_claimed_at: null,
+            lease_owner: null,
+            lease_expires_at: null,
             stage_history: appendStageHistory(job.stage_history, stageEntry(errorCode, {
               error_code: errorCode,
               retryable,

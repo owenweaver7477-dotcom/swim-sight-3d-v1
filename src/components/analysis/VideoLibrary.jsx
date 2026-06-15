@@ -81,7 +81,10 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     return differenceInMinutes(new Date(), new Date(ts)) >= 10;
   })();
 
-  const jobStatus = job?.status;
+  const queueStatus = job?.queue_status;
+  const jobStatus = ['queued', 'dispatching', 'failed', 'retry_available', 'timed_out'].includes(queueStatus)
+    ? queueStatus
+    : job?.status;
   const jobStage = job?.stage;
   const jobProgress = job?.progress_percent;
   const qualityFlags = asQualityFlags(job?.quality_flags);
@@ -97,7 +100,10 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       const nextStatus = res.data?.processing_status || 'processing_ai';
       onAIStatusChange?.(upload.id, nextStatus);
       setAiStarted(true);
-      setAiMessage('AI Review started. The report will appear when the secure callback returns.');
+      setAiMessage(res.data?.queued && !res.data?.dispatched
+        ? `Queued for AI Review${res.data?.queue_position ? ` — position ${res.data.queue_position}` : ''}. Swim Sight 3D will send it when the AI worker is free.`
+        : 'AI Review started. The report will appear when the secure callback returns.'
+      );
     } catch (err) {
       onAIStatusChange?.(upload.id, 'error');
       setAiError(`${err?.message || 'Could not start AI Review.'} Uploaded video remains saved. Retry AI Review or continue manual review.`);
@@ -245,11 +251,30 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     }
 
     if (ACTIVE_PROCESSING_STATUSES.includes(status)) {
+      const isQueuedForAI = status === 'pending_ai'
+        || status === 'queued_ai'
+        || queueStatus === 'queued'
+        || job?.status === 'queued';
       return (
         <div className="space-y-1.5">
           <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
-            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> AI Processing...
+            {isQueuedForAI
+              ? <Clock className="w-3 h-3 mr-1.5" />
+              : <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+            }
+            {isQueuedForAI ? 'Queued for AI Review' : 'AI Processing...'}
           </Button>
+          {isQueuedForAI && (
+            <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
+              <Clock className="w-3 h-3 flex-shrink-0 mt-0.5" />
+              <span>
+                {job?.queue_position
+                  ? `Position ${job.queue_position} in the AI queue. `
+                  : 'Waiting for the AI worker. '}
+                You can continue manual review while this waits.
+              </span>
+            </div>
+          )}
           {isStuck && (
             <div className="flex items-center gap-1.5 text-[10px] text-yellow-500">
               <AlertCircle className="w-3 h-3 flex-shrink-0" />
@@ -352,6 +377,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <div className="text-[9px] text-muted-foreground font-mono">
           Video row: {upload.id} · Status: {status}
           {job?.id ? ` · AI job: ${job.id}` : ''}
+          {job?.queue_position ? ` · Queue #${job.queue_position}` : ''}
         </div>
 
         {ACTIVE_PROCESSING_STATUSES.includes(status) && jobStage && (

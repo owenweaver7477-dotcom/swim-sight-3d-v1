@@ -30,6 +30,14 @@ async function postJson(url, payload) {
   return parseResponse(response);
 }
 
+async function getJson(url) {
+  const authHeaders = await getAuthHeaders();
+  const response = await fetch(url, {
+    headers: authHeaders,
+  });
+  return parseResponse(response);
+}
+
 async function patchJson(url, payload) {
   const authHeaders = await getAuthHeaders();
   const response = await fetch(url, {
@@ -96,6 +104,14 @@ export const functions = {
 
   resetTimedOutAIJobs(payload) {
     return postJson('/api/admin/ai-jobs/reset-timed-out', payload);
+  },
+
+  getAIQueueStatus(clubId) {
+    return getJson(`/api/admin/ai-jobs/dispatch-next?club_id=${encodeURIComponent(clubId)}`);
+  },
+
+  dispatchNextAIJob(payload) {
+    return postJson('/api/admin/ai-jobs/dispatch-next', payload);
   },
 
   async getSharedReport(token) {

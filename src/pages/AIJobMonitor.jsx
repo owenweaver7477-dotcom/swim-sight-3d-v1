@@ -14,6 +14,8 @@ import { format } from 'date-fns';
 
 const STATUS_CONFIG = {
   queued:              { label: 'Queued',            color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
+  dispatching:         { label: 'Dispatching',       color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
+  dispatched:          { label: 'Dispatched',        color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   accepted:            { label: 'Accepted',          color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   running:             { label: 'Running',           color: 'text-primary bg-primary/10 border-primary/20' },
   downloading_video:   { label: 'Downloading',       color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
@@ -27,6 +29,7 @@ const STATUS_CONFIG = {
   manual_review_recommended: { label: 'Manual Review', color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
   manual_review:       { label: 'Manual Review',       color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
   retry_available:     { label: 'Retry Available',     color: 'text-amber-400 bg-amber-900/20 border-amber-700/30' },
+  failed:              { label: 'Dispatch Failed',      color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   timed_out:           { label: 'Timed Out',         color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   error:               { label: 'Error',             color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   cancelled:           { label: 'Cancelled',         color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
@@ -51,7 +54,8 @@ const FILTERS = [
   { key: 'error',          label: 'Error' },
 ];
 
-const RUNNING_STATUSES = ['queued','accepted','running','downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
+const RUNNING_STATUSES = ['accepted','running','downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
+const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing'];
 
 function asQualityFlags(value) {
   if (Array.isArray(value)) return value;
@@ -66,12 +70,28 @@ function feedbackCounts(rows = []) {
   }, {});
 }
 
+function displayStatus(job) {
+  if (['queued', 'dispatching', 'dispatched', 'failed', 'retry_available', 'timed_out'].includes(job.queue_status)) {
+    return job.queue_status;
+  }
+  return job.status;
+}
+
+function isQueuedJob(job) {
+  return job.queue_status === 'queued' || job.status === 'queued';
+}
+
+function isActiveJob(job) {
+  return ACTIVE_QUEUE_STATUSES.includes(job.queue_status) || RUNNING_STATUSES.includes(job.status);
+}
+
 function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const video   = videos.find(v => v.id === job.video_upload_id);
   const swimmer = swimmers.find(s => s.id === (job.swimmer_id || video?.swimmer_id));
-  const cfg = STATUS_CONFIG[job.status] || { label: job.status, color: 'text-muted-foreground bg-secondary border-border' };
+  const effectiveStatus = displayStatus(job);
+  const cfg = STATUS_CONFIG[effectiveStatus] || { label: effectiveStatus, color: 'text-muted-foreground bg-secondary border-border' };
   const relCfg = job.pose_reliability ? RELIABILITY_CONFIG[job.pose_reliability] : null;
   const qualityFlags = asQualityFlags(job.quality_flags);
   const jobFeedback = feedback.filter(row => (
@@ -82,8 +102,10 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
   const calibrationCounts = feedbackCounts(jobFeedback);
 
   const timedOut = isTimedOut(job);
-  const canRetry = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'].includes(job.status)
-    && job.retryable !== false;
+  const canRetry = (
+    ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'].includes(job.status)
+    || ['failed', 'retry_available', 'timed_out'].includes(job.queue_status)
+  ) && job.retryable !== false;
   const attemptCount = job.attempt_count ?? ((job.retry_count || 0) + 1);
   const maxAttempts = job.max_attempts || 3;
 
@@ -128,6 +150,8 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[10px]">
             <div><span className="text-muted-foreground">Job ID</span><div className="font-mono text-foreground truncate">{job.id || '—'}</div></div>
             <div><span className="text-muted-foreground">Server Job ID</span><div className="font-mono text-foreground truncate">{job.server_job_id || '—'}</div></div>
+            <div><span className="text-muted-foreground">Queue Status</span><div className="text-foreground">{job.queue_status || '—'}</div></div>
+            <div><span className="text-muted-foreground">Queue Position</span><div className="text-foreground">{job.queue_position ?? '—'}</div></div>
             <div><span className="text-muted-foreground">Pose Reliability</span>
               <div className={relCfg?.color || 'text-muted-foreground'}>{relCfg?.label || '—'}</div>
             </div>
@@ -141,6 +165,7 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             <div><span className="text-muted-foreground">Callback Status</span><div className="text-foreground">{job.callback_status || (job.callback_received ? 'received' : '—')}</div></div>
             <div><span className="text-muted-foreground">Retryable</span><div className={job.retryable === false ? 'text-amber-400' : 'text-green-400'}>{job.retryable === false ? 'No' : 'Yes'}</div></div>
             {job.accepted_at && <div><span className="text-muted-foreground">Accepted</span><div className="text-foreground">{format(new Date(job.accepted_at), 'dd MMM, HH:mm')}</div></div>}
+            {job.dispatched_at && <div><span className="text-muted-foreground">Dispatched</span><div className="text-foreground">{format(new Date(job.dispatched_at), 'dd MMM, HH:mm')}</div></div>}
             {job.started_at && <div><span className="text-muted-foreground">Started</span><div className="text-foreground">{format(new Date(job.started_at), 'dd MMM, HH:mm')}</div></div>}
             {job.failed_at && <div><span className="text-muted-foreground">Failed</span><div className="text-foreground">{format(new Date(job.failed_at), 'dd MMM, HH:mm')}</div></div>}
             {job.timed_out_at && <div><span className="text-muted-foreground">Timed out</span><div className="text-foreground">{format(new Date(job.timed_out_at), 'dd MMM, HH:mm')}</div></div>}
@@ -194,6 +219,12 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             </div>
           )}
 
+          {job.dispatch_error && (
+            <div className="p-2.5 rounded-lg bg-amber-900/10 border border-amber-700/20 text-[10px] text-amber-400">
+              <span className="font-semibold">Dispatch: </span>{job.dispatch_error}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             {canRetry && (
               <Button
@@ -237,7 +268,9 @@ export default function AIJobMonitor() {
   const [filter, setFilter] = useState('all');
   const [retrying, setRetrying] = useState(null);
   const [resetting, setResetting] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
   const [resetResult, setResetResult] = useState(null);
+  const [dispatchResult, setDispatchResult] = useState(null);
 
   const memberRole = club?._memberRole || 'coach';
   const isAdmin = ['owner', 'admin'].includes(memberRole);
@@ -272,6 +305,17 @@ export default function AIJobMonitor() {
     staleTime: 60 * 1000,
   });
 
+  const { data: queueStatus } = useQuery({
+    queryKey: ['ai-queue-status', club?.id],
+    queryFn: async () => {
+      const res = await functions.getAIQueueStatus(club.id);
+      return res.data;
+    },
+    enabled: !!club?.id && canViewJobs,
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+  });
+
   const handleResetTimedOut = async () => {
     setResetting(true);
     setResetResult(null);
@@ -282,6 +326,28 @@ export default function AIJobMonitor() {
       queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleDispatchNext = async () => {
+    setDispatching(true);
+    setDispatchResult(null);
+    try {
+      const res = await functions.dispatchNextAIJob({ club_id: club.id });
+      if (res.data?.dispatched) {
+        setDispatchResult(res.data?.job_visible
+          ? 'Next queued job was sent to the AI worker.'
+          : 'A queued job was sent to the AI worker. Private details stay hidden if it belongs to another club.');
+      } else if (res.data?.reason === 'capacity_full') {
+        setDispatchResult('No AI worker slot is available yet. Queued jobs will stay safe until capacity opens.');
+      } else {
+        setDispatchResult('No queued job is waiting to dispatch.');
+      }
+      queryClient.invalidateQueries({ queryKey: ['ai-jobs', club?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-queue-status', club?.id] });
+      queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
+    } finally {
+      setDispatching(false);
     }
   };
 
@@ -307,8 +373,12 @@ export default function AIJobMonitor() {
 
   const filteredJobs = jobs.filter(j => {
     if (filter === 'all') return true;
-    if (filter === 'running') return RUNNING_STATUSES.includes(j.status);
-    if (filter === 'retry_available') return ['retry_available', 'timed_out', 'error'].includes(j.status) && j.retryable !== false;
+    if (filter === 'queued') return isQueuedJob(j);
+    if (filter === 'running') return isActiveJob(j);
+    if (filter === 'retry_available') return (
+      ['retry_available', 'timed_out', 'error'].includes(j.status)
+      || ['failed', 'retry_available', 'timed_out'].includes(j.queue_status)
+    ) && j.retryable !== false;
     if (filter === 'unreliable_pose') return ['unreliable_pose', 'manual_review_recommended'].includes(j.status);
     if (filter === 'error') return ['error', 'timed_out'].includes(j.status);
     return j.status === filter;
@@ -317,9 +387,12 @@ export default function AIJobMonitor() {
   // Counts for filter tabs
   const counts = {
     all: jobs.length,
-    queued: jobs.filter(j => j.status === 'queued').length,
-    running: jobs.filter(j => RUNNING_STATUSES.includes(j.status)).length,
-    retry_available: jobs.filter(j => ['retry_available', 'timed_out', 'error'].includes(j.status) && j.retryable !== false).length,
+    queued: jobs.filter(isQueuedJob).length,
+    running: jobs.filter(isActiveJob).length,
+    retry_available: jobs.filter(j => (
+      ['retry_available', 'timed_out', 'error'].includes(j.status)
+      || ['failed', 'retry_available', 'timed_out'].includes(j.queue_status)
+    ) && j.retryable !== false).length,
     unreliable_pose: jobs.filter(j => ['unreliable_pose', 'manual_review_recommended'].includes(j.status)).length,
     completed: jobs.filter(j => j.status === 'completed').length,
     error: jobs.filter(j => ['error', 'timed_out'].includes(j.status)).length,
@@ -333,6 +406,16 @@ export default function AIJobMonitor() {
         subtitle="Monitor AI processing jobs, debug the pose analysis pipeline, and review callback flow."
         action={
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={handleDispatchNext}
+              disabled={dispatching}
+            >
+              {dispatching ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Activity className="w-3 h-3 mr-1" />}
+              Dispatch Next
+            </Button>
             {isAdmin && (
               <Button
                 size="sm"
@@ -363,14 +446,20 @@ export default function AIJobMonitor() {
           {resetResult}
         </div>
       )}
+      {dispatchResult && (
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-800">
+          {dispatchResult}
+        </div>
+      )}
 
       {/* Summary row */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
         {[
           { label: 'Total',     val: counts.all,            color: 'text-foreground' },
+          { label: 'Queued',    val: queueStatus?.club_queued_jobs ?? counts.queued, color: 'text-blue-400' },
           { label: 'Running',   val: counts.running,        color: 'text-primary' },
           { label: 'Completed', val: counts.completed,      color: 'text-green-400' },
-          { label: 'Unreliable',val: counts.unreliable_pose,color: 'text-amber-400' },
+          { label: 'Retry',     val: counts.retry_available,color: 'text-amber-400' },
           { label: 'Error',     val: counts.error,          color: 'text-red-400' },
         ].map(s => (
           <div key={s.label} className="p-3 rounded-xl bg-card border border-border text-center">
@@ -378,6 +467,20 @@ export default function AIJobMonitor() {
             <div className="text-[10px] text-muted-foreground">{s.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="mb-5 p-3 rounded-xl bg-card border border-border text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <span><strong className="text-foreground">Max active AI jobs:</strong> {queueStatus?.max_active_ai_jobs ?? 1}</span>
+          <span><strong className="text-foreground">Global active:</strong> {queueStatus?.global_active_jobs ?? '—'}</span>
+          <span><strong className="text-foreground">Global queued:</strong> {queueStatus?.global_queued_jobs ?? '—'}</span>
+          {queueStatus?.next_queued_job?.queue_position && (
+            <span><strong className="text-foreground">Next club queue position:</strong> {queueStatus.next_queued_job.queue_position}</span>
+          )}
+        </div>
+        <p className="mt-2 text-[10px] leading-relaxed">
+          Queued jobs do not receive signed video URLs until an AI worker slot opens. This protects private video links and prevents Render overload.
+        </p>
       </div>
 
       {/* Filter tabs */}

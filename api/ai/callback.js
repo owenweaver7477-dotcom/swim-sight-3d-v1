@@ -1,4 +1,5 @@
 import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../_lib/server.js';
+import { dispatchNextQueuedAIJob, markJobQueueComplete } from '../_lib/aiQueue.js';
 
 const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.55;
 const MIN_KEYPOINTS_FOR_AI_FINDINGS = 12;
@@ -288,6 +289,7 @@ export default async function handler(req, res) {
     if (progressOnly && job) {
       await service.from('ai_processing_jobs').update({
         status: callbackStatus === 'running' ? 'running' : callbackStatus,
+        queue_status: 'processing',
         stage: payload.stage || callbackStatus,
         progress_percent: payload.progress_percent ?? job.progress_percent ?? 0,
         pose_reliability: payload.pose_reliability || job.pose_reliability || null,
@@ -331,8 +333,14 @@ export default async function handler(req, res) {
       const attemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
       const maxAttempts = Number(job.max_attempts || 3) || 3;
       const retryable = !qualityPass && attemptCount < maxAttempts;
+      const finalQueueStatus = callbackError
+        ? (retryable ? 'retry_available' : 'failed')
+        : qualityPass
+        ? 'completed'
+        : 'manual_review';
       await service.from('ai_processing_jobs').update({
         status: jobStatus,
+        queue_status: finalQueueStatus,
         stage: callbackError
           ? 'error'
           : qualityPass
@@ -364,6 +372,9 @@ export default async function handler(req, res) {
         video_duration_seconds: payload.video_duration_seconds ?? null,
         video_fps: payload.video_fps ?? null,
         callback_summary: safeCallbackSummary(payload, quality),
+        active_slot_claimed_at: null,
+        lease_owner: null,
+        lease_expires_at: null,
       }).eq('id', job.id);
     }
 
@@ -398,6 +409,21 @@ export default async function handler(req, res) {
       || (existingReports || []).find((report) => !isCoachLockedReport(report.status))
       || null;
     if (existingReport && isCoachLockedReport(existingReport.status)) {
+      let lockedReportNextDispatch = null;
+      if (job) {
+        try {
+          lockedReportNextDispatch = await dispatchNextQueuedAIJob({
+            service,
+            req,
+            dispatcher: `callback:${job.id}`,
+          });
+        } catch (dispatchError) {
+          console.warn('AI callback skipped locked report update, but dispatch-next failed', {
+            job_id: job.id,
+            message: dispatchError?.message,
+          });
+        }
+      }
       return sendJson(res, 200, {
         success: true,
         report_id: existingReport.id,
@@ -406,6 +432,7 @@ export default async function handler(req, res) {
         findings_created: 0,
         key_frames_created: 0,
         skipped_report_update: true,
+        next_dispatch_attempted: Boolean(lockedReportNextDispatch?.dispatched),
       });
     }
 
@@ -528,6 +555,30 @@ export default async function handler(req, res) {
       }
     }
 
+    let nextDispatch = null;
+    if (job) {
+      try {
+        const finalAttemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
+        const finalMaxAttempts = Number(job.max_attempts || 3) || 3;
+        const queueStatus = callbackError
+          ? (finalAttemptCount < finalMaxAttempts ? 'retry_available' : 'failed')
+          : qualityPass
+          ? 'completed'
+          : 'manual_review';
+        await markJobQueueComplete(service, job, queueStatus);
+        nextDispatch = await dispatchNextQueuedAIJob({
+          service,
+          req,
+          dispatcher: `callback:${job.id}`,
+        });
+      } catch (dispatchError) {
+        console.warn('AI callback completed, but dispatch-next failed', {
+          job_id: job.id,
+          message: dispatchError?.message,
+        });
+      }
+    }
+
     return sendJson(res, 200, {
       success: true,
       report_id: report.id,
@@ -538,6 +589,7 @@ export default async function handler(req, res) {
       quality_gate_passed: qualityPass,
       quality_flags: qualityFlags,
       manual_review_required: !qualityPass,
+      next_dispatch_attempted: Boolean(nextDispatch?.dispatched),
     });
   } catch (error) {
     return handleApiError(res, error);
