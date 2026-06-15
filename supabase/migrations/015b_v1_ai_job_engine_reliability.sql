@@ -1,10 +1,8 @@
 -- Swim Sight 3D V1 production AI job engine reliability.
 -- Backwards-compatible durability fields for retries, acceptance tracking,
 -- callback diagnostics, and timed-out job recovery.
-
-alter type public.ai_job_status add value if not exists 'manual_review';
-alter type public.ai_job_status add value if not exists 'retry_available';
-alter type public.ai_job_status add value if not exists 'cancelled';
+--
+-- Requires 015a_v1_ai_job_status_enum_values.sql to have completed first.
 
 alter table public.ai_processing_jobs
   add column if not exists attempt_count integer not null default 0,

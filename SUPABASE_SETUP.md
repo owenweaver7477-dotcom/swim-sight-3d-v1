@@ -6,7 +6,7 @@ This project uses Supabase for V1 auth, database, storage, and RLS. Do not put r
 
 Run this checklist before handing the app to a coach:
 
-1. Run all migrations through `015_v1_ai_job_engine_reliability.sql`.
+1. Run all migrations through `015b_v1_ai_job_engine_reliability.sql`.
 2. Confirm `notification_logs` exists.
 3. Confirm `video_annotations` exists.
 4. Confirm `pilot_feedback` exists before using `/pilot-readiness`.
@@ -75,7 +75,10 @@ Apply in order:
 12. `supabase/migrations/012_v1_large_video_upload_lifecycle.sql`
 13. `supabase/migrations/013_v1_ai_feedback_calibration.sql`
 14. `supabase/migrations/014_v1_pilot_feedback.sql`
-15. `supabase/migrations/015_v1_ai_job_engine_reliability.sql`
+15. `supabase/migrations/015a_v1_ai_job_status_enum_values.sql`
+16. `supabase/migrations/015b_v1_ai_job_engine_reliability.sql`
+
+Important: run `015a` and let it complete before running `015b`. PostgreSQL requires new enum values to be committed before later statements can use them.
 
 Confirm that:
 
