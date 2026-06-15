@@ -16,15 +16,13 @@ import { Button } from '@/components/ui/button';
 const NAV_MAIN = [
   { to: '/dashboard',       label: 'Dashboard',       icon: LayoutDashboard },
   { to: '/analyse',         label: 'Analyse Video',   icon: FlaskConical },
-  { to: '/ai-reviews',      label: 'AI Reviews',      icon: Brain },
+  { to: '/ai-reviews',      label: 'Coach Studio',    icon: Brain },
   { to: '/swimmers',        label: 'Swimmers',        icon: Users },
   { to: '/drill-library',   label: 'Drill Library',   icon: Dumbbell },
 ];
 
 const NAV_TOOLS = [
-  { to: '/performance',     label: 'Performance',     icon: TrendingUp },
-  { to: '/technical-standards', label: 'Technical Standards', icon: Target },
-  { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
+  { to: '/performance',     label: 'Reports / Performance', icon: TrendingUp },
 ];
 
 const NAV_CLUB = [
@@ -33,6 +31,8 @@ const NAV_CLUB = [
 
 // Admin-only — all advanced/debug tools collapsed under single section
 const NAV_ADMIN = [
+  { to: '/technical-standards', label: 'Technical Standards', icon: Target },
+  { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
   { to: '/ai-jobs',       label: 'AI Job Monitor',  icon: Activity },
   { to: '/roadmap',       label: 'Roadmap',         icon: Map },
 ];

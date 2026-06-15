@@ -135,7 +135,7 @@ export default function TeamDashboard() {
       icon: Brain, iconColor: 'text-amber-500', urgent: true,
       label: `${awaitingReview.length} AI report${awaitingReview.length > 1 ? 's' : ''} awaiting coach review`,
       meta: `${pendingAIFindings.length} finding${pendingAIFindings.length !== 1 ? 's' : ''} need approval`,
-      cta: 'Open AI Reviews', onClick: () => navigate('/ai-reviews'),
+      cta: 'Open Coach Studio', onClick: () => navigate('/ai-reviews'),
     },
     errorVideos.length > 0 && {
       icon: AlertCircle, iconColor: 'text-red-500', urgent: true,
@@ -177,7 +177,7 @@ export default function TeamDashboard() {
       <PageHeader
         eyebrow={club.name}
         title="Coach Control Centre"
-        subtitle="What needs your attention today: private videos, Coach Studio reviews, reports to finalise, and swimmer follow-up."
+        subtitle="What needs your attention today: videos to review, Coach Studio decisions, reports to finalise, and swimmer follow-up."
         action={
           <Button size="sm" className="bg-primary text-white text-xs h-8" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
             <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Video
@@ -223,7 +223,7 @@ export default function TeamDashboard() {
               {[
                 { label: 'Upload Video', icon: Upload, to: '/analyse' },
                 { label: 'Add Swimmer', icon: Plus, to: '/swimmers' },
-                { label: 'AI Reviews', icon: Brain, to: '/ai-reviews' },
+                { label: 'Coach Studio', icon: Brain, to: '/ai-reviews' },
                 { label: 'Drill Library', icon: Dumbbell, to: '/drill-library' },
               ].map(a => {
                 const Icon = a.icon;
@@ -306,7 +306,7 @@ export default function TeamDashboard() {
                 })}
                 {awaitingReview.length > 4 && (
                   <div className="px-4 py-2.5">
-                    <Link to="/ai-reviews" className="text-[10px] text-primary font-semibold hover:underline">+{awaitingReview.length - 4} more in AI Reviews</Link>
+                    <Link to="/ai-reviews" className="text-[10px] text-primary font-semibold hover:underline">+{awaitingReview.length - 4} more in Coach Studio</Link>
                   </div>
                 )}
               </div>

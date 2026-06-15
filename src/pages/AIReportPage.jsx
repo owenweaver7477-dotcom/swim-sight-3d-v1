@@ -14,7 +14,7 @@ import ShareReportSection from '@/components/ai-report/ShareReportSection';
 import PrintableReport from '@/components/reports/PrintableReport';
 import {
   Brain, CheckCircle2, Clock, Activity, Loader2,
-  ArrowLeft, Star, Camera, Film, AlertTriangle, ClipboardCheck, Share2, Download, ChevronRight,
+  ArrowLeft, Star, Camera, Film, AlertTriangle, ClipboardCheck, Share2, Download,
   Trash2, Plus, Save
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -245,11 +245,12 @@ function CoachStudioGuidedNav({
   canGoNext,
 }) {
   const current = COACH_STUDIO_GUIDED_STEPS.find(step => step.id === activeStep) || COACH_STUDIO_GUIDED_STEPS[0];
+  const completeCount = Object.values(completion).filter(Boolean).length;
   return (
-    <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+    <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-4">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Coach Studio</div>
+          <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Coach Studio workflow</div>
           <h2 className="text-base font-bold text-foreground">{current.label}</h2>
           <p className="text-xs text-muted-foreground mt-1 max-w-2xl">{current.helper}</p>
         </div>
@@ -274,6 +275,8 @@ function CoachStudioGuidedNav({
               className={`text-left p-2.5 rounded-lg border transition-colors ${
                 active
                   ? 'bg-primary/10 border-primary/30 text-foreground'
+                  : complete
+                  ? 'bg-green-50 border-green-200 text-green-800'
                   : 'bg-secondary/30 border-border text-muted-foreground hover:border-primary/30'
               }`}
             >
@@ -286,12 +289,37 @@ function CoachStudioGuidedNav({
           );
         })}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[10px] text-muted-foreground">
-        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Video reviewed: {completion.video ? 'started' : 'open fullscreen first'}</div>
-        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Key stamps: {completion.stamps ? 'saved' : 'optional but helpful'}</div>
-        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Findings: {completion.findings ? 'reviewed' : 'add or approve findings'}</div>
-        <div className="p-2 rounded-lg bg-secondary/40 border border-border">Share: {completion.finalise ? 'ready' : 'finalise when complete'}</div>
+      <div className="text-[10px] text-muted-foreground">
+        {completeCount} of {COACH_STUDIO_GUIDED_STEPS.length} review steps have progress. Use this as a guide, not a hard gate.
       </div>
+    </div>
+  );
+}
+
+function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coachDrawCount, isReportFinalised }) {
+  const rows = [
+    { label: 'Pending AI drafts', value: pendingCount, status: pendingCount > 0 ? 'Needs coach decision' : 'Clear' },
+    { label: 'Approved findings', value: approvedCount, status: approvedCount > 0 ? 'Report-ready' : 'None yet' },
+    { label: 'Key moments', value: keyStampCount, status: keyStampCount > 0 ? 'Captured' : 'Optional' },
+    { label: 'Coach Draw marks', value: coachDrawCount, status: coachDrawCount > 0 ? 'Saved' : 'Optional' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      {rows.map(row => (
+        <div key={row.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+          <div className="text-[10px] text-slate-500">{row.label}</div>
+          <div className="flex items-end justify-between gap-2 mt-1">
+            <div className="text-lg font-bold text-slate-900">{row.value}</div>
+            <div className="text-[9px] text-slate-400 text-right">{row.status}</div>
+          </div>
+        </div>
+      ))}
+      {isReportFinalised && (
+        <div className="col-span-2 lg:col-span-4 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+          This coach-approved report is finalised. Share and PDF actions are available in the final step.
+        </div>
+      )}
     </div>
   );
 }
@@ -871,7 +899,7 @@ export default function AIReportPage() {
 
           {/* Back nav */}
           <Button size="sm" variant="ghost" onClick={() => navigate('/ai-reports')}>
-            <ArrowLeft className="w-3.5 h-3.5 mr-1" /> AI Reviews
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Coach Studio
           </Button>
 
           {/* Header */}
@@ -896,159 +924,13 @@ export default function AIReportPage() {
             </div>
           </PageHeader>
 
-          {/* Workflow stepper */}
-          <div className="p-3 rounded-xl bg-card border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Where you are</div>
-            <WorkflowStepper currentStep={workflowStep} />
-          </div>
-
-          {/* Review progress checklist */}
-          <ReviewChecklist
-            report={report}
-            video={video}
-            findings={findings}
-            sharedLinks={sharedLinks}
+          <CoachStudioSnapshot
+            pendingCount={pendingCount}
+            approvedCount={approvedCount}
+            keyStampCount={keyStampCount}
+            coachDrawCount={coachDrawCount}
+            isReportFinalised={isReportFinalised}
           />
-
-          {/* Prominent CTA based on step */}
-          {workflowStep === 'ai' && findings.length > 0 && (
-            <div className="p-4 rounded-xl bg-yellow-900/10 border border-yellow-700/20 flex items-center gap-3">
-              <Brain className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">Review AI Findings</div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Scroll down to approve or dismiss each AI-suggested finding.</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-            </div>
-          )}
-          {workflowStep === 'review' && canEdit && approvedCount > 0 && !isReportFinalised && (
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-3">
-              <ClipboardCheck className="w-5 h-5 text-primary flex-shrink-0" />
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">{approvedCount} finding{approvedCount !== 1 ? 's' : ''} approved</div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {pendingCount > 0 ? `${pendingCount} still pending — review them below, then finalise.` : 'Ready to finalise the coach report.'}
-                </p>
-              </div>
-            </div>
-          )}
-          {workflowStep === 'final' && canEdit && !isReportFinalised && (
-            <div className="p-4 rounded-xl bg-green-900/10 border border-green-700/20 flex items-center gap-3">
-              <ClipboardCheck className="w-5 h-5 text-green-400 flex-shrink-0" />
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">Ready to Finalise</div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">All findings reviewed. Click "Finalise Coach Report" below.</p>
-              </div>
-            </div>
-          )}
-          {workflowStep === 'export' && (
-            <div className="p-4 rounded-xl bg-green-900/10 border border-green-700/20 flex items-center gap-3 flex-wrap gap-y-2">
-              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-foreground">Final Report Ready</div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Download the PDF or create a share link for the swimmer.</p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  <Download className="w-3 h-3" /> Download PDF
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Placeholder / error warning — coach internal only */}
-          <PlaceholderWarningBanner
-            analysisMode={report.analysis_mode}
-            aiErrorMessage={report.ai_error_message}
-            realPoseDetected={report.real_pose_detected}
-          />
-
-          {/* Real pose evidence panel — coach internal only */}
-          <PoseEvidencePanel report={report} />
-          {aiJob && (
-            <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs font-semibold text-foreground">AI Review status</div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    AI-assisted evidence supports coach review. Coach approval is required before sharing.
-                  </p>
-                </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${qualityMeta.className}`}>
-                  {qualityMeta.label}
-                </span>
-              </div>
-              <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
-                {qualityMeta.detail}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
-                <div>
-                  <span className="text-muted-foreground">Stage</span>
-                  <div className="font-medium text-foreground">{aiJob.stage || 'Complete'}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Job status</span>
-                  <div className="font-medium text-foreground">{aiJob.status}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Pose reliability</span>
-                  <div className="font-medium text-foreground">{aiJob.pose_reliability || 'Not provided'}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Detection ratio</span>
-                  <div className="font-medium text-foreground">{formatDetectionRatio(aiJob.detection_ratio)}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Frames processed</span>
-                  <div className="font-medium text-foreground">{aiJob.frame_count_processed ?? 'Not provided'}</div>
-                </div>
-              </div>
-              {aiJob.callback_summary && (
-                <div className="grid grid-cols-3 gap-2 text-[10px]">
-                  <div className="p-2 rounded-lg bg-secondary/40 border border-border">
-                    <span className="text-muted-foreground">Returned</span>
-                    <div className="font-semibold text-foreground">{aiJob.callback_summary.findings_count ?? 0}</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-secondary/40 border border-border">
-                    <span className="text-muted-foreground">Accepted</span>
-                    <div className="font-semibold text-foreground">{aiJob.callback_summary.actionable_findings_count ?? (report.real_pose_detected ? findings.filter(f => f.source === 'ai').length : 0)}</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-secondary/40 border border-border">
-                    <span className="text-muted-foreground">Filtered</span>
-                    <div className="font-semibold text-foreground">{aiJob.callback_summary.filtered_findings_count ?? 0}</div>
-                  </div>
-                </div>
-              )}
-              {asQualityFlags(aiJob.quality_flags).length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {asQualityFlags(aiJob.quality_flags).map(flag => (
-                    <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
-                      {flag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {aiJob.recommended_next_action && (
-                <div className="text-[10px] text-muted-foreground">
-                  <span className="font-semibold text-foreground">Recommended next action: </span>
-                  {aiJob.recommended_next_action}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* AI transparency notice */}
-          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-900/10 border border-yellow-700/20">
-            <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] text-yellow-400/80 leading-relaxed">
-              AI suggestions require coach review before being shared with swimmers or parents. Approve findings below to include them in the final coach report.
-            </p>
-          </div>
-
-          <HydrodynamicReviewPanel report={report} findings={findings} />
 
           <div id="section-coach-studio">
             <CoachStudioGuidedNav
@@ -1061,6 +943,114 @@ export default function AIReportPage() {
               canGoNext={currentStudioStepIndex < COACH_STUDIO_GUIDED_STEPS.length - 1}
             />
           </div>
+
+          <details className="rounded-xl bg-card border border-border overflow-hidden">
+            <summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-foreground flex items-center justify-between">
+              AI evidence, quality notes, and report readiness
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${qualityMeta.className}`}>
+                {qualityMeta.label}
+              </span>
+            </summary>
+            <div className="p-4 border-t border-border space-y-4">
+              <div className="p-3 rounded-xl bg-secondary/40 border border-border">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Workflow status</div>
+                <WorkflowStepper currentStep={workflowStep} />
+              </div>
+
+              <ReviewChecklist
+                report={report}
+                video={video}
+                findings={findings}
+                sharedLinks={sharedLinks}
+              />
+
+              <PlaceholderWarningBanner
+                analysisMode={report.analysis_mode}
+                aiErrorMessage={report.ai_error_message}
+                realPoseDetected={report.real_pose_detected}
+              />
+
+              <PoseEvidencePanel report={report} />
+
+              {aiJob && (
+                <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold text-foreground">AI Review status</div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        AI-assisted evidence supports coach review. Coach approval is required before sharing.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
+                    {qualityMeta.detail}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
+                    <div>
+                      <span className="text-muted-foreground">Stage</span>
+                      <div className="font-medium text-foreground">{aiJob.stage || 'Complete'}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Job status</span>
+                      <div className="font-medium text-foreground">{aiJob.status}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Pose reliability</span>
+                      <div className="font-medium text-foreground">{aiJob.pose_reliability || 'Not provided'}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Detection ratio</span>
+                      <div className="font-medium text-foreground">{formatDetectionRatio(aiJob.detection_ratio)}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Frames processed</span>
+                      <div className="font-medium text-foreground">{aiJob.frame_count_processed ?? 'Not provided'}</div>
+                    </div>
+                  </div>
+                  {aiJob.callback_summary && (
+                    <div className="grid grid-cols-3 gap-2 text-[10px]">
+                      <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+                        <span className="text-muted-foreground">Returned</span>
+                        <div className="font-semibold text-foreground">{aiJob.callback_summary.findings_count ?? 0}</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+                        <span className="text-muted-foreground">Accepted</span>
+                        <div className="font-semibold text-foreground">{aiJob.callback_summary.actionable_findings_count ?? (report.real_pose_detected ? findings.filter(f => f.source === 'ai').length : 0)}</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-secondary/40 border border-border">
+                        <span className="text-muted-foreground">Filtered</span>
+                        <div className="font-semibold text-foreground">{aiJob.callback_summary.filtered_findings_count ?? 0}</div>
+                      </div>
+                    </div>
+                  )}
+                  {asQualityFlags(aiJob.quality_flags).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {asQualityFlags(aiJob.quality_flags).map(flag => (
+                        <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
+                          {flag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {aiJob.recommended_next_action && (
+                    <div className="text-[10px] text-muted-foreground">
+                      <span className="font-semibold text-foreground">Recommended next action: </span>
+                      {aiJob.recommended_next_action}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-yellow-800 leading-relaxed">
+                  AI suggestions are draft evidence only. The shared swimmer report includes coach-approved content.
+                </p>
+              </div>
+
+              <HydrodynamicReviewPanel report={report} findings={findings} />
+            </div>
+          </details>
 
           {/* Coach summary / next focus */}
           {coachStudioStep === 'summary' && (
@@ -1200,8 +1190,8 @@ export default function AIReportPage() {
             </div>
           )}
 
-          {/* Key moments */}
-          {keyFrames.length > 0 && (
+          {/* Legacy key frames from earlier reports — keep visible only near final review */}
+          {coachStudioStep === 'finalise' && keyFrames.length > 0 && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-2">
               <div className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                 <Activity className="w-3.5 h-3.5 text-primary" /> Key Moments ({keyFrames.length})
@@ -1303,64 +1293,70 @@ export default function AIReportPage() {
                   Pose evidence was unreliable or unavailable. Add real coach observations here; no AI findings are fabricated.
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <select
-                  value={manualPhase}
-                  onChange={e => setManualPhase(e.target.value)}
-                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
-                >
-                  <option value="">Select stroke phase</option>
-                  {studioPhases.map(phase => (
-                    <option key={phase} value={phase}>{labelFromKey(phase)}</option>
-                  ))}
-                </select>
-                <select
-                  value={manualSeverity}
-                  onChange={e => setManualSeverity(e.target.value)}
-                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <select
-                  value={manualFaultTag}
-                  onChange={e => setManualFaultTag(e.target.value)}
-                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
-                >
-                  <option value="">Optional fault tag</option>
-                  {COACH_STUDIO_FAULT_TAGS.map(tag => (
-                    <option key={tag} value={tag}>{labelFromKey(tag)}</option>
-                  ))}
-                </select>
-                <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs">
-                  <span className="text-muted-foreground">Video timestamp</span>
-                  <span className="font-mono text-primary">
-                    {manualTimestamp != null ? formatTimestamp(Number(manualTimestamp)) : 'Capture from Coach Studio'}
-                  </span>
+              <div className="rounded-xl border border-border bg-secondary/20 p-3 space-y-3">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">What happened</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={manualPhase}
+                    onChange={e => setManualPhase(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                  >
+                    <option value="">Select stroke phase</option>
+                    {studioPhases.map(phase => (
+                      <option key={phase} value={phase}>{labelFromKey(phase)}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={manualSeverity}
+                    onChange={e => setManualSeverity(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                  >
+                    <option value="low">Low severity</option>
+                    <option value="medium">Medium severity</option>
+                    <option value="high">High severity</option>
+                    <option value="critical">Critical severity</option>
+                  </select>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={manualFaultTag}
+                    onChange={e => setManualFaultTag(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                  >
+                    <option value="">Optional fault tag</option>
+                    {COACH_STUDIO_FAULT_TAGS.map(tag => (
+                      <option key={tag} value={tag}>{labelFromKey(tag)}</option>
+                    ))}
+                  </select>
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs">
+                    <span className="text-muted-foreground">Video timestamp</span>
+                    <span className="font-mono text-primary">
+                      {manualTimestamp != null ? formatTimestamp(Number(manualTimestamp)) : 'Capture from Coach Studio'}
+                    </span>
+                  </div>
+                </div>
+                <Textarea
+                  value={manualObservation}
+                  onChange={e => setManualObservation(e.target.value)}
+                  className="text-xs min-h-[76px] bg-background"
+                  placeholder="What did the coach verify on video?"
+                />
               </div>
-              <Textarea
-                value={manualObservation}
-                onChange={e => setManualObservation(e.target.value)}
-                className="text-xs min-h-[64px]"
-                placeholder="Observation — what did the coach verify on video?"
-              />
-              <Textarea
-                value={manualWhy}
-                onChange={e => setManualWhy(e.target.value)}
-                className="text-xs min-h-[48px]"
-                placeholder="Why does it matter?"
-              />
-              <Textarea
-                value={manualCue}
-                onChange={e => setManualCue(e.target.value)}
-                className="text-xs min-h-[48px]"
-                placeholder="Correction cue..."
-              />
+
+              <div className="rounded-xl border border-border bg-white p-3 space-y-3">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Coaching correction</div>
+                <Textarea
+                  value={manualWhy}
+                  onChange={e => setManualWhy(e.target.value)}
+                  className="text-xs min-h-[56px]"
+                  placeholder="Why does it matter for the swimmer?"
+                />
+                <Textarea
+                  value={manualCue}
+                  onChange={e => setManualCue(e.target.value)}
+                  className="text-xs min-h-[56px]"
+                  placeholder="What should the swimmer feel in the water?"
+                />
               {manualDrillSuggestions.length > 0 && (
                 <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
                   <div className="text-[10px] uppercase tracking-wider text-blue-700 font-bold">
@@ -1393,30 +1389,39 @@ export default function AIReportPage() {
                   </p>
                 </div>
               )}
-              <Textarea
-                value={manualDrill}
-                onChange={e => {
-                  setManualDrill(e.target.value);
-                  setManualLinkedDrill(null);
-                }}
-                className="text-xs min-h-[40px]"
-                placeholder="Drill recommendation..."
-              />
-              <Textarea
-                value={manualNextFocus}
-                onChange={e => setManualNextFocus(e.target.value)}
-                className="text-xs min-h-[48px]"
-                placeholder="Next focus..."
-              />
-              <Textarea
-                value={manualCoachNotes}
-                onChange={e => setManualCoachNotes(e.target.value)}
-                className="text-xs min-h-[40px]"
-                placeholder="Private coach notes — not shown on shared reports..."
-              />
+                <Textarea
+                  value={manualDrill}
+                  onChange={e => {
+                    setManualDrill(e.target.value);
+                    setManualLinkedDrill(null);
+                  }}
+                  className="text-xs min-h-[44px]"
+                  placeholder="Drill recommendation..."
+                />
+                <Textarea
+                  value={manualNextFocus}
+                  onChange={e => setManualNextFocus(e.target.value)}
+                  className="text-xs min-h-[56px]"
+                  placeholder="Next focus..."
+                />
+              </div>
+
+              <details className="rounded-xl border border-border bg-secondary/20">
+                <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Report options and private note
+                </summary>
+                <div className="p-3 pt-0 space-y-2">
+                  <Textarea
+                    value={manualCoachNotes}
+                    onChange={e => setManualCoachNotes(e.target.value)}
+                    className="text-xs min-h-[48px] bg-background"
+                    placeholder="Private coach notes — not shown on shared reports..."
+                  />
+                </div>
+              </details>
               <Button
                 size="sm"
-                className="h-8 text-xs bg-primary text-primary-foreground"
+                className="h-10 text-xs bg-primary text-primary-foreground"
                 onClick={() => createManualFinding.mutate()}
                 disabled={createManualFinding.isPending || !manualObservation.trim()}
               >

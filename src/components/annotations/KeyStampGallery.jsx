@@ -8,6 +8,7 @@ import {
   Edit3,
   Image,
   Link2,
+  MoreHorizontal,
   PencilLine,
   Plus,
   Save,
@@ -54,7 +55,9 @@ function KeyStampCard({
   };
 
   return (
-    <div className="rounded-xl bg-card border border-border overflow-hidden">
+    <div className={`rounded-xl bg-card border overflow-hidden transition-colors ${
+      stamp.include_in_report ? 'border-green-200 shadow-sm' : 'border-border'
+    }`}>
       <div className="relative bg-slate-950" style={{ aspectRatio: '16/9' }}>
         {thumbnail ? (
           <img
@@ -68,11 +71,12 @@ function KeyStampCard({
             <div className="text-xs font-mono">{stamp.frame_label || stamp.video_frame_time_label || formatTimestamp(stamp.timestamp_seconds)}</div>
           </div>
         )}
-        {stamp.include_in_report && (
-          <div className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-1 rounded-full bg-green-500 text-white flex items-center gap-1 shadow">
-            <CheckCircle2 className="w-3 h-3" /> Approved
-          </div>
-        )}
+        <div className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow ${
+          stamp.include_in_report ? 'bg-green-500 text-white' : 'bg-slate-900/80 text-slate-200 border border-white/10'
+        }`}>
+          {stamp.include_in_report ? <CheckCircle2 className="w-3 h-3" /> : <Image className="w-3 h-3" />}
+          {stamp.include_in_report ? 'In report' : 'Not included'}
+        </div>
       </div>
 
       <div className="p-3 space-y-3">
@@ -116,44 +120,55 @@ function KeyStampCard({
 
             {canEdit && (
               <div className="space-y-2">
-                <select
-                  value={stamp.finding_id || ''}
-                  onChange={event => onUpdate(stamp, { finding_id: event.target.value || null })}
-                  className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs"
-                >
-                  <option value="">Attach to finding...</option>
-                  {findings.map(finding => (
-                    <option key={finding.id} value={finding.id}>
-                      {finding.finding_name || finding.observation}
-                    </option>
-                  ))}
-                </select>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     size="sm"
                     variant={stamp.include_in_report ? 'default' : 'outline'}
-                    className="h-9 text-xs"
+                    className="h-10 text-xs"
                     onClick={() => onUpdate(stamp, {
                       include_in_report: !stamp.include_in_report,
                       is_public: !stamp.include_in_report,
                     })}
                   >
                     <Link2 className="w-3.5 h-3.5 mr-1" />
-                    {stamp.include_in_report ? 'Remove from report' : 'Approve for report'}
+                    {stamp.include_in_report ? 'Remove' : 'Approve'}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => onCreateFinding(stamp)}>
+                  <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => onCreateFinding(stamp)}>
                     <Plus className="w-3.5 h-3.5 mr-1" /> Finding
                   </Button>
-                  <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => onOpenDraw(stamp)}>
-                    <PencilLine className="w-3.5 h-3.5 mr-1" /> Coach Draw
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => setEditing(true)}>
-                    <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
-                  </Button>
                 </div>
-                <Button size="sm" variant="outline" className="h-8 text-xs text-destructive w-full" onClick={() => onDelete(stamp)}>
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete key stamp
-                </Button>
+
+                <details className="rounded-lg border border-border bg-secondary/30">
+                  <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    More actions
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </summary>
+                  <div className="p-3 pt-0 space-y-2">
+                    <select
+                      value={stamp.finding_id || ''}
+                      onChange={event => onUpdate(stamp, { finding_id: event.target.value || null })}
+                      className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">Attach to finding...</option>
+                      {findings.map(finding => (
+                        <option key={finding.id} value={finding.id}>
+                          {finding.finding_name || finding.observation}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => onOpenDraw(stamp)}>
+                        <PencilLine className="w-3.5 h-3.5 mr-1" /> Coach Draw
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => setEditing(true)}>
+                        <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
+                      </Button>
+                    </div>
+                    <Button size="sm" variant="outline" className="h-8 text-xs text-destructive w-full" onClick={() => onDelete(stamp)}>
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete key stamp
+                    </Button>
+                  </div>
+                </details>
               </div>
             )}
           </>

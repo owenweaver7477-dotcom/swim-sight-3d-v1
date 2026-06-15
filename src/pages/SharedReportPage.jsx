@@ -95,7 +95,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                 <div className="text-[10px] text-slate-300 print:text-slate-500">Coach-reviewed swim analysis</div>
               </div>
             </div>
-            <h1 className="text-2xl font-bold mb-1">{report.title || 'Coach Technique Report'}</h1>
+            <h1 className="text-2xl font-bold mb-1">{report.title || 'Swimmer Improvement Plan'}</h1>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-400/30 print:bg-green-50 print:border-green-300">
             <CheckCircle2 className="w-4 h-4 text-green-400 print:text-green-600" />
@@ -166,7 +166,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
 
       {report.technical_summary && (
         <div className="px-8 py-6 border-b border-slate-200">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Technical Summary</h3>
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Technical Focus</h3>
           <p className="text-sm text-slate-700 leading-relaxed">{report.technical_summary}</p>
         </div>
       )}
@@ -183,7 +183,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
         <div className="px-8 py-6">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-600 rounded-full"></span>
-            Technical Findings <span className="text-sm font-normal text-slate-500">({findings.length})</span>
+            Improvement Plan <span className="text-sm font-normal text-slate-500">({findings.length})</span>
           </h2>
           <div className="space-y-4">
             {findings.map((finding, index) => {
@@ -217,7 +217,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                        Observation
+                        What We Saw
                       </div>
                       <p className="text-sm text-slate-700 leading-relaxed">
                         {finding.coach_sees.split('\n\nCoach should check:')[0]}
@@ -236,7 +236,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                   {finding.cue && (
                     <div className="pl-4 border-l-4 border-cyan-500 bg-cyan-50/50 rounded-r-lg p-3">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 mb-1.5 flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5" /> What To Feel In The Water
+                        <Target className="w-3.5 h-3.5" /> What To Feel
                       </div>
                       <p className="text-sm font-semibold text-slate-900 leading-relaxed">{finding.cue}</p>
                     </div>
@@ -290,7 +290,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
         <div className="px-8 py-6 border-t border-slate-200">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
-            Included Coach Annotations <span className="text-sm font-normal text-slate-500">({unlinkedAnnotations.length})</span>
+            Coach-Selected Key Moments <span className="text-sm font-normal text-slate-500">({unlinkedAnnotations.length})</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {unlinkedAnnotations.map((annotation, index) => (

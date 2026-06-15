@@ -226,8 +226,8 @@ export default function AIReportsListPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
       <PageHeader
-        title="AI Reviews"
-        subtitle="Pose-assisted technique reports awaiting coach review and approval."
+        title="Coach Studio"
+        subtitle="Open video reviews, approve AI-assisted drafts, or complete premium manual analysis."
         action={
           <Link to="/analyse">
             <Button size="sm" className="bg-primary text-white text-xs h-8">
@@ -238,7 +238,7 @@ export default function AIReportsListPage() {
       />
 
       <div className="mb-5 text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg px-4 py-2.5">
-        AI suggestions require coach approval before any report is shared with swimmers or parents.
+        AI assists when evidence is strong. Coach Studio remains the main review workspace.
       </div>
 
       {isLoading ? (
@@ -249,9 +249,9 @@ export default function AIReportsListPage() {
       ) : reports.length === 0 ? (
         <div className="p-10 rounded-xl border border-dashed border-slate-300 bg-white text-center">
           <Brain className="w-9 h-9 text-slate-300 mx-auto mb-3" />
-          <div className="text-sm font-semibold text-slate-700 mb-1">No AI reports yet</div>
+          <div className="text-sm font-semibold text-slate-700 mb-1">No coach reviews yet</div>
           <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto mb-4">
-            Upload a video in Analyse, then use "Send for AI Review". Your report will appear here once processing completes.
+            Upload a video in Analyse, then open Coach Studio with AI assistance or manual review.
           </p>
           <Link to="/analyse">
             <Button size="sm" className="bg-primary text-white">

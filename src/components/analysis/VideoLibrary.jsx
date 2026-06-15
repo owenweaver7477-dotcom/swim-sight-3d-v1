@@ -237,7 +237,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       return (
         <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
           onClick={() => navigate(`/ai-review?report_id=${linkedReport.id}`)}>
-          <ArrowRight className="w-3 h-3 mr-1.5" /> Open AI Review
+          <ArrowRight className="w-3 h-3 mr-1.5" /> Open Coach Studio
         </Button>
       );
     }
@@ -374,11 +374,16 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
         <AIJobStatusBadge status={status} jobStatus={jobStatus} />
 
-        <div className="text-[9px] text-muted-foreground font-mono">
-          Video row: {upload.id} · Status: {status}
-          {job?.id ? ` · AI job: ${job.id}` : ''}
-          {job?.queue_position ? ` · Queue #${job.queue_position}` : ''}
-        </div>
+        <details className="rounded-lg border border-border bg-secondary/30">
+          <summary className="cursor-pointer list-none px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Technical status
+          </summary>
+          <div className="px-2.5 pb-2 text-[9px] text-muted-foreground font-mono break-all">
+            Video row: {upload.id} · Status: {status}
+            {job?.id ? ` · AI job: ${job.id}` : ''}
+            {job?.queue_position ? ` · Queue #${job.queue_position}` : ''}
+          </div>
+        </details>
 
         {ACTIVE_PROCESSING_STATUSES.includes(status) && jobStage && (
           <div className="text-[10px] text-muted-foreground leading-relaxed">{jobStage}</div>
@@ -420,7 +425,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             {aiStarted && (
               <div className="flex flex-wrap gap-1.5">
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate('/ai-reviews')}>
-                  <FileText className="w-3 h-3 mr-1" /> Open AI Reviews
+                  <FileText className="w-3 h-3 mr-1" /> Open Coach Studio
                 </Button>
                 <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/ai-jobs')}>
                   <Activity className="w-3 h-3 mr-1" /> AI Jobs
