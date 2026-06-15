@@ -146,14 +146,14 @@ export default function TeamDashboard() {
     readyVideos.length > 0 && {
       icon: Video, iconColor: 'text-cyan-600', urgent: false,
       label: `${readyVideos.length} uploaded video${readyVideos.length > 1 ? 's' : ''} ready for AI Review`,
-      meta: 'Preview the clip, confirm stroke/angle, then send for AI Review',
-      cta: 'Send to AI', onClick: () => navigate('/analyse'),
+      meta: 'Preview the clip, then use AI assistance or Coach Studio review',
+      cta: 'Review Video', onClick: () => navigate('/analyse'),
     },
     manualReviewReports.length > 0 && {
       icon: AlertCircle, iconColor: 'text-orange-500', urgent: true,
       label: `${manualReviewReports.length} report${manualReviewReports.length > 1 ? 's' : ''} need manual coach review`,
       meta: 'AI evidence was weak, filtered, or unavailable',
-      cta: 'Review', onClick: () => navigate('/ai-reviews'),
+      cta: 'Open Coach Studio', onClick: () => navigate('/ai-reviews'),
     },
     processingVideos.length > 0 && {
       icon: Loader2, iconColor: 'text-blue-500', urgent: false,
@@ -177,7 +177,7 @@ export default function TeamDashboard() {
       <PageHeader
         eyebrow={club.name}
         title="Coach Control Centre"
-        subtitle="What needs your attention today: uploads, AI reviews, manual checks, and recent coach reports."
+        subtitle="What needs your attention today: private videos, Coach Studio reviews, reports to finalise, and swimmer follow-up."
         action={
           <Button size="sm" className="bg-primary text-white text-xs h-8" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
             <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Video
@@ -273,8 +273,8 @@ export default function TeamDashboard() {
             <div className="space-y-2">
               {[
                 ['1', 'Upload a 5-10 second swim clip'],
-                ['2', 'Send the private video for AI Review'],
-                ['3', 'Approve, edit, or reject draft findings'],
+                ['2', 'Open Coach Studio; AI assists when evidence is strong'],
+                ['3', 'Add, approve, edit, or reject findings'],
                 ['4', 'Finalise and share the coach-approved report'],
               ].map(([num, label]) => (
                 <div key={num} className="flex items-center gap-2 text-[11px] text-slate-600">

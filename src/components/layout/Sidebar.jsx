@@ -19,10 +19,10 @@ const NAV_MAIN = [
   { to: '/ai-reviews',      label: 'AI Reviews',      icon: Brain },
   { to: '/swimmers',        label: 'Swimmers',        icon: Users },
   { to: '/drill-library',   label: 'Drill Library',   icon: Dumbbell },
-  { to: '/performance',     label: 'Performance',     icon: TrendingUp },
 ];
 
 const NAV_TOOLS = [
+  { to: '/performance',     label: 'Performance',     icon: TrendingUp },
   { to: '/technical-standards', label: 'Technical Standards', icon: Target },
   { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
 ];

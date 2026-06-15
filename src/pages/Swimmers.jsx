@@ -37,6 +37,7 @@ export default function Swimmers() {
   const [deleteTarget, setDeleteTarget] = useState(null); // swimmer to confirm delete
   const [form, setForm] = useState(EMPTY_FORM);
   const [squadFilter, setSquadFilter] = useState('all');
+  const [newSquadName, setNewSquadName] = useState('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const canManageSwimmers = MANAGE_SWIMMER_ROLES.includes(memberRole);
@@ -93,6 +94,26 @@ export default function Swimmers() {
     },
   });
 
+  const createSquad = useMutation({
+    mutationFn: (name) => entities.Squad.create({
+      club_id: club.id,
+      name: name.trim(),
+    }),
+    onSuccess: (createdSquad) => {
+      queryClient.invalidateQueries({ queryKey: ['squads', club?.id] });
+      setForm(prev => ({ ...prev, squad_id: createdSquad.id }));
+      setNewSquadName('');
+    },
+  });
+
+  const updateSwimmer = useMutation({
+    mutationFn: ({ id, patch }) => entities.Swimmer.update(id, patch),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['swimmers', club?.id] });
+      setSelected(updated);
+    },
+  });
+
   const handleStartReview = (swimmer) => {
     setReviewSession(null);
     navigate(`/analyse`);
@@ -130,6 +151,27 @@ export default function Swimmers() {
             </div>
             <h2 className="text-lg font-bold text-foreground mb-1">{selected.name}</h2>
             {squad && <div className="text-xs text-muted-foreground mb-2">Squad: {squad.name}</div>}
+            {canManageSwimmers && (
+              <div className="mb-3">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Squad</Label>
+                <Select
+                  value={selected.squad_id || 'unassigned'}
+                  onValueChange={(value) => updateSwimmer.mutate({
+                    id: selected.id,
+                    patch: { squad_id: value === 'unassigned' ? null : value },
+                  })}
+                  disabled={updateSwimmer.isPending}
+                >
+                  <SelectTrigger className="h-8 bg-secondary border-border mt-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {squads.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {strokes.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-3">
                 {strokes.map(s => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}
@@ -230,17 +272,34 @@ export default function Swimmers() {
                     <Label className="text-xs text-muted-foreground">Name</Label>
                     <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" className="bg-secondary border-border mt-1" />
                   </div>
-                  {squads.length > 0 && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Squad</Label>
-                      <Select value={form.squad_id} onValueChange={v => setForm(p => ({ ...p, squad_id: v }))}>
-                        <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select squad" /></SelectTrigger>
-                        <SelectContent>
-                          {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Squad</Label>
+                    <Select value={form.squad_id || 'unassigned'} onValueChange={v => setForm(p => ({ ...p, squad_id: v === 'unassigned' ? '' : v }))}>
+                      <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select squad" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <div className="mt-2 flex gap-2">
+                      <Input
+                        value={newSquadName}
+                        onChange={e => setNewSquadName(e.target.value)}
+                        placeholder="Create squad, e.g. Junior Performance"
+                        className="h-8 bg-secondary border-border text-xs"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs flex-shrink-0"
+                        disabled={!newSquadName.trim() || createSquad.isPending}
+                        onClick={() => createSquad.mutate(newSquadName)}
+                      >
+                        {createSquad.isPending ? 'Adding...' : 'Add Squad'}
+                      </Button>
                     </div>
-                  )}
+                  </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Main Strokes</Label>
                     <Input value={form.main_strokes} onChange={e => setForm(p => ({ ...p, main_strokes: e.target.value }))} placeholder="e.g. Breaststroke, IM" className="bg-secondary border-border mt-1" />

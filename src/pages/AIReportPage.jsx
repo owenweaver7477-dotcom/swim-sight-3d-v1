@@ -27,7 +27,7 @@ import FinaliseQualityGate from '@/components/ai-report/FinaliseQualityGate';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import CoachReviewAssistantCard from '@/components/ai-report/CoachReviewAssistantCard';
 import { getDefaultDrills } from '@/lib/defaultDrills';
-import { drillSummary } from '@/lib/drillMatching';
+import { drillSummary, suggestDrillsForFinding } from '@/lib/drillMatching';
 import CoachDrawStudio from '@/components/annotations/CoachDrawStudio';
 import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
 
@@ -252,6 +252,7 @@ export default function AIReportPage() {
   const [manualCoachNotes, setManualCoachNotes] = useState('');
   const [manualTimestamp, setManualTimestamp] = useState(null);
   const [manualFaultTag, setManualFaultTag] = useState('');
+  const [manualLinkedDrill, setManualLinkedDrill] = useState(null);
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -364,6 +365,23 @@ export default function AIReportPage() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  const manualDraftFinding = {
+    finding_name: manualObservation || manualFaultTag || manualPhase,
+    observation: manualObservation,
+    coach_sees: manualObservation,
+    why_it_matters: manualWhy,
+    correction_cue: manualCue,
+    next_focus: manualNextFocus,
+    stroke_phase: manualPhase,
+    phase: manualPhase,
+    fault_tag: manualFaultTag,
+  };
+  const manualDrillSuggestions = suggestDrillsForFinding(
+    drillOptions,
+    manualDraftFinding,
+    video?.stroke_type || report?.stroke_type,
+    4
+  );
 
   const dragAnalysisItems = [];
 
@@ -553,6 +571,9 @@ export default function AIReportPage() {
       why_it_matters: manualWhy || null,
       correction_cue: manualCue,
       drill: manualDrill || null,
+      linked_drill_id: manualLinkedDrill?.id || null,
+      linked_drill_title: manualLinkedDrill?.title || manualDrill || null,
+      linked_drill_summary: manualLinkedDrill ? drillSummary(manualLinkedDrill) : null,
       next_focus: manualNextFocus,
       coach_notes: manualCoachNotes || null,
       raw_ai_payload: {
@@ -581,6 +602,7 @@ export default function AIReportPage() {
       setManualCoachNotes('');
       setManualTimestamp(null);
       setManualFaultTag('');
+      setManualLinkedDrill(null);
       queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
     },
   });
@@ -1146,9 +1168,44 @@ export default function AIReportPage() {
                 className="text-xs min-h-[48px]"
                 placeholder="Correction cue..."
               />
+              {manualDrillSuggestions.length > 0 && (
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
+                  <div className="text-[10px] uppercase tracking-wider text-blue-700 font-bold">
+                    Suggested drills from phase/fault
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {manualDrillSuggestions.map(drill => (
+                      <button
+                        key={drill.id}
+                        type="button"
+                        onClick={() => {
+                          setManualDrill(drill.title);
+                          setManualLinkedDrill(drill);
+                        }}
+                        className={`text-left p-2 rounded-lg border transition-colors ${
+                          manualLinkedDrill?.id === drill.id || manualDrill === drill.title
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-white border-blue-100 text-slate-700 hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="text-[11px] font-semibold">{drill.title}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">
+                          {drillSummary(drill)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-blue-700/70">
+                    Suggestions come from the Drill Library using stroke, phase, fault tag, and coach wording.
+                  </p>
+                </div>
+              )}
               <Textarea
                 value={manualDrill}
-                onChange={e => setManualDrill(e.target.value)}
+                onChange={e => {
+                  setManualDrill(e.target.value);
+                  setManualLinkedDrill(null);
+                }}
                 className="text-xs min-h-[40px]"
                 placeholder="Drill recommendation..."
               />

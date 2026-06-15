@@ -32,6 +32,7 @@ export default function AnnotationToolbar({
   onCancel,
   canUndo,
   canRedo,
+  canSave = true,
   saving,
 }) {
   return (
@@ -99,8 +100,8 @@ export default function AnnotationToolbar({
         <Button size="sm" variant="outline" className="h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10" onClick={onClear}>
           <Trash2 className="w-3.5 h-3.5 mr-1" />Clear
         </Button>
-        <Button size="sm" className="h-9 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400 ml-auto" onClick={onSave} disabled={saving}>
-          <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : 'Save Annotation'}
+        <Button size="sm" className="h-9 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400 ml-auto" onClick={onSave} disabled={saving || !canSave}>
+          <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : canSave ? 'Save Annotation' : 'Draw first'}
         </Button>
       </div>
     </div>

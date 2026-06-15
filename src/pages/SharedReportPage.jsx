@@ -235,7 +235,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                   {finding.cue && (
                     <div className="pl-4 border-l-4 border-cyan-500 bg-cyan-50/50 rounded-r-lg p-3">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 mb-1.5 flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5" /> Correction Cue
+                        <Target className="w-3.5 h-3.5" /> What To Feel In The Water
                       </div>
                       <p className="text-sm font-semibold text-slate-900 leading-relaxed">{finding.cue}</p>
                     </div>

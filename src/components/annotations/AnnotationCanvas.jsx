@@ -109,7 +109,7 @@ export default function AnnotationCanvas({ timestampSeconds, onSave, onCancel, s
   const displayShapes = previewShape ? [...shapes, previewShape] : shapes;
 
   return (
-    <div className="absolute inset-0 z-20 bg-slate-950/25">
+    <div className="absolute inset-0 z-20 bg-transparent">
       <div
         ref={surfaceRef}
         className="absolute inset-0 touch-none cursor-crosshair"
@@ -122,7 +122,7 @@ export default function AnnotationCanvas({ timestampSeconds, onSave, onCancel, s
         <AnnotationLayer shapes={displayShapes} width={surfaceRef.current?.clientWidth || 1280} height={surfaceRef.current?.clientHeight || 720} className="w-full h-full pointer-events-none" />
       </div>
 
-      <div className="absolute left-3 right-3 bottom-3 z-30">
+      <div className="absolute left-3 right-3 bottom-3 z-30 max-h-[48%] overflow-y-auto rounded-xl">
         <AnnotationToolbar
           tool={tool}
           color={color}
@@ -137,6 +137,7 @@ export default function AnnotationCanvas({ timestampSeconds, onSave, onCancel, s
           onCancel={onCancel}
           canUndo={shapes.length > 0}
           canRedo={redo.length > 0}
+          canSave={shapes.length > 0}
           saving={saving}
         />
         <div className="mt-2 text-[10px] text-white/80 bg-black/40 rounded-lg px-2 py-1 w-fit">
