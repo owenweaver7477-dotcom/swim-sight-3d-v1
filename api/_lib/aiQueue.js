@@ -290,6 +290,12 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
     analysis_type: upload.analysis_type || 'Technique Review',
     camera_angle: upload.camera_angle || 'Side',
     capture_source: upload.capture_source || null,
+    original_filename: upload.original_filename || null,
+    file_size_bytes: upload.file_size_bytes ?? null,
+    file_size_mb: upload.file_size_mb ?? (
+      upload.file_size_bytes ? Number((Number(upload.file_size_bytes) / (1024 * 1024)).toFixed(2)) : null
+    ),
+    duration_seconds: upload.duration_seconds ?? null,
     review_context: upload.review_context || {},
     callback_url: callbackUrl,
     max_sampled_frames: 100,

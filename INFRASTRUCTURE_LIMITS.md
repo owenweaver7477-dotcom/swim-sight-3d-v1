@@ -30,7 +30,7 @@ The app should create a `video_uploads` row before storage upload begins. If sto
 - Format: MP4 or MOV
 - Resolution: 720p or 1080p
 - Avoid raw 4K slow-motion for live demos unless compressed
-- Avoid screen recordings when possible
+- Avoid high-resolution screen recordings when possible; use the original camera export instead
 - Keep the browser tab open until upload completes
 
 ## Why Storage Stays Private
@@ -73,6 +73,17 @@ Paid Render may be needed when coaches need:
 ## AI Reliability And Manual Review
 
 AI Review is evidence-assisted, not automatic truth. If pose evidence is weak, partial, blocked, or not coach-grade, the system must create a manual-review state with zero fake findings.
+
+The Python AI worker uses adaptive processing instead of one fixed workload for every clip:
+
+- `standard_ai`: normal short 720p/1080p camera clips receive the fullest V1 sampling window.
+- `reduced_ai`: heavier clips are downsampled and sampled over a shorter safe window.
+- `minimal_ai`: risky high-resolution, high-FPS, or screen-recording clips get a tiny pose attempt only.
+- `manual_review_required`: unreadable, corrupt, extreme, or unsafe videos skip pose processing and return a manual-review report state.
+
+File size is not the only factor. Decoded pixel workload matters more. A 44 MB high-resolution screen recording can be harder on the worker than a larger normal 1080p camera export because each decoded frame is much bigger.
+
+Paid Render gives more CPU/memory headroom and fewer cold starts, but it does not replace safe adaptive processing. The worker should still downsample heavy videos and fall back to manual review instead of crashing.
 
 Manual review remains valid because the coach can:
 

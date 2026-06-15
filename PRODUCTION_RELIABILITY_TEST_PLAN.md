@@ -10,6 +10,7 @@ Use this plan before opening Swim Sight 3D to heavier club pilot traffic. The go
 4. Confirm Render has the matching `AI_WEBHOOK_SECRET`.
 5. Confirm the `private-videos` bucket is private.
 6. Confirm Render health returns the expected engine version.
+7. Confirm the Render worker is running the adaptive engine (`pose-mvp-0.5` or newer).
 
 ## Expected Queue States
 
@@ -98,6 +99,19 @@ Use this plan before opening Swim Sight 3D to heavier club pilot traffic. The go
    - Report opens in manual review state.
    - Coach can add manual finding, Coach Draw annotation, drill, and summary.
 
+## Test 8A: Heavy Screen Recording Safety
+
+1. Upload the known 44 MB high-resolution `.mov` screen recording.
+2. Send it for AI Review.
+3. Expected Render behavior:
+   - Video download succeeds without logging the signed URL.
+   - Worker logs source metadata and selects `reduced_ai` or `minimal_ai`.
+   - Worker samples a short window only and resizes frames before pose detection.
+4. Expected app behavior:
+   - If pose evidence is usable, findings still arrive as pending coach-review drafts.
+   - If pose evidence is weak, report becomes manual review with zero fake findings.
+   - AI Job Monitor shows quality flags such as `screen_recording_possible`, `minimal_ai_sampling`, or `heavy_video_downsampled`.
+
 ## Test 9: Retry Failed Job
 
 1. Trigger a retryable failure.
@@ -148,6 +162,7 @@ Use this plan before opening Swim Sight 3D to heavier club pilot traffic. The go
    - Upload row appears before storage upload completes.
    - Coach sees upload progress/state.
    - AI trigger is disabled until upload is complete.
+   - AI worker downscales/samples based on resolution, FPS, duration, and decoded workload, not file size alone.
 
 ## Test 15: Calibration Feedback After Review
 

@@ -160,6 +160,12 @@ function safeCallbackSummary(payload, quality) {
     detection_ratio: payload.detection_ratio ?? null,
     pose_reliability: payload.pose_reliability || null,
     recommended_next_action: payload.recommended_next_action || null,
+    processing_tier: payload.processing_tier || null,
+    source_width: payload.source_width ?? null,
+    source_height: payload.source_height ?? null,
+    processed_width: payload.processed_width ?? null,
+    processed_height: payload.processed_height ?? null,
+    processing_window_seconds: payload.processing_window_seconds ?? null,
     error_message: payload.error_message || null,
   };
 }
