@@ -2,12 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 import { strokePages } from './strokePageData';
 
 export default function StrokeDetailPage({ stroke }) {
   const page = strokePages[stroke];
 
-  usePublicMeta(page.title, page.intro);
+  usePublicMeta(publicSeoMetadata[page.seoKey]);
 
   return (
     <PublicLayout>
@@ -34,6 +35,13 @@ export default function StrokeDetailPage({ stroke }) {
         </div>
       </PublicSection>
       <PublicSection title="Coach-approved reporting" description="Findings can be AI-assisted or manual, but every report item should be coach-reviewed before it is finalised or shared." />
+      <PublicSection subtle title="Keep exploring Swim Sight 3D">
+        <div className="flex flex-wrap gap-3">
+          <Link to="/stroke-analysis" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">All stroke analysis pages</Link>
+          <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
+          <Link to="/features" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Explore features</Link>
+        </div>
+      </PublicSection>
     </PublicLayout>
   );
 }

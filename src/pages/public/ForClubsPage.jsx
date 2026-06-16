@@ -2,15 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 export default function ForClubsPage() {
-  usePublicMeta('For Clubs', 'Swim Sight 3D gives swim clubs private workspaces for squads, coaches, technical findings, reports, and progress tracking.');
+  usePublicMeta(publicSeoMetadata.clubs);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="For clubs"
-        title="A private technical review workspace for squads and coaching teams."
+        title="Swimming analysis workflows for clubs and squads."
         description="Create shared coaching language, organise swimmers by squad, and keep reports consistent across coaches without exposing private video publicly."
         actions={<Link to="/pricing" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">See pilot options</Link>}
       />

@@ -2,15 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 export default function ForCoachesPage() {
-  usePublicMeta('For Coaches', 'Swim Sight 3D helps swim coaches review video faster, create timestamped findings, assign drills, and share clearer swimmer reports.');
+  usePublicMeta(publicSeoMetadata.coaches);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="For coaches"
-        title="Review a swimmer faster with Coach Studio."
+        title="Turn swim video into clearer coach feedback."
         description="Use video, key moments, drawing tools, manual findings, and AI-assisted draft evidence to create feedback that swimmers can actually understand."
         actions={<Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>}
       />

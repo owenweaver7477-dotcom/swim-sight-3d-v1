@@ -2,16 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 import { strokePages } from './strokePageData';
 
 export default function StrokeAnalysisPage() {
-  usePublicMeta('Stroke Analysis', 'Explore Swim Sight 3D stroke analysis structure for breaststroke, freestyle, backstroke, and butterfly coaching workflows.');
+  usePublicMeta(publicSeoMetadata.strokeAnalysis);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="Stroke analysis"
-        title="Stroke review pages for coach-approved technical reporting."
+        title="Swimming stroke analysis for coach-approved reports."
         description="Swim Sight 3D organises analysis around stroke phases, common faults, coach cues, drills, and report-ready findings. AI can assist, but coaches approve the final content."
       />
       <PublicSection title="Choose a stroke">

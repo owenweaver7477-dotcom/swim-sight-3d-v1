@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 const tiers = [
   ['Coach pilot', 'For individual coaches testing video review, Coach Studio, reports, and manual delivery.', 'Pricing is being finalised for pilot coaches.'],
@@ -10,13 +11,13 @@ const tiers = [
 ];
 
 export default function PricingPage() {
-  usePublicMeta('Pricing', 'Swim Sight 3D pricing is being finalised for coach and club pilot access. No payment or billing is enabled on this page.');
+  usePublicMeta(publicSeoMetadata.pricing);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="Pricing"
-        title="Pilot pricing is being finalised."
+        title="Swim Sight 3D pricing for coaches and clubs."
         description="Swim Sight 3D is currently being prepared for serious coach and club pilot use. Billing is not enabled on this public website."
         actions={<Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Request access through the app</Link>}
       />

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import PublicLayout from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 const proofPoints = [
   ['Coach-approved findings', 'Nothing reaches a swimmer report until the coach reviews it.'],
@@ -77,7 +78,11 @@ function MiniCard({ icon: Icon, title, description, dark = false }) {
 
 function HeroPreview() {
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-4 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
+    <div
+      className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-4 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl"
+      role="img"
+      aria-label="Coach Studio preview with a timestamped breaststroke key moment and drill recommendation"
+    >
       <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div>
@@ -118,10 +123,7 @@ function HeroPreview() {
 }
 
 export default function HomePage() {
-  usePublicMeta(
-    'AI-Assisted Swimming Analysis Reports for Coaches',
-    'Swim Sight 3D helps swim coaches upload video, review stroke phases, add coach-approved findings, assign drills, and create swimmer improvement reports.'
-  );
+  usePublicMeta(publicSeoMetadata.home);
 
   return (
     <PublicLayout>
@@ -225,7 +227,11 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            role="img"
+            aria-label="Coach Draw preview with line reset correction marks"
+          >
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Coach Draw preview</div>
             <div className="mt-5 h-56 rounded-2xl border border-slate-200 bg-[linear-gradient(90deg,rgba(14,165,233,0.08)_1px,transparent_1px),linear-gradient(rgba(14,165,233,0.08)_1px,transparent_1px)] bg-[length:24px_24px] p-5">
               <div className="mt-16 h-1 w-56 rotate-[-7deg] rounded-full bg-sky-500" />

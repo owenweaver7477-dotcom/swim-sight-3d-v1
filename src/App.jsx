@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -63,6 +64,20 @@ const AuthenticatedApp = () => {
     '/faq',
   ];
   const isPublicWebsitePath = publicWebsitePaths.includes(location.pathname);
+
+  useEffect(() => {
+    if (isPublicWebsitePath) {
+      return;
+    }
+
+    let robots = document.head.querySelector('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.setAttribute('name', 'robots');
+      document.head.appendChild(robots);
+    }
+    robots.setAttribute('content', 'noindex,nofollow');
+  }, [isPublicWebsitePath, location.pathname]);
 
   if (!isPublicWebsitePath && (isLoadingPublicSettings || isLoadingAuth)) {
     return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 const features = [
   ['Video upload', 'Upload race or training footage into a private club workspace.'],
@@ -17,13 +18,13 @@ const features = [
 ];
 
 export default function FeaturesPage() {
-  usePublicMeta('Features', 'Explore Swim Sight 3D features for video review, Coach Studio, AI-assisted draft findings, drill assignment, and shared swimmer reports.');
+  usePublicMeta(publicSeoMetadata.features);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="Features"
-        title="A connected workflow for swim video review and reporting."
+        title="Swimming video analysis features for coaches."
         description="Swim Sight 3D brings video, coach-created findings, AI-assisted draft evidence, drills, and shared reports into one club-ready workflow."
         actions={<Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Open App</Link>}
       />

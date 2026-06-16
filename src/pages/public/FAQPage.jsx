@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 const faqs = [
   ['Does Swim Sight 3D replace the coach?', 'No. The product is built around coach approval. AI can assist, but coaches decide what is accurate and what appears in a report.'],
@@ -17,13 +18,13 @@ const faqs = [
 ];
 
 export default function FAQPage() {
-  usePublicMeta('FAQ', 'Answers about Swim Sight 3D AI-assisted swimming analysis, coach approval, manual review, private videos, squads, reports, and pilot access.');
+  usePublicMeta(publicSeoMetadata.faq);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="FAQ"
-        title="Questions coaches and clubs ask first."
+        title="Swim Sight 3D frequently asked questions."
         description="Short, honest answers about AI, coach approval, privacy, reports, supported strokes, and pilot access."
         actions={<Link to="/features" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Explore features</Link>}
       />
@@ -35,6 +36,13 @@ export default function FAQPage() {
               <p className="mt-2 text-sm leading-7 text-slate-600">{answer}</p>
             </div>
           ))}
+        </div>
+      </PublicSection>
+      <PublicSection subtle title="Useful next pages">
+        <div className="flex flex-wrap gap-3">
+          <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
+          <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Explore features</Link>
+          <Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Log in</Link>
         </div>
       </PublicSection>
     </PublicLayout>

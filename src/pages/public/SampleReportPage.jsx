@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import usePublicMeta from './usePublicMeta';
+import { publicSeoMetadata } from './publicSeoMetadata';
 
 const reportItems = [
   ['What we saw', 'Breaststroke kick setup is slightly wide before the drive phase.'],
@@ -12,18 +13,18 @@ const reportItems = [
 ];
 
 export default function SampleReportPage() {
-  usePublicMeta('Sample Report', 'Preview the structure of a Swim Sight 3D swimmer improvement report with coach findings, drills, key moments, and next focus.');
+  usePublicMeta(publicSeoMetadata.sampleReport);
 
   return (
     <PublicLayout>
       <PublicHero
         eyebrow="Sample report"
-        title="A swimmer-friendly improvement plan, not raw AI output."
+        title="Sample swimming analysis report."
         description="This public sample shows the kind of report structure coaches can share after approving findings. It uses demo content only."
         actions={<Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Create reports in app</Link>}
       />
       <PublicSection title="Demo report preview" description="Example content only. Real reports are created from coach-reviewed club data.">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-950/8">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-950/8" aria-label="Demo Swim Sight 3D swimmer improvement report preview">
           <div className="border-b border-slate-200 bg-slate-950 p-6 text-white">
             <div className="text-xs uppercase tracking-[0.24em] text-cyan-200">Swim Sight 3D report</div>
             <h2 className="mt-3 text-2xl font-bold">Demo Swimmer · Breaststroke Review</h2>
@@ -39,6 +40,14 @@ export default function SampleReportPage() {
         </div>
       </PublicSection>
       <PublicSection subtle title="What public reports do not include" description="Public shared reports should not include private video paths, signed URLs, raw AI payloads, rejected findings, pending findings, or private coach notes." />
+      <PublicSection title="Explore the workflow behind this report">
+        <div className="flex flex-wrap gap-3">
+          <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
+          <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
+          <Link to="/for-clubs" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
+          <Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Log in</Link>
+        </div>
+      </PublicSection>
     </PublicLayout>
   );
 }
