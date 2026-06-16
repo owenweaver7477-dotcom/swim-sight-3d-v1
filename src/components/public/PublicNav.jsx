@@ -48,7 +48,7 @@ export default function PublicNav() {
             Login
           </Link>
           <Link
-            to="/dashboard"
+            to="/login"
             className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-950/15 transition-colors hover:bg-slate-800"
           >
             Open App <ArrowRight className="h-3.5 w-3.5" />
@@ -77,7 +77,7 @@ export default function PublicNav() {
               <Link to="/login" onClick={() => setOpen(false)} className="rounded-full border border-slate-200 px-4 py-2 text-center text-xs font-semibold text-slate-700">
                 Login
               </Link>
-              <Link to="/dashboard" onClick={() => setOpen(false)} className="rounded-full bg-slate-950 px-4 py-2 text-center text-xs font-semibold text-white">
+              <Link to="/login" onClick={() => setOpen(false)} className="rounded-full bg-slate-950 px-4 py-2 text-center text-xs font-semibold text-white">
                 Open App
               </Link>
             </div>

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { breadcrumbStructuredData, faqStructuredData } from './publicStructuredData';
 
 const faqs = [
   ['Does Swim Sight 3D replace the coach?', 'No. The product is built around coach approval. AI can assist, but coaches decide what is accurate and what appears in a report.'],
@@ -22,6 +24,15 @@ export default function FAQPage() {
 
   return (
     <PublicLayout>
+      <StructuredData
+        data={[
+          faqStructuredData(faqs),
+          breadcrumbStructuredData([
+            { name: 'Home', path: '/' },
+            { name: 'FAQ', path: '/faq' },
+          ]),
+        ]}
+      />
       <PublicHero
         eyebrow="FAQ"
         title="Swim Sight 3D frequently asked questions."

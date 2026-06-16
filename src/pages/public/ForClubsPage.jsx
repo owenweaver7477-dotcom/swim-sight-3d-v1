@@ -1,14 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { breadcrumbStructuredData } from './publicStructuredData';
 
 export default function ForClubsPage() {
   usePublicMeta(publicSeoMetadata.clubs);
 
   return (
     <PublicLayout>
+      <StructuredData data={breadcrumbStructuredData([{ name: 'Home', path: '/' }, { name: 'For Clubs', path: '/for-clubs' }])} />
       <PublicHero
         eyebrow="For clubs"
         title="Swimming analysis workflows for clubs and squads."

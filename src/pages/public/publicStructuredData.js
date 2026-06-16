@@ -1,0 +1,58 @@
+const SITE_URL = 'https://swim-sight-3d-v1.vercel.app';
+
+export function homeStructuredData() {
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Swim Sight 3D',
+      url: SITE_URL,
+      logo: `${SITE_URL}/icons/icon-512.png`,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Swim Sight 3D',
+      url: SITE_URL,
+      description: 'AI-assisted swimming analysis report software for coaches and clubs.',
+      inLanguage: 'en',
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Swim Sight 3D',
+      applicationCategory: 'SportsApplication',
+      operatingSystem: 'Web',
+      url: SITE_URL,
+      description: 'AI-assisted swimming analysis report software that helps swim coaches review video, approve findings, assign drills, and create swimmer improvement reports.',
+    },
+  ];
+}
+
+export function faqStructuredData(faqs) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(([question, answer]) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: answer,
+      },
+    })),
+  };
+}
+
+export function breadcrumbStructuredData(items) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: `${SITE_URL}${item.path}`,
+    })),
+  };
+}

@@ -16,8 +16,10 @@ import {
   Waves,
 } from 'lucide-react';
 import PublicLayout from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { homeStructuredData } from './publicStructuredData';
 
 const proofPoints = [
   ['Coach-approved findings', 'Nothing reaches a swimmer report until the coach reviews it.'],
@@ -127,6 +129,7 @@ export default function HomePage() {
 
   return (
     <PublicLayout>
+      <StructuredData data={homeStructuredData()} />
       <section className="relative overflow-hidden border-b border-slate-800 bg-slate-950 px-4 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(14,165,233,0.28),transparent_30%),radial-gradient(circle_at_80%_18%,rgba(34,211,238,0.12),transparent_28%)]" />
         <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'linear-gradient(90deg,#ffffff 1px,transparent 1px),linear-gradient(#ffffff 1px,transparent 1px)', backgroundSize: '56px 56px' }} />

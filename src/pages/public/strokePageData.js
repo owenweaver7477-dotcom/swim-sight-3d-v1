@@ -1,6 +1,7 @@
 export const strokePages = {
   breaststroke: {
     seoKey: 'breaststroke',
+    navLabel: 'Breaststroke',
     title: 'Breaststroke analysis software for coaches',
     h1: 'Breaststroke analysis for coaches.',
     intro: 'Review breaststroke phases with coach-approved findings for catch, breath, heel recovery, kick drive, and body-line reset.',
@@ -9,6 +10,7 @@ export const strokePages = {
   },
   freestyle: {
     seoKey: 'freestyle',
+    navLabel: 'Freestyle',
     title: 'Freestyle analysis software for coaches',
     h1: 'Freestyle analysis for coaches.',
     intro: 'Structure freestyle review around body position, head control, entry, catch setup, pull pathway, rotation, and breathing rhythm.',
@@ -17,6 +19,7 @@ export const strokePages = {
   },
   backstroke: {
     seoKey: 'backstroke',
+    navLabel: 'Backstroke',
     title: 'Backstroke analysis software for coaches',
     h1: 'Backstroke analysis for coaches.',
     intro: 'Help coaches review body alignment, rotation, hand entry, catch setup, pull pathway, kick rhythm, and timing consistency.',
@@ -25,6 +28,7 @@ export const strokePages = {
   },
   butterfly: {
     seoKey: 'butterfly',
+    navLabel: 'Butterfly',
     title: 'Butterfly analysis software for coaches',
     h1: 'Butterfly analysis for coaches.',
     intro: 'Review butterfly with a coach-led structure for body wave, catch, pull, breath timing, kick timing, and recovery rhythm.',

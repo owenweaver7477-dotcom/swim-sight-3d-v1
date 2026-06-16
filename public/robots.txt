@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /analyse
+Disallow: /ai-reviews
+Disallow: /ai-review
+Disallow: /ai-jobs
+Disallow: /ai-calibration
+Disallow: /pilot-readiness
+Disallow: /club-settings
+Disallow: /swimmers
+Disallow: /performance
+Disallow: /club-progress
+Disallow: /swimmer-trends
+Disallow: /technical-standards
+Disallow: /reference-library
+Disallow: /biomechanics-hud
+Disallow: /settings
+Disallow: /shared-report/
+Disallow: /join
+Disallow: /club-onboarding
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://swim-sight-3d-v1.vercel.app/sitemap.xml

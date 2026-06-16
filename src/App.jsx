@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -182,6 +184,8 @@ function App() {
           <AuthenticatedApp />
           <InstallAppPrompt />
         </Router>
+        <Analytics />
+        <SpeedInsights />
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>

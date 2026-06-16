@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { breadcrumbStructuredData } from './publicStructuredData';
 
 const tiers = [
   ['Coach pilot', 'For individual coaches testing video review, Coach Studio, reports, and manual delivery.', 'Pricing is being finalised for pilot coaches.'],
@@ -15,6 +17,7 @@ export default function PricingPage() {
 
   return (
     <PublicLayout>
+      <StructuredData data={breadcrumbStructuredData([{ name: 'Home', path: '/' }, { name: 'Pricing', path: '/pricing' }])} />
       <PublicHero
         eyebrow="Pricing"
         title="Swim Sight 3D pricing for coaches and clubs."

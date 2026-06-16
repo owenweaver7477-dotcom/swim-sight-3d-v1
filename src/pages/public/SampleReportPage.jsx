@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { breadcrumbStructuredData } from './publicStructuredData';
 
 const reportItems = [
   ['What we saw', 'Breaststroke kick setup is slightly wide before the drive phase.'],
@@ -17,6 +19,7 @@ export default function SampleReportPage() {
 
   return (
     <PublicLayout>
+      <StructuredData data={breadcrumbStructuredData([{ name: 'Home', path: '/' }, { name: 'Sample Report', path: '/sample-report' }])} />
       <PublicHero
         eyebrow="Sample report"
         title="Sample swimming analysis report."

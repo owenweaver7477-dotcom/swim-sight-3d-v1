@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { breadcrumbStructuredData } from './publicStructuredData';
 import { strokePages } from './strokePageData';
 
 export default function StrokeAnalysisPage() {
@@ -10,6 +12,7 @@ export default function StrokeAnalysisPage() {
 
   return (
     <PublicLayout>
+      <StructuredData data={breadcrumbStructuredData([{ name: 'Home', path: '/' }, { name: 'Stroke Analysis', path: '/stroke-analysis' }])} />
       <PublicHero
         eyebrow="Stroke analysis"
         title="Swimming stroke analysis for coach-approved reports."

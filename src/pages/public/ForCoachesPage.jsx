@@ -1,14 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
+import { breadcrumbStructuredData } from './publicStructuredData';
 
 export default function ForCoachesPage() {
   usePublicMeta(publicSeoMetadata.coaches);
 
   return (
     <PublicLayout>
+      <StructuredData data={breadcrumbStructuredData([{ name: 'Home', path: '/' }, { name: 'For Coaches', path: '/for-coaches' }])} />
       <PublicHero
         eyebrow="For coaches"
         title="Turn swim video into clearer coach feedback."
