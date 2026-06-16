@@ -1,0 +1,30 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import usePublicMeta from './usePublicMeta';
+
+export default function ForCoachesPage() {
+  usePublicMeta('For Coaches', 'Swim Sight 3D helps swim coaches review video faster, create timestamped findings, assign drills, and share clearer swimmer reports.');
+
+  return (
+    <PublicLayout>
+      <PublicHero
+        eyebrow="For coaches"
+        title="Review a swimmer faster with Coach Studio."
+        description="Use video, key moments, drawing tools, manual findings, and AI-assisted draft evidence to create feedback that swimmers can actually understand."
+        actions={<Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>}
+      />
+      <PublicSection title="What coaches get">
+        <div className="grid gap-4 md:grid-cols-3">
+          <PublicCard title="Faster video review" description="Slow playback down, step approximately through key moments, and capture timestamps without losing the coaching flow." />
+          <PublicCard title="Clearer swimmer feedback" description="Explain what was seen, why it matters, what to feel in the water, and what drill to practise next." />
+          <PublicCard title="Coach-approved reports" description="Every shared report is built from content the coach has approved, edited, or created manually." />
+          <PublicCard title="Timestamped key moments" description="Save report-ready moments for breath timing, catch setup, kick drive, body line, turns, and breakouts." />
+          <PublicCard title="Drill assignment" description="Attach relevant drills and next-focus items so feedback turns into practical training direction." />
+          <PublicCard title="Professional delivery" description="Share secure reports with swimmers or parents without sending private video files publicly." />
+        </div>
+      </PublicSection>
+      <PublicSection subtle title="AI is an assistant inside the coach workflow" description="When video evidence is strong enough, AI can suggest draft findings. When it is not, Coach Studio still supports a complete manual review." />
+    </PublicLayout>
+  );
+}
