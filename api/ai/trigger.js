@@ -15,6 +15,11 @@ import {
   getAIQueueSummary,
   stageEntry,
 } from '../_lib/aiQueue.js';
+import {
+  consumeAIReviewCredit,
+  getClubAIEntitlement,
+  publicEntitlementResponse,
+} from '../_lib/entitlements.js';
 
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
@@ -50,6 +55,8 @@ export default async function handler(req, res) {
 
   let job;
   let upload;
+  let entitlement;
+  let creditUsage = null;
   let attemptCount = 0;
   let maxAttempts = DEFAULT_MAX_ATTEMPTS;
 
@@ -135,6 +142,19 @@ export default async function handler(req, res) {
       });
     }
 
+    entitlement = await getClubAIEntitlement(service, {
+      clubId: upload.club_id,
+      userId: user.id,
+    });
+    if (!entitlement.allowed) {
+      return sendJson(res, 402, {
+        error: entitlement.message,
+        ...publicEntitlementResponse(entitlement),
+        video_upload_id: upload.id,
+        processing_status: upload.processing_status || 'uploaded',
+      });
+    }
+
     if (!RETRYABLE_VIDEO_STATUSES.includes(upload.processing_status || 'uploaded')) {
       return sendJson(res, 409, {
         error: 'This video is not in a retryable state. Refresh the video library before trying again.',
@@ -201,6 +221,14 @@ export default async function handler(req, res) {
     if (createJobError) throw createJobError;
     job = createdJob;
 
+    creditUsage = await consumeAIReviewCredit(service, {
+      entitlement,
+      clubId: upload.club_id,
+      userId: user.id,
+      videoUploadId: upload.id,
+      aiProcessingJobId: job.id,
+    });
+
     await service
       .from('video_uploads')
       .update({ processing_status: 'pending_ai', ai_error_message: null })
@@ -255,8 +283,46 @@ export default async function handler(req, res) {
       max_active_ai_jobs: summary.max_active_ai_jobs,
       global_active_jobs: summary.global_active_jobs,
       global_queued_jobs: summary.global_queued_jobs,
+      entitlement: publicEntitlementResponse(entitlement),
+      credit_usage: creditUsage,
     });
   } catch (error) {
+    if (error.entitlement) {
+      try {
+        const service = createServiceClient();
+        if (job?.id) {
+          await service.from('ai_processing_jobs').update({
+            status: 'error',
+            queue_status: 'failed',
+            stage: error.entitlement.reason || 'ai_entitlement_blocked',
+            quality_flags: ['ai_entitlement_blocked'],
+            recommended_next_action: 'manual_review_recommended',
+            error_message: error.message,
+            last_error: error.message,
+            error_code: error.entitlement.reason || 'ai_entitlement_blocked',
+            dispatch_error: error.message,
+            retryable: false,
+            render_acceptance_status: 'not_dispatched',
+            failed_at: nowIso(),
+            completed_at: nowIso(),
+            stage_history: appendStageHistory(job.stage_history, stageEntry(error.entitlement.reason || 'ai_entitlement_blocked')),
+          }).eq('id', job.id);
+        }
+        if (upload?.id) {
+          await service.from('video_uploads').update({
+            processing_status: upload.processing_status || 'uploaded',
+            ai_error_message: error.message,
+          }).eq('id', upload.id);
+        }
+      } catch {
+        // Best-effort entitlement failure recording only.
+      }
+      return sendJson(res, error.status || 402, {
+        error: error.message,
+        ...error.entitlement,
+      });
+    }
+
     if (job?.id || upload?.id) {
       try {
         const service = createServiceClient();

@@ -8,7 +8,9 @@ async function parseResponse(response) {
 
   if (!response.ok) {
     const message = typeof body === 'object' ? body.error || body.message : body;
-    throw new Error(message || `Request failed with status ${response.status}`);
+    const error = new Error(message || `Request failed with status ${response.status}`);
+    if (body && typeof body === 'object') Object.assign(error, body);
+    throw error;
   }
 
   return { data: body };

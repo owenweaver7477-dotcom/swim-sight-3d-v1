@@ -6,16 +6,17 @@ This project uses Supabase for V1 auth, database, storage, and RLS. Do not put r
 
 Run this checklist before handing the app to a coach:
 
-1. Run all migrations through `016_v1_true_ai_queue_concurrency.sql`.
+1. Run all migrations through `017_v1_ai_entitlements_credit_ledger.sql`.
 2. Confirm `notification_logs` exists.
 3. Confirm `video_annotations` exists.
 4. Confirm `pilot_feedback` exists before using `/pilot-readiness`.
-5. Confirm `clubs` has `initials`, `location`, `primary_color`, and `accent_color`.
-6. Confirm `squads` has `level`, `training_focus`, `lead_coach_name`, `is_active`, and `archived_at`.
-7. Confirm the `private-videos` bucket exists and is private.
-8. Confirm Vercel has `SUPABASE_SERVICE_ROLE_KEY`, `AI_WEBHOOK_SECRET`, `AI_SERVER_URL`, and `PUBLIC_APP_URL`.
-9. Confirm Render has the same `AI_WEBHOOK_SECRET` value as Vercel.
-10. Confirm the Python callback sends `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>`.
+5. Confirm `ai_credit_ledger` exists before testing credit-limited AI plans.
+6. Confirm `clubs` has `initials`, `location`, `primary_color`, `accent_color`, and AI entitlement fields.
+7. Confirm `squads` has `level`, `training_focus`, `lead_coach_name`, `is_active`, and `archived_at`.
+8. Confirm the `private-videos` bucket exists and is private.
+9. Confirm Vercel has `SUPABASE_SERVICE_ROLE_KEY`, `AI_WEBHOOK_SECRET`, `AI_SERVER_URL`, and `PUBLIC_APP_URL`.
+10. Confirm Render has the same `AI_WEBHOOK_SECRET` value as Vercel.
+11. Confirm the Python callback sends `x-ai-webhook-secret` or `Authorization: Bearer <AI_WEBHOOK_SECRET>`.
 
 ## 1. Create Project
 
@@ -78,6 +79,7 @@ Apply in order:
 15. `supabase/migrations/015a_v1_ai_job_status_enum_values.sql`
 16. `supabase/migrations/015b_v1_ai_job_engine_reliability.sql`
 17. `supabase/migrations/016_v1_true_ai_queue_concurrency.sql`
+18. `supabase/migrations/017_v1_ai_entitlements_credit_ledger.sql`
 
 Important: run `015a` and let it complete before running `015b`. PostgreSQL requires new enum values to be committed before later statements can use them.
 
@@ -88,6 +90,7 @@ Confirm that:
 - Helper functions such as `public.has_club_role` are present.
 - `ai_processing_jobs` has the V1 reliability columns, attempt tracking, callback diagnostics, and granular statuses before testing AI Review callbacks.
 - `ai_processing_jobs` has queue fields and the service-role-only queue functions from `016_v1_true_ai_queue_concurrency.sql` before testing multiple AI jobs.
+- `clubs` has AI entitlement fields and `ai_credit_ledger` exists from `017_v1_ai_entitlements_credit_ledger.sql` before testing credit-limited AI plans.
 - `drills` exists with shared default rows before testing database-backed Drill Library content.
 - `video_annotations`, `technical_standards`, `reference_profiles`, `reference_assets`, `notification_logs`, `ai_finding_feedback`, and `pilot_feedback` exist before testing Coach Draw, standards/reference, report delivery, calibration, and pilot feedback.
 - `clubs` has profile fields and `squads` has V1 organisation fields before testing club settings polish.

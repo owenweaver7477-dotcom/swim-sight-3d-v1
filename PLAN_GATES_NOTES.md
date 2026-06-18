@@ -21,6 +21,13 @@ This document describes the Phase 13 paid-AI architecture foundation. It prepare
 
 Front-end feature gates are for user experience only. They are not security.
 
+Phase 15A adds a backend-ready entitlement foundation:
+
+- nullable club-level plan and AI access fields
+- `ai_credit_ledger` for pilot credit grants and AI Review debits
+- server-side AI Review entitlement checks in `/api/ai/trigger`
+- pilot-safe fallback so missing entitlement data does not block current testing
+
 Before real billing or paid AI launch, Swim Sight 3D must enforce entitlements server-side before:
 
 - dispatching paid AI jobs
