@@ -211,12 +211,12 @@ export default function SampleReportPage() {
               <p className="text-base leading-8 text-slate-700">
                 Sample reports show only coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not included.
               </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
-                <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
-                <Link to="/for-clubs" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
-                <Link to="/stroke-analysis/breaststroke" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">Breaststroke analysis</Link>
-                <Link to="/faq" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">Read FAQ</Link>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
+                <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
+                <Link to="/for-clubs" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
+                <Link to="/stroke-analysis/breaststroke" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Breaststroke analysis</Link>
+                <Link to="/faq" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Read FAQ</Link>
               </div>
             </div>
           </div>
@@ -232,11 +232,11 @@ export default function SampleReportPage() {
               Use Coach Studio to review video, capture key moments, add coach-approved feedback, and share clear swimmer improvement reports.
             </p>
           </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/features" className="inline-flex items-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link to="/features" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
               Explore features <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-            <Link to="/login" className="inline-flex items-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+            <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
               Log in to create a report
             </Link>
           </div>

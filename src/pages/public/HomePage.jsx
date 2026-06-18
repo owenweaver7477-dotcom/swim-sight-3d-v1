@@ -148,14 +148,14 @@ export default function HomePage() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">
               Swim Sight 3D does not replace the coach. It gives coaches a clearer system for reviewing video, organising technical feedback, and sharing improvement plans with swimmers or parents.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/sample-report" className="inline-flex items-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition-colors hover:bg-cyan-100">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition-colors hover:bg-cyan-100">
                 View Sample Report <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-              <Link to="/login" className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+              <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
                 Log in
               </Link>
-              <a href="#how-it-works" className="inline-flex items-center rounded-full px-5 py-3 text-sm font-semibold text-slate-300 transition-colors hover:text-white">
+              <a href="#how-it-works" className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-300 transition-colors hover:text-white">
                 See how it works
               </a>
             </div>
@@ -379,11 +379,11 @@ export default function HomePage() {
               Start with a sample report, then log in when you are ready to use the coach workflow.
             </p>
           </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/sample-report" className="inline-flex items-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
               View Sample Report
             </Link>
-            <Link to="/login" className="inline-flex items-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+            <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
               Log in
             </Link>
           </div>

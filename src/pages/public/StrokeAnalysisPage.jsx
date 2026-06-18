@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import PublicLayout, { PublicCard, PublicHero, PublicSection } from '@/components/public/PublicLayout';
+import { ArrowRight, CheckCircle2, FileText, Target } from 'lucide-react';
+import PublicLayout, { PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
@@ -17,18 +18,50 @@ export default function StrokeAnalysisPage() {
         eyebrow="Stroke analysis"
         title="Swimming stroke analysis for coach-approved reports."
         description="Swim Sight 3D organises analysis around stroke phases, common faults, coach cues, drills, and report-ready findings. AI can assist, but coaches approve the final content."
+        actions={
+          <>
+            <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
+            <Link to="/features" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
+          </>
+        }
       />
-      <PublicSection title="Choose a stroke">
+      <PublicSection title="Choose a stroke" description="Each stroke page introduces the review phases and common faults coaches can document inside Coach Studio.">
         <div className="grid gap-4 md:grid-cols-2">
           {Object.entries(strokePages).map(([slug, page]) => (
-            <Link key={slug} to={`/stroke-analysis/${slug}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-sky-200 hover:shadow-md">
-              <h2 className="text-lg font-bold text-slate-950">{page.h1.replace(' analysis', '')}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{page.intro}</p>
+            <Link key={slug} to={`/stroke-analysis/${slug}`} className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-200 hover:shadow-md">
+              <div className="h-2 bg-gradient-to-r from-sky-500 via-cyan-300 to-slate-950" />
+              <div className="p-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-600">Stroke page</div>
+                <div className="mt-3 flex items-start justify-between gap-4">
+                  <h2 className="text-xl font-bold text-slate-950">{page.navLabel}</h2>
+                  <ArrowRight className="mt-1 h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-sky-600" />
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{page.intro}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {page.phases.slice(0, 3).map(phase => (
+                    <span key={phase} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{phase}</span>
+                  ))}
+                </div>
+              </div>
             </Link>
           ))}
         </div>
       </PublicSection>
-      <PublicSection subtle title="What stroke analysis means here" description="It means a structured coaching workflow: review the video, tag the phase, identify the technical fault, approve or write the finding, assign a drill, and share the improvement plan." />
+      <PublicSection subtle title="What stroke analysis means here" description="It means a structured coaching workflow, not an unsupported automatic verdict.">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            [Target, 'Review the phase', 'Tag the stroke phase and save the moments that support the correction.'],
+            [CheckCircle2, 'Approve the finding', 'Coach-created or AI-assisted findings are reviewed before they reach a report.'],
+            [FileText, 'Share the plan', 'The final output is a swimmer improvement report with cues, drills, and next focus.'],
+          ].map(([Icon, title, description]) => (
+            <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <Icon className="h-5 w-5 text-sky-600" />
+              <h2 className="mt-4 text-base font-bold text-slate-950">{title}</h2>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
+            </div>
+          ))}
+        </div>
+      </PublicSection>
     </PublicLayout>
   );
 }
