@@ -122,7 +122,7 @@ export default function AnnotationCanvas({ timestampSeconds, onSave, onCancel, s
         <AnnotationLayer shapes={displayShapes} width={surfaceRef.current?.clientWidth || 1280} height={surfaceRef.current?.clientHeight || 720} className="w-full h-full pointer-events-none" />
       </div>
 
-      <div className="absolute left-3 right-3 bottom-3 z-30 max-h-[48%] overflow-y-auto rounded-xl">
+      <div className="absolute left-3 right-3 bottom-3 z-30 max-h-[48%] overflow-y-auto rounded-xl md:left-auto md:top-3 md:bottom-3 md:w-[min(320px,calc(100%-1.5rem))] md:max-h-none">
         <AnnotationToolbar
           tool={tool}
           color={color}

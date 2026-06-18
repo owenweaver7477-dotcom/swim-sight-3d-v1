@@ -181,13 +181,13 @@ function AthleteOverview() {
 
 function MetricSummary({ tick }) {
   const swolf = useMemo(() => (34.2 + Math.sin(tick / 2) * 0.4).toFixed(1), [tick]);
-  const drag = useMemo(() => (0.74 + Math.cos(tick / 3) * 0.03).toFixed(2), [tick]);
+  const dragRisk = useMemo(() => Math.round(62 + Math.cos(tick / 3) * 5), [tick]);
 
   return (
     <FloatingHUDPanel title="Metric Summary" label="Hydro Index" dock="right">
       <div className="space-y-3">
         <MetricPill label="SWOLF score" value={swolf} tone="cyan" />
-        <MetricPill label="Peak drag coefficient" value={drag} suffix=" Cd" tone="emerald" />
+        <MetricPill label="Peak drag risk cue" value={dragRisk} suffix="%" tone="emerald" />
         <MotionRow>
           <div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.055] px-3 py-3 text-xs leading-relaxed text-amber-50/80">
             Estimate only. Coach verification remains required before report inclusion.

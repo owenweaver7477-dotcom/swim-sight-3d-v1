@@ -40,6 +40,7 @@ function KeyStampCard({
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(stamp.title || 'Key moment');
   const [coachNote, setCoachNote] = useState(stamp.coach_note || '');
+  const [phaseValue, setPhaseValue] = useState(stamp?.drawing_data?.phase || '');
   const phase = stamp?.drawing_data?.phase || null;
   const approxFrame = getApproxFrame(stamp);
   const thumbnail = typeof stamp.thumbnail_data_url === 'string' && stamp.thumbnail_data_url.startsWith('data:image/')
@@ -50,6 +51,10 @@ function KeyStampCard({
     await onUpdate(stamp, {
       title: title.trim() || 'Key moment',
       coach_note: coachNote.trim() || null,
+      drawing_data: {
+        ...(stamp.drawing_data || {}),
+        phase: phaseValue.trim() || null,
+      },
     });
     setEditing(false);
   };
@@ -83,6 +88,12 @@ function KeyStampCard({
         {editing ? (
           <div className="space-y-2">
             <Input value={title} onChange={event => setTitle(event.target.value)} className="h-9 text-xs" />
+            <Input
+              value={phaseValue}
+              onChange={event => setPhaseValue(event.target.value)}
+              className="h-9 text-xs"
+              placeholder="Stroke phase, e.g. kick_setup"
+            />
             <Textarea value={coachNote} onChange={event => setCoachNote(event.target.value)} className="text-xs min-h-[56px]" />
             <div className="flex gap-2">
               <Button size="sm" className="h-8 text-xs" onClick={saveEdit}>
