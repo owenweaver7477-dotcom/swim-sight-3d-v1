@@ -8,8 +8,8 @@ export default function TelemetryChart() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-slate-400">
-        <span>Stroke Rate</span>
-        <span>Forward Velocity</span>
+        <span>Cycle timing cue</span>
+        <span>Motion cue</span>
       </div>
       <div className="relative h-44 overflow-hidden rounded-xl border border-white/10 bg-slate-950/35">
         <div
@@ -20,7 +20,7 @@ export default function TelemetryChart() {
             backgroundSize: '28px 28px',
           }}
         />
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 318 120" preserveAspectRatio="none" aria-label="Stroke rate versus forward velocity chart">
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 318 120" preserveAspectRatio="none" aria-label="Prototype movement cue chart">
           <defs>
             <linearGradient id="strokeGradient" x1="0" x2="1" y1="0" y2="0">
               <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.15" />
@@ -69,18 +69,18 @@ export default function TelemetryChart() {
         </svg>
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-500">
           <span>00:00</span>
-          <span>Cycle Phase</span>
+          <span>Preview trend</span>
           <span>00:18</span>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Peak cadence</div>
-          <div className="mt-1 text-lg font-semibold text-cyan-100">42.8 spm</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Cadence cue</div>
+          <div className="mt-1 text-lg font-semibold text-cyan-100">Sample</div>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Velocity band</div>
-          <div className="mt-1 text-lg font-semibold text-emerald-100">1.64 m/s</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Motion band</div>
+          <div className="mt-1 text-lg font-semibold text-emerald-100">Preview</div>
         </div>
       </div>
     </div>

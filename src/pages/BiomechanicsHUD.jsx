@@ -1,16 +1,19 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, ChevronLeft, CircleGauge, Crosshair, Eye, Layers3, LocateFixed, Move3D, Waves } from 'lucide-react';
+import { Activity, ChevronLeft, Crosshair, Eye, LocateFixed, Lock, MousePointer2, Move3D, RotateCcw, Waves } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FloatingHUDPanel from '@/components/hud/FloatingHUDPanel';
 import SwimTelemetryScene from '@/components/hud/SwimTelemetryScene';
 import TelemetryChart from '@/components/hud/TelemetryChart';
+import { useClubContext } from '@/lib/useClubContext';
+import { getFeatureGateState, getPlanKey } from '@/lib/plans/featureGates';
 
 const cameraPresets = [
-  { id: 'underwater', label: 'Underwater View', icon: Waves },
-  { id: 'birdsEye', label: "Bird's Eye", icon: Eye },
-  { id: 'follow', label: 'Follow Swimmer', icon: LocateFixed },
-  { id: 'bone', label: 'Bone Alignment', icon: Move3D },
+  { id: 'side', label: 'Side View', icon: Waves },
+  { id: 'top', label: 'Top View', icon: Eye },
+  { id: 'follow', label: 'Follow View', icon: LocateFixed },
+  { id: 'alignment', label: 'Alignment View', icon: Move3D },
+  { id: 'reset', label: 'Reset', icon: RotateCcw, reset: true },
 ];
 
 const trialGroups = [
@@ -45,7 +48,7 @@ const statRows = [
   ['Stroke', 'Breaststroke'],
   ['Camera', 'Side view'],
   ['Clip', '00:18.4'],
-  ['Pose reliability', 'High'],
+  ['Evidence mode', 'Prototype preview'],
 ];
 
 function MotionRow({ children, delay = 0 }) {
@@ -98,11 +101,11 @@ function MetricPill({ label, value, suffix, tone = 'cyan' }) {
 
 function TrialRail() {
   return (
-    <FloatingHUDPanel title="Historical Trials" label="Archive" dock="left" className="h-[calc(100vh-2rem)] w-[21rem]">
+    <FloatingHUDPanel title="Sample Review Archive" label="Prototype" dock="left" className="h-[calc(100vh-2rem)] w-[20rem]">
       <div className="mb-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Active squad</div>
-          <div className="mt-1 text-sm font-semibold text-white">Junior Performance</div>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Preview context</div>
+          <div className="mt-1 text-sm font-semibold text-white">Coach-guided sample</div>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
           <Activity className="h-4 w-4" />
@@ -151,7 +154,7 @@ function TrialRail() {
 
 function AthleteOverview() {
   return (
-    <FloatingHUDPanel title="Athlete Overview" label="Biomechanics" dock="right" className="min-h-[18rem]">
+    <FloatingHUDPanel title="Reference Context" label="Elite Lab Preview" dock="right" className="min-h-[18rem]">
       <div className="space-y-4">
         <MotionRow>
           <div className="flex items-center gap-3">
@@ -160,7 +163,7 @@ function AthleteOverview() {
             </div>
             <div>
               <div className="text-lg font-semibold text-white">Mia Hartley</div>
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Breaststroke · Lane 4 · U15</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Sample breaststroke reference</div>
             </div>
           </div>
         </MotionRow>
@@ -180,17 +183,17 @@ function AthleteOverview() {
 }
 
 function MetricSummary({ tick }) {
-  const swolf = useMemo(() => (34.2 + Math.sin(tick / 2) * 0.4).toFixed(1), [tick]);
-  const dragRisk = useMemo(() => Math.round(62 + Math.cos(tick / 3) * 5), [tick]);
+  const alignmentCue = useMemo(() => Math.round(76 + Math.sin(tick / 2) * 4), [tick]);
+  const resistanceCue = useMemo(() => Math.round(62 + Math.cos(tick / 3) * 5), [tick]);
 
   return (
-    <FloatingHUDPanel title="Metric Summary" label="Hydro Index" dock="right">
+    <FloatingHUDPanel title="Prototype Cues" label="Preview Only" dock="right">
       <div className="space-y-3">
-        <MetricPill label="SWOLF score" value={swolf} tone="cyan" />
-        <MetricPill label="Peak drag risk cue" value={dragRisk} suffix="%" tone="emerald" />
+        <MetricPill label="Alignment cue" value={alignmentCue} suffix="%" tone="cyan" />
+        <MetricPill label="Resistance cue" value={resistanceCue} suffix="%" tone="emerald" />
         <MotionRow>
           <div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.055] px-3 py-3 text-xs leading-relaxed text-amber-50/80">
-            Estimate only. Coach verification remains required before report inclusion.
+            Prototype visualisation only. Coach verification remains required before any report inclusion.
           </div>
         </MotionRow>
       </div>
@@ -198,14 +201,14 @@ function MetricSummary({ tick }) {
   );
 }
 
-function CameraDock({ activePreset, onPresetChange }) {
+function CameraDock({ activePreset, onPresetChange, onReset }) {
   return (
-    <div className="pointer-events-auto fixed bottom-5 left-1/2 z-[82] w-[min(48rem,calc(100vw-1.5rem))] -translate-x-1/2">
-      <div className="rounded-full border border-white/10 bg-slate-950/65 px-2 py-2 shadow-2xl shadow-cyan-950/25 backdrop-blur-xl">
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+    <div className="pointer-events-auto fixed bottom-5 left-1/2 z-[82] w-[min(52rem,calc(100vw-1.5rem))] -translate-x-1/2">
+      <div className="rounded-3xl border border-white/10 bg-slate-950/70 px-2 py-2 shadow-2xl shadow-cyan-950/25 backdrop-blur-xl md:rounded-full">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           {cameraPresets.map((preset) => {
             const Icon = preset.icon;
-            const active = activePreset === preset.id;
+            const active = !preset.reset && activePreset === preset.id;
             return (
               <motion.button
                 key={preset.id}
@@ -213,7 +216,7 @@ function CameraDock({ activePreset, onPresetChange }) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                onClick={() => onPresetChange(preset.id)}
+                onClick={() => preset.reset ? onReset() : onPresetChange(preset.id)}
                 className={`flex h-11 items-center justify-center gap-2 rounded-full border px-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all ${
                   active
                     ? 'border-cyan-200/40 bg-cyan-300/15 text-cyan-50 shadow-lg shadow-cyan-400/10'
@@ -232,14 +235,69 @@ function CameraDock({ activePreset, onPresetChange }) {
   );
 }
 
+function EliteLabAccessPanel({ gate }) {
+  const gateMessage = gate.isEnforced && !gate.isAllowed
+    ? gate.message
+    : 'Elite Lab reference comparison is being prepared for future premium plans.';
+
+  return (
+    <div className="pointer-events-auto fixed left-4 top-16 z-[84] w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-amber-200/20 bg-slate-950/72 p-4 text-slate-100 shadow-2xl shadow-cyan-950/20 backdrop-blur-xl xl:left-[22.5rem]">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-amber-200/30 bg-amber-300/10 text-amber-100">
+          <Lock className="h-4 w-4" />
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100">Future Premium</div>
+          <h1 className="mt-1 text-lg font-semibold text-white">Elite Lab Preview</h1>
+          <p className="mt-1 text-xs leading-relaxed text-slate-300">
+            Future premium reference-comparison tools for coach-guided swim analysis.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-3 text-xs leading-relaxed text-slate-300">
+        {gateMessage} Required plan: <span className="font-semibold text-amber-100">{gate.requiredPlanLabel}</span>.
+        Coach Studio and reports remain available now.
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        <span className="rounded-full border border-cyan-200/20 bg-cyan-300/10 px-2.5 py-1 text-cyan-100">In development</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">Not a live measurement tool</span>
+      </div>
+    </div>
+  );
+}
+
+function MovementHelpPanel() {
+  return (
+    <div className="pointer-events-auto fixed bottom-24 left-1/2 z-[82] hidden w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-white/10 bg-slate-950/62 px-4 py-3 text-xs text-slate-300 shadow-xl shadow-cyan-950/20 backdrop-blur-xl md:block">
+      <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-100">
+        <MousePointer2 className="h-3.5 w-3.5" />
+        How to move
+      </div>
+      <div className="grid gap-1.5 sm:grid-cols-2">
+        <div>Desktop: drag to rotate · scroll to zoom · right-drag to pan</div>
+        <div>Touch: one finger to rotate · pinch to zoom · two fingers to pan</div>
+      </div>
+    </div>
+  );
+}
+
 export default function BiomechanicsHUD() {
-  const [cameraPreset, setCameraPreset] = useState('underwater');
+  const { club } = useClubContext();
+  const planKey = getPlanKey(club);
+  const eliteGate = getFeatureGateState('elite_3d_comparison', planKey);
+  const [cameraPreset, setCameraPreset] = useState('side');
+  const [viewKey, setViewKey] = useState(0);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((value) => value + 1), 2600);
     return () => window.clearInterval(id);
   }, []);
+
+  const resetView = () => {
+    setCameraPreset('side');
+    setViewKey((value) => value + 1);
+  };
 
   return (
     <div className="fixed inset-0 z-[70] overflow-hidden bg-[#030712] text-slate-100">
@@ -251,7 +309,7 @@ export default function BiomechanicsHUD() {
             </div>
           }
         >
-          <SwimTelemetryScene cameraPreset={cameraPreset} />
+          <SwimTelemetryScene cameraPreset={cameraPreset} viewKey={viewKey} />
         </Suspense>
       </div>
 
@@ -269,23 +327,25 @@ export default function BiomechanicsHUD() {
           </Link>
         </div>
 
-        <div className="pointer-events-auto fixed left-1/2 top-4 z-[85] hidden w-[min(32rem,calc(100vw-10rem))] -translate-x-1/2 rounded-full border border-amber-200/20 bg-slate-950/70 px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-xl shadow-cyan-950/20 backdrop-blur-xl md:block">
-          Elite Lab preview - future premium reference comparison. Coach-guided only; not a live measurement tool.
+        <div className="pointer-events-auto fixed left-1/2 top-4 z-[85] hidden w-[min(36rem,calc(100vw-10rem))] -translate-x-1/2 rounded-full border border-amber-200/20 bg-slate-950/70 px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-xl shadow-cyan-950/20 backdrop-blur-xl md:block">
+          Elite Lab Preview - future premium reference comparison. Coach-guided only; not part of standard reports.
         </div>
 
-        <div className="hidden xl:block fixed left-4 top-16 z-[82]">
+        <EliteLabAccessPanel gate={eliteGate} />
+
+        <div className="hidden 2xl:block fixed left-4 top-16 z-[82]">
           <TrialRail />
         </div>
 
-        <div className="fixed right-4 top-4 z-[82] hidden w-[min(24.5rem,calc(100vw-2rem))] grid-cols-1 gap-4 lg:grid">
+        <div className="fixed right-4 top-20 z-[82] hidden w-[min(23rem,calc(100vw-2rem))] grid-cols-1 gap-4 lg:grid">
           <AthleteOverview />
-          <FloatingHUDPanel title="Telemetry Chart" label="Stroke Velocity" dock="right">
+          <FloatingHUDPanel title="Movement Preview" label="Sample Trend" dock="right">
             <TelemetryChart />
           </FloatingHUDPanel>
           <MetricSummary tick={tick} />
         </div>
 
-        <div className="fixed left-4 right-4 top-16 z-[82] grid max-h-[40vh] gap-3 overflow-y-auto lg:hidden">
+        <div className="fixed left-4 right-4 top-[17rem] z-[82] grid max-h-[28vh] gap-3 overflow-y-auto lg:hidden">
           <AthleteOverview />
           <MetricSummary tick={tick} />
         </div>
@@ -298,12 +358,9 @@ export default function BiomechanicsHUD() {
           <Crosshair className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-cyan-100/45" />
         </div>
 
-        <div className="pointer-events-auto fixed bottom-24 left-1/2 z-[82] hidden -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/50 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-slate-400 backdrop-blur-xl md:flex">
-          <CircleGauge className="mr-2 h-3.5 w-3.5 text-cyan-200" />
-          Left drag orbit · Scroll zoom · Right drag pan
-        </div>
+        <MovementHelpPanel />
 
-        <CameraDock activePreset={cameraPreset} onPresetChange={setCameraPreset} />
+        <CameraDock activePreset={cameraPreset} onPresetChange={setCameraPreset} onReset={resetView} />
       </div>
     </div>
   );

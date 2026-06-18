@@ -27,8 +27,8 @@ const tiers = [
   },
   {
     plan: PLAN_DEFINITIONS[PLAN_KEYS.ELITE_LAB],
-    items: ['Future multi-angle review', 'Future reference comparison', 'Future priority AI', 'Premium export planning'],
-    note: 'Future premium lab tier. Not a live 3D or measurement product today.',
+    items: ['Future multi-angle review', 'Future 3D reference comparison', 'Future priority AI', 'Premium export planning'],
+    note: 'Future premium lab tier. It is not a live measurement product today.',
   },
 ];
 
@@ -67,7 +67,7 @@ export default function PricingPage() {
               {plan.key === PLAN_KEYS.ELITE_LAB && (
                 <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-800">
                   <Lock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                  Elite Lab is future premium access. It is not a live measurement or swimmer-specific 3D analysis product today.
+                  Elite Lab is future premium access for reference comparison in development. It is not a live measurement product today.
                 </div>
               )}
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm font-semibold leading-6 text-slate-700">{note}</div>

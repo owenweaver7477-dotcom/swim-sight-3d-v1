@@ -45,7 +45,7 @@ export const PLAN_DEFINITIONS = {
     shortLabel: 'Elite Lab',
     description: 'Future premium reference comparison, multi-angle review, priority AI, and advanced exports.',
     summary: 'Future premium lab workflow. Not a live measurement tool.',
-    ctaLabel: 'Discuss Elite Lab',
+    ctaLabel: 'Request access',
   },
 };
 
@@ -111,7 +111,7 @@ export const FEATURE_GATES = {
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
     lockedMessage: 'Priority AI queue is planned for Elite Lab.',
-    ctaLabel: 'Discuss Elite Lab',
+    ctaLabel: 'Request access',
   },
   advanced_progress: {
     label: 'Advanced progress',
@@ -146,14 +146,14 @@ export const FEATURE_GATES = {
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
     lockedMessage: 'Multi-angle review is planned for Elite Lab. Current AI processes the primary angle only.',
-    ctaLabel: 'Discuss Elite Lab',
+    ctaLabel: 'Request access',
   },
   elite_3d_comparison: {
     label: 'Elite Lab reference comparison',
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
     lockedMessage: 'Elite Lab reference comparison is a future premium workflow, not a live measurement tool.',
-    ctaLabel: 'Discuss Elite Lab',
+    ctaLabel: 'Request access',
   },
 };
 

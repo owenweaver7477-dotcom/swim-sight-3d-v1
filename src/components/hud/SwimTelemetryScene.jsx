@@ -4,11 +4,11 @@ import { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls
 import * as THREE from 'three';
 
 const cameraPresets = {
-  underwater: {
+  side: {
     position: new THREE.Vector3(0, 1.35, 7.2),
     target: new THREE.Vector3(0, 0.45, 0),
   },
-  birdsEye: {
+  top: {
     position: new THREE.Vector3(0.15, 8.5, 0.35),
     target: new THREE.Vector3(0, 0, 0),
   },
@@ -16,25 +16,27 @@ const cameraPresets = {
     position: new THREE.Vector3(-4.8, 2.25, 4.8),
     target: new THREE.Vector3(0.7, 0.55, 0),
   },
-  bone: {
+  alignment: {
     position: new THREE.Vector3(4.6, 2.65, 3.2),
     target: new THREE.Vector3(0.15, 0.55, 0),
   },
 };
 
-function CameraRig({ preset }) {
+function CameraRig({ preset, viewKey }) {
   const { camera, gl } = useThree();
   const controls = useRef(null);
   const isAnimating = useRef(true);
-  const activePreset = cameraPresets[preset] || cameraPresets.underwater;
+  const activePreset = cameraPresets[preset] || cameraPresets.side;
 
   useEffect(() => {
     const instance = new ThreeOrbitControls(camera, gl.domElement);
     instance.enableDamping = true;
-    instance.dampingFactor = 0.08;
-    instance.rotateSpeed = 0.65;
-    instance.zoomSpeed = 0.72;
-    instance.panSpeed = 0.6;
+    instance.dampingFactor = 0.065;
+    instance.rotateSpeed = 0.55;
+    instance.zoomSpeed = 0.68;
+    instance.panSpeed = 0.72;
+    instance.enablePan = true;
+    instance.screenSpacePanning = true;
     instance.minDistance = 2.4;
     instance.maxDistance = 12;
     instance.maxPolarAngle = Math.PI * 0.52;
@@ -42,6 +44,10 @@ function CameraRig({ preset }) {
       LEFT: THREE.MOUSE.ROTATE,
       MIDDLE: THREE.MOUSE.DOLLY,
       RIGHT: THREE.MOUSE.PAN,
+    };
+    instance.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
     };
     controls.current = instance;
 
@@ -53,7 +59,7 @@ function CameraRig({ preset }) {
 
   useEffect(() => {
     isAnimating.current = true;
-  }, [preset]);
+  }, [preset, viewKey]);
 
   useFrame(() => {
     if (!controls.current) return;
@@ -103,7 +109,7 @@ function WaterPlane() {
 
 function SwimmerRig({ preset }) {
   const group = useRef(null);
-  const lineColor = preset === 'bone' ? '#e0f2fe' : '#00f2fe';
+  const lineColor = preset === 'alignment' ? '#e0f2fe' : '#00f2fe';
   const joints = useMemo(
     () => [
       [-1.85, 0.46, 0],
@@ -188,13 +194,16 @@ function TelemetryPath() {
   );
 }
 
-export default function SwimTelemetryScene({ cameraPreset }) {
+export default function SwimTelemetryScene({ cameraPreset, viewKey }) {
   return (
     <div className="absolute inset-0 h-screen w-screen" style={{ width: '100vw', height: '100vh' }}>
       <Canvas
         camera={{ position: [0, 1.35, 7.2], fov: 45, near: 0.1, far: 80 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         dpr={[1, 2]}
+        onCreated={({ gl }) => {
+          gl.domElement.style.touchAction = 'none';
+        }}
         style={{ display: 'block', width: '100vw', height: '100vh' }}
       >
         <color attach="background" args={['#030712']} />
@@ -205,7 +214,7 @@ export default function SwimTelemetryScene({ cameraPreset }) {
         <WaterPlane />
         <SwimmerRig preset={cameraPreset} />
         <TelemetryPath />
-        <CameraRig preset={cameraPreset} />
+        <CameraRig preset={cameraPreset} viewKey={viewKey} />
       </Canvas>
     </div>
   );
