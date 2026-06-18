@@ -94,6 +94,7 @@ export default function AnnotationCanvas({ timestampSeconds, onSave, onCancel, s
   };
 
   const save = () => {
+    if (!shapes.length) return;
     const rect = surfaceRef.current?.getBoundingClientRect();
     const canvasWidth = Math.round(rect?.width || 1280);
     const canvasHeight = Math.round(rect?.height || 720);
