@@ -119,7 +119,7 @@ Coach Studio means the product remains useful even when AI evidence is weak. The
 2. Open AI Job Monitor if the user is owner/admin.
 3. Check Render health: `https://swim-sight-ai-server.onrender.com/health`.
 4. Use manual review if the AI job is slow or times out.
-5. Do not imply the AI result is guaranteed to return during the live conversation.
+5. Do not imply the AI result will always return during the live conversation.
 
 ## Shared Report Test
 

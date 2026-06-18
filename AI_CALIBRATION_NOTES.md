@@ -39,8 +39,8 @@ Approved, edited, and rejected findings can later be used to evaluate:
 
 - No automatic live retraining happens from every coach action.
 - No medical diagnosis is made.
-- No guaranteed accuracy is claimed.
-- No exact drag, exact biomechanics, or race prediction is claimed.
+- No certainty-level accuracy claims are made.
+- No numerical force, body-mechanics certainty, or race prediction claims are made.
 - No private video paths, signed URLs, or raw private storage data are included in feedback exports or public reports.
 
 ## Future Upgrade Path

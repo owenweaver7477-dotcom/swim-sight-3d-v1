@@ -78,7 +78,7 @@ Structured data currently includes:
 - FAQ page: `FAQPage`
 - Public pages: `BreadcrumbList` where useful
 
-No fake reviews, fake ratings, fake pricing, medical claims, exact biomechanics claims, or official SwimPro claims are included.
+No fake reviews, fake ratings, fake pricing, medical claims, body-mechanics certainty claims, or official SwimPro claims are included.
 
 ## Open Graph Image
 

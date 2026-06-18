@@ -25,7 +25,7 @@ Swim Sight 3D is currently a Vercel-hosted PWA for controlled club testing. Coac
 - Do not claim a formal relationship with SwimPro unless one exists.
 - Do not claim camera-control support for SwimPro systems.
 - Do not claim exact drag measurement.
-- Do not claim medical, clinical, or guaranteed performance outcomes.
+- Do not claim medical, clinical, or certainty-level performance outcomes.
 - Do not claim AI findings are final without coach approval.
 
 ## Required Before App Store Submission
