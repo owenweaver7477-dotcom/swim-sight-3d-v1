@@ -58,6 +58,13 @@ export default function DrillDetailModal({ drill, onClose, onAssignDrill, assign
         </div>
 
         <div className="px-5 pb-5 space-y-4">
+          {drill.report_summary && drill.report_summary !== drill.purpose && (
+            <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 mb-1.5">Report-Friendly Summary</div>
+              <p className="text-sm text-slate-800 leading-relaxed">{drill.report_summary}</p>
+            </div>
+          )}
+
           {/* Fault tags */}
           {drill.fault_tags && (
             <div>
