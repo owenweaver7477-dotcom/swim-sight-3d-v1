@@ -64,7 +64,12 @@ export default function FAQPage() {
         eyebrow="FAQ"
         title="Swim Sight 3D frequently asked questions."
         description="Short, honest answers about AI, coach approval, privacy, reports, supported strokes, and pilot access."
-        actions={<Link to="/features" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Explore features</Link>}
+        actions={
+          <>
+            <Link to="/features" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Explore features</Link>
+            <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">AI + trust</Link>
+          </>
+        }
       />
       <PublicSection title="Frequently asked questions">
         <div className="grid gap-5">
@@ -89,6 +94,7 @@ export default function FAQPage() {
       <PublicSection subtle title="Useful next pages">
         <div className="flex flex-wrap gap-3">
           <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
+          <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Coach-approved AI</Link>
           <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Explore features</Link>
           <Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Log in</Link>
         </div>

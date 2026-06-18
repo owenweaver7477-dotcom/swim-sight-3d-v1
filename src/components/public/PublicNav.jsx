@@ -6,6 +6,7 @@ const navItems = [
   { to: '/features', label: 'Features' },
   { to: '/for-coaches', label: 'Coaches' },
   { to: '/for-clubs', label: 'Clubs' },
+  { to: '/coach-approved-ai', label: 'AI + Trust' },
   { to: '/sample-report', label: 'Sample Report' },
   { to: '/stroke-analysis', label: 'Stroke Analysis' },
   { to: '/pricing', label: 'Pricing' },

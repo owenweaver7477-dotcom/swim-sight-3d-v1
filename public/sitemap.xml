@@ -21,6 +21,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swim-sight-3d-v1.vercel.app/coach-approved-ai</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swim-sight-3d-v1.vercel.app/sample-report</loc>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>

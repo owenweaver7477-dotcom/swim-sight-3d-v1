@@ -28,6 +28,7 @@ export default function ForCoachesPage() {
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
             <Link to="/features" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">See Coach Studio</Link>
+            <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">AI + trust</Link>
           </>
         }
       />
@@ -82,7 +83,11 @@ export default function ForCoachesPage() {
           ))}
         </div>
       </PublicSection>
-      <PublicSection subtle title="AI is an assistant inside the coach workflow" description="When video evidence is strong enough, AI can suggest draft findings. When it is not, Coach Studio still supports a complete manual review." />
+      <PublicSection subtle title="AI is an assistant inside the coach workflow" description="When video evidence is strong enough, AI can suggest draft findings. When it is not, Coach Studio still supports a complete manual review.">
+        <Link to="/coach-approved-ai" className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
+          Read how coach-approved AI works
+        </Link>
+      </PublicSection>
     </PublicLayout>
   );
 }

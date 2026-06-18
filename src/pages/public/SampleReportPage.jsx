@@ -213,6 +213,7 @@ export default function SampleReportPage() {
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
+                <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Coach-approved AI</Link>
                 <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
                 <Link to="/for-clubs" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
                 <Link to="/stroke-analysis/breaststroke" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Breaststroke analysis</Link>

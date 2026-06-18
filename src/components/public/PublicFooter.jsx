@@ -24,6 +24,7 @@ export default function PublicFooter() {
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Product</div>
           <div className="mt-3 grid gap-2 text-sm">
             <Link to="/features" className="hover:text-white">Features</Link>
+            <Link to="/coach-approved-ai" className="hover:text-white">AI + Trust</Link>
             <Link to="/sample-report" className="hover:text-white">Sample Report</Link>
             <Link to="/stroke-analysis" className="hover:text-white">Stroke Analysis</Link>
             <Link to="/pricing" className="hover:text-white">Pricing</Link>

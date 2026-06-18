@@ -19,6 +19,11 @@ export const publicSeoMetadata = {
     title: 'For Clubs | Swim Sight 3D Swimming Analysis Platform',
     description: 'Swim Sight 3D gives swim clubs private workspaces for squads, coaches, technical findings, reports, and consistent swimmer feedback workflows.',
   },
+  coachApprovedAI: {
+    path: '/coach-approved-ai',
+    title: 'Coach-Approved AI Swimming Analysis | Swim Sight 3D',
+    description: 'Learn how Swim Sight 3D uses coach-approved AI swimming analysis, manual review, video quality gates, private swim video review, and public-safe swimmer reports.',
+  },
   sampleReport: {
     path: '/sample-report',
     title: 'Sample Swimming Analysis Report | Swim Sight 3D',

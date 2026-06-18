@@ -16,6 +16,7 @@ import HomePage from './pages/public/HomePage';
 import FeaturesPage from './pages/public/FeaturesPage';
 import ForCoachesPage from './pages/public/ForCoachesPage';
 import ForClubsPage from './pages/public/ForClubsPage';
+import CoachApprovedAIPage from './pages/public/CoachApprovedAIPage';
 import SampleReportPage from './pages/public/SampleReportPage';
 import StrokeAnalysisPage from './pages/public/StrokeAnalysisPage';
 import BreaststrokeAnalysisPage from './pages/public/BreaststrokeAnalysisPage';
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
     '/features',
     '/for-coaches',
     '/for-clubs',
+    '/coach-approved-ai',
     '/sample-report',
     '/stroke-analysis',
     '/stroke-analysis/breaststroke',
@@ -114,6 +116,7 @@ const AuthenticatedApp = () => {
       <Route path="/features" element={<FeaturesPage />} />
       <Route path="/for-coaches" element={<ForCoachesPage />} />
       <Route path="/for-clubs" element={<ForClubsPage />} />
+      <Route path="/coach-approved-ai" element={<CoachApprovedAIPage />} />
       <Route path="/sample-report" element={<SampleReportPage />} />
       <Route path="/stroke-analysis" element={<StrokeAnalysisPage />} />
       <Route path="/stroke-analysis/breaststroke" element={<BreaststrokeAnalysisPage />} />

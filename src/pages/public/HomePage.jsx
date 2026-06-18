@@ -155,6 +155,9 @@ export default function HomePage() {
               <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
                 Log in
               </Link>
+              <Link to="/coach-approved-ai" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+                How AI works
+              </Link>
               <a href="#how-it-works" className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-300 transition-colors hover:text-white">
                 See how it works
               </a>
@@ -262,6 +265,11 @@ export default function HomePage() {
           <MiniCard icon={Brain} title="Draft findings only" description="AI output is treated as evidence for review, not automatic truth." />
           <MiniCard icon={ShieldCheck} title="Quality gates" description="Weak pose or unreliable evidence becomes manual review with no fake findings." />
           <MiniCard icon={CheckCircle2} title="Coach final say" description="Reports only show approved coach content, whether AI-assisted or manual." />
+        </div>
+        <div className="mt-8">
+          <Link to="/coach-approved-ai" className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
+            Read the AI trust explanation
+          </Link>
         </div>
       </Section>
 

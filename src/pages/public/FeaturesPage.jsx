@@ -55,6 +55,7 @@ export default function FeaturesPage() {
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
+            <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">How AI works</Link>
             <Link to="/login" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Open App</Link>
           </>
         }
@@ -85,7 +86,7 @@ export default function FeaturesPage() {
               Video, AI, manual findings, drills, and reports all support the same principle: evidence is reviewed by the coach before it is shared.
             </p>
             <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-800">
-              AI suggests. Coaches decide.
+              AI suggests. Coaches decide. <Link to="/coach-approved-ai" className="text-sky-700 hover:text-sky-900">Read the trust explanation.</Link>
             </div>
           </div>
           <div className="grid gap-4">
