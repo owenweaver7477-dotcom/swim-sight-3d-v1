@@ -23,6 +23,7 @@ export default function ForClubsPage() {
           <>
             <Link to="/pricing" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">See pilot options</Link>
             <Link to="/sample-report" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">View sample report</Link>
+            <Link to="/privacy-video-review" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Privacy + video review</Link>
           </>
         }
       />
@@ -67,6 +68,9 @@ export default function ForClubsPage() {
             </div>
             <Link to="/sample-report" className="mt-6 inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
               See report format <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <Link to="/privacy-video-review" className="ml-0 mt-3 inline-flex items-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 sm:ml-2">
+              Video privacy <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </div>
         </div>

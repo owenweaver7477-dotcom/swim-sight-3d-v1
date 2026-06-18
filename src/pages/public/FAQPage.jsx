@@ -25,7 +25,8 @@ const faqGroups = [
   {
     category: 'Privacy',
     items: [
-      ['Are videos private?', 'Uploaded videos are stored privately. Public shared reports should never expose private video paths or signed video URLs.'],
+      ['Are videos private?', 'Uploaded videos are handled inside the authenticated club workflow. Public shared reports should never expose private video paths or signed video URLs. See the privacy and video review page for the public explanation.'],
+      ['What is excluded from shared reports?', 'Shared reports are designed to exclude private video paths, signed URLs, raw AI output, rejected findings, calibration feedback, and internal coach notes not selected for the report.'],
     ],
   },
   {
@@ -95,6 +96,7 @@ export default function FAQPage() {
         <div className="flex flex-wrap gap-3">
           <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
           <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Coach-approved AI</Link>
+          <Link to="/privacy-video-review" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Privacy + video review</Link>
           <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Explore features</Link>
           <Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Log in</Link>
         </div>

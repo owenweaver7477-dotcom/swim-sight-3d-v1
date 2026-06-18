@@ -24,6 +24,11 @@ export const publicSeoMetadata = {
     title: 'Coach-Approved AI Swimming Analysis | Swim Sight 3D',
     description: 'Learn how Swim Sight 3D uses coach-approved AI swimming analysis, manual review, video quality gates, private swim video review, and public-safe swimmer reports.',
   },
+  privacyVideoReview: {
+    path: '/privacy-video-review',
+    title: 'Privacy and Video Review | Swim Sight 3D',
+    description: 'Learn how Swim Sight 3D handles private swim video review, coach-approved shared reports, signed video URLs, raw AI output, rejected findings, and public-safe report links.',
+  },
   sampleReport: {
     path: '/sample-report',
     title: 'Sample Swimming Analysis Report | Swim Sight 3D',
