@@ -27,27 +27,27 @@ export const publicSeoMetadata = {
   strokeAnalysis: {
     path: '/stroke-analysis',
     title: 'Swimming Stroke Analysis Software | Swim Sight 3D',
-    description: 'Explore Swim Sight 3D stroke analysis pages for breaststroke, freestyle, backstroke, and butterfly coach-approved technical reports.',
+    description: 'Explore swimming stroke analysis for breaststroke, freestyle, backstroke, and butterfly with coach-approved video review, key moments, cues, drills, and swimmer reports.',
   },
   breaststroke: {
     path: '/stroke-analysis/breaststroke',
     title: 'Breaststroke Analysis Software for Coaches | Swim Sight 3D',
-    description: 'Review breaststroke timing, catch, breath, heel recovery, kick drive, and line reset with coach-approved Swim Sight 3D analysis reports.',
+    description: 'Review breaststroke technique, timing, catch, breath, heel recovery, late foot turn, kick drive, and line reset with coach-approved Swim Sight 3D reports.',
   },
   freestyle: {
     path: '/stroke-analysis/freestyle',
     title: 'Freestyle Analysis Software for Coaches | Swim Sight 3D',
-    description: 'Review freestyle body line, head position, catch setup, pull pathway, breathing timing, and rotation with coach-approved Swim Sight 3D reports.',
+    description: 'Review freestyle technique, body line, head position, catch setup, pull pathway, breathing timing, rotation, and recovery with coach-approved Swim Sight 3D reports.',
   },
   backstroke: {
     path: '/stroke-analysis/backstroke',
     title: 'Backstroke Analysis Software for Coaches | Swim Sight 3D',
-    description: 'Review backstroke body alignment, rotation, hand entry, catch, pull, kick rhythm, and timing consistency with coach-approved reports.',
+    description: 'Review backstroke technique, body alignment, head position, rotation, hand entry, catch setup, pull pathway, hip position, and kick rhythm with coach-approved reports.',
   },
   butterfly: {
     path: '/stroke-analysis/butterfly',
     title: 'Butterfly Analysis Software for Coaches | Swim Sight 3D',
-    description: 'Review butterfly body wave, catch, pull, breath timing, kick timing, rhythm, and recovery with coach-approved Swim Sight 3D reports.',
+    description: 'Review butterfly technique, body wave, hand entry, catch setup, breath timing, kick timing, rhythm, and recovery with coach-approved Swim Sight 3D reports.',
   },
   pricing: {
     path: '/pricing',

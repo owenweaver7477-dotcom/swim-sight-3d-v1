@@ -17,7 +17,7 @@ export default function StrokeAnalysisPage() {
       <PublicHero
         eyebrow="Stroke analysis"
         title="Swimming stroke analysis for coach-approved reports."
-        description="Swim Sight 3D organises analysis around stroke phases, common faults, coach cues, drills, and report-ready findings. AI can assist, but coaches approve the final content."
+        description="Swim Sight 3D organises swimming stroke analysis around video review, stroke phases, key moments, common faults, coach cues, drills, and report-ready findings. AI can assist, but coaches approve the final content."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
@@ -25,6 +25,30 @@ export default function StrokeAnalysisPage() {
           </>
         }
       />
+      <PublicSection title="What swimming stroke analysis means in Swim Sight 3D" description="Stroke analysis is not an automatic verdict. It is a coach-led video review workflow that turns a technical moment into a clear swimmer improvement plan.">
+        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">Coach workflow</div>
+            <h2 className="mt-3 text-2xl font-bold text-slate-950">Tag the phase. Mark the moment. Share the plan.</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Coaches can use Swim Sight 3D to review footage, save key timestamps, document technique faults, attach cues and drills, and create coach-approved swimmer reports.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ['Phase tagging', 'Organise review around entry, catch, breath, kick, recovery, rhythm, or line reset.'],
+              ['Key moments', 'Save the timestamp that shows the correction clearly.'],
+              ['Coach findings', 'Write or approve the technical observation before it reaches the report.'],
+              ['Report output', 'Give swimmers a practical plan with cue, drill, and next focus.'],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-base font-bold text-slate-950">{title}</h2>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </PublicSection>
       <PublicSection title="Choose a stroke" description="Each stroke page introduces the review phases and common faults coaches can document inside Coach Studio.">
         <div className="grid gap-4 md:grid-cols-2">
           {Object.entries(strokePages).map(([slug, page]) => (
@@ -38,7 +62,7 @@ export default function StrokeAnalysisPage() {
                 </div>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{page.intro}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {page.phases.slice(0, 3).map(phase => (
+                  {page.phases.slice(0, 4).map(phase => (
                     <span key={phase} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{phase}</span>
                   ))}
                 </div>
@@ -60,6 +84,11 @@ export default function StrokeAnalysisPage() {
               <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
             </div>
           ))}
+        </div>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
+          <Link to="/features" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">Explore features</Link>
+          <Link to="/for-coaches" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">For coaches</Link>
         </div>
       </PublicSection>
     </PublicLayout>
