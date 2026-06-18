@@ -939,6 +939,20 @@ export default function Analyse() {
           <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-[11px] text-muted-foreground leading-relaxed">
             Upload footage exported from SwimPro or any standard camera system. Use a short 5-15 second clip where the swimmer is clearly visible. Side angle is preferred. Large swim videos are supported, but upload speed depends on Wi-Fi and device. Avoid screen recordings where possible; underwater distortion can reduce pose reliability. If AI evidence is weak, the report will move to manual coach review.
           </div>
+          <div className="mb-4 grid gap-2 rounded-xl border border-border bg-card p-3 text-[11px] text-muted-foreground sm:grid-cols-3">
+            <div>
+              <span className="font-semibold text-foreground">Upload status stays visible.</span><br />
+              Video rows appear in the library while uploading, after refresh, and if an upload fails.
+            </div>
+            <div>
+              <span className="font-semibold text-foreground">Keep this tab open.</span><br />
+              Large videos can take a few minutes, and inactive browser tabs may slow uploads down.
+            </div>
+            <div>
+              <span className="font-semibold text-foreground">Manual review is always available.</span><br />
+              Once uploaded, Coach Studio can be used even if AI is queued, slow, or unavailable.
+            </div>
+          </div>
 
           <div className="mb-4">
             <Label className="text-xs text-muted-foreground">Capture Source</Label>
@@ -1043,14 +1057,22 @@ export default function Analyse() {
             </div>
           )}
           {uploadInProgress && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 p-3 rounded-lg bg-card border border-border">
-              <Loader2 className="w-4 h-4 animate-spin text-primary" /> {uploadStatusMessage || 'Uploading video to private club storage...'}
+            <div className="flex items-start gap-2 text-xs text-muted-foreground mb-3 p-3 rounded-lg bg-card border border-border">
+              <Loader2 className="w-4 h-4 animate-spin text-primary mt-0.5 flex-shrink-0" />
+              <div>
+                <div>{uploadStatusMessage || 'Uploading video to private club storage...'}</div>
+                <div className="mt-1 text-[10px]">Keep this tab open until upload completes. If the upload fails, the row will remain visible so you can retry or delete it.</div>
+              </div>
             </div>
           )}
           {uploadReady && (
             <div className="space-y-3 mb-3">
-              <div className="flex items-center gap-2 text-xs text-green-400 p-3 rounded-lg bg-card border border-border">
-                <CheckCircle2 className="w-4 h-4" /> {uploadStatusMessage || 'Video uploaded. Ready for AI Review.'}
+              <div className="flex items-start gap-2 text-xs text-green-700 p-3 rounded-lg bg-green-50 border border-green-200">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="font-semibold">{uploadStatusMessage || 'Video uploaded. Ready for review.'}</div>
+                  <div className="mt-1 text-[10px] text-green-700">Next: configure the review, send for AI Review, or open Coach Studio for manual review.</div>
+                </div>
               </div>
               {/* Review Setup Panel — appears after successful upload */}
               <ReviewSetupPanel
@@ -1069,10 +1091,10 @@ export default function Analyse() {
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/30 space-y-2">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-primary flex-shrink-0" />
-                  <div className="text-sm font-semibold text-foreground">Video uploaded — ready for AI Review</div>
+                  <div className="text-sm font-semibold text-foreground">Video uploaded — ready for review</div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Preview the clip below, then use the <strong>Uploaded Videos — Send to AI</strong> section to send it for AI Review. The Python server only receives a short-lived signed video URL.
+                  Preview the clip below, then continue to configure the review. You can send it for AI Review or open Coach Studio for manual review. The Python server only receives a short-lived signed video URL when AI Review is started.
                 </p>
                 <Button
                   size="sm"
@@ -1087,8 +1109,9 @@ export default function Analyse() {
             </div>
           )}
           {uploadFailed && (
-            <div className="space-y-2 text-xs text-destructive mb-3 p-3 rounded-lg bg-card border border-border">
-              <span className="flex items-start gap-1"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadStatusMessage || 'Upload did not complete. Retry on stable Wi-Fi or delete the failed row.'}</span>
+            <div className="space-y-2 text-xs text-red-700 mb-3 p-3 rounded-lg bg-red-50 border border-red-200">
+              <span className="flex items-start gap-1"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadStatusMessage || 'Upload did not complete. The failed row remains in the Video Library so it is not hidden or lost.'}</span>
+              <p className="text-[10px] leading-relaxed">Retry while the selected file is still available, or delete the failed row and upload the clip again on stable Wi-Fi. AI Review is disabled until the private upload completes.</p>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleUpload} disabled={!file}>
                   Retry upload
@@ -1117,14 +1140,17 @@ export default function Analyse() {
 
       <FeedbackButton pageRoute="/analyse" />
 
-      {/* Uploaded Videos — Send to AI — always visible on Steps 0, 1, 2 */}
+      {/* Video Library — Review Status — always visible on Steps 0, 1, 2 */}
       {(step === 0 || step === 1 || step === 2) && club && (
         <div className="mt-10" ref={videoLibraryRef}>
           <div className="h-px bg-border mb-6" />
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-bold text-foreground">Uploaded Videos — Send to AI</h2>
+            <h2 className="text-sm font-bold text-foreground">Video Library — Review Status</h2>
           </div>
+          <p className="mb-4 text-xs text-muted-foreground leading-relaxed">
+            Uploaded videos stay visible here. Use the next-action message on each card to preview, open Coach Studio, send for AI Review, retry AI, or remove failed uploads.
+          </p>
           {swimmers.length === 0 ? (
             <div className="p-5 rounded-xl bg-card border border-border text-center text-xs text-muted-foreground">
               Add a swimmer first, then upload a video to trigger AI Analysis.

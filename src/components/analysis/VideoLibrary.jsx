@@ -13,7 +13,7 @@ import { format, differenceInMinutes } from 'date-fns';
 import AIJobStatusBadge from './AIJobStatusBadge';
 
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
-const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading'];
+const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'finalising_upload'];
 const FAILED_UPLOAD_STATUSES = ['upload_failed'];
 const ACTIVE_PROCESSING_STATUSES = ['queued_ai', 'processing_ai', 'pending_ai', 'processing'];
 const REFRESHING_STATUSES = [...ACTIVE_UPLOAD_STATUSES, ...ACTIVE_PROCESSING_STATUSES];
@@ -46,6 +46,100 @@ function asQualityFlags(value) {
   if (typeof value === 'string') return value.split(',').filter(Boolean);
   return [];
 }
+
+function getCoachStatusSummary({
+  status,
+  uploadStatus,
+  jobStatus,
+  queueStatus,
+  linkedReport,
+  isUploading,
+  isUploadFailed,
+  isTimedOut,
+  isUnreliable,
+  hasPrivateObject,
+}) {
+  if (isUploadFailed) {
+    return {
+      tone: 'danger',
+      label: 'Upload failed',
+      detail: 'The video row is saved, but the private file is not ready. Select the file again to retry, or remove the failed row.',
+      action: 'Retry upload or delete row',
+    };
+  }
+  if (isUploading) {
+    return {
+      tone: 'info',
+      label: uploadStatus === 'finalising_upload' ? 'Finalising upload' : 'Uploading private video',
+      detail: 'Keep this tab open for the most reliable upload. If the browser is inactive, large videos may slow down.',
+      action: 'Wait for upload to finish',
+    };
+  }
+  if (!hasPrivateObject) {
+    return {
+      tone: 'warning',
+      label: 'Private file missing',
+      detail: 'This row does not have a usable private storage object yet. Re-upload the clip before AI review.',
+      action: 'Upload again',
+    };
+  }
+  if (isTimedOut) {
+    return {
+      tone: 'warning',
+      label: 'AI review timed out',
+      detail: 'The uploaded video is still saved. Retry AI Review or continue in Coach Studio.',
+      action: 'Retry AI or continue manual review',
+    };
+  }
+  if (status === 'error' || jobStatus === 'failed' || jobStatus === 'retry_available') {
+    return {
+      tone: 'warning',
+      label: 'AI retry available',
+      detail: 'AI Review did not complete cleanly. The video remains available for retry or manual review.',
+      action: 'Retry AI Review or continue manual review',
+    };
+  }
+  if (ACTIVE_PROCESSING_STATUSES.includes(status) || ['queued', 'dispatching', 'dispatched', 'processing'].includes(queueStatus)) {
+    const queued = status === 'pending_ai' || status === 'queued_ai' || queueStatus === 'queued' || jobStatus === 'queued';
+    return {
+      tone: 'info',
+      label: queued ? 'AI queued' : 'AI processing',
+      detail: queued
+        ? 'The video is waiting for the AI worker. Coach Studio remains available while it waits.'
+        : 'AI Review is processing. Coach Studio remains available if the coach wants to continue manually.',
+      action: queued ? 'Wait or open Coach Studio' : 'Wait for AI result',
+    };
+  }
+  if (status === 'completed' && linkedReport) {
+    return {
+      tone: 'success',
+      label: 'AI review needs coach approval',
+      detail: 'Open Coach Studio to verify, edit, approve, or reject findings before sharing.',
+      action: 'Review AI findings',
+    };
+  }
+  if (isUnreliable) {
+    return {
+      tone: 'warning',
+      label: 'Manual review available',
+      detail: 'AI evidence was limited or not requested. Coach Studio can still create a complete report.',
+      action: 'Continue in Coach Studio',
+    };
+  }
+  return {
+    tone: 'success',
+    label: 'Uploaded — ready for review',
+    detail: 'The private video is ready. Start AI Review or open Coach Studio for manual review.',
+    action: 'Choose AI or Coach Studio',
+  };
+}
+
+const SUMMARY_TONE_CLASS = {
+  success: 'bg-green-50 border-green-200 text-green-800',
+  warning: 'bg-amber-50 border-amber-200 text-amber-800',
+  danger: 'bg-red-50 border-red-200 text-red-700',
+  info: 'bg-blue-50 border-blue-200 text-blue-800',
+};
 
 function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, canTriggerAI, onAIStatusChange }) {
   const navigate = useNavigate();
@@ -145,6 +239,21 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     || jobStatus === 'unreliable_pose'
     || jobStatus === 'manual_review_recommended';
   const isTimedOut = jobStatus === 'timed_out' || (jobStatus === 'error' && job?.stage === 'timed_out');
+  const isAiActive = ACTIVE_PROCESSING_STATUSES.includes(status)
+    || ['queued', 'dispatching', 'dispatched', 'processing'].includes(queueStatus)
+    || ['queued', 'accepted', 'running'].includes(jobStatus);
+  const coachStatus = getCoachStatusSummary({
+    status,
+    uploadStatus,
+    jobStatus,
+    queueStatus,
+    linkedReport,
+    isUploading,
+    isUploadFailed,
+    isTimedOut,
+    isUnreliable,
+    hasPrivateObject,
+  });
 
   const renderPrimaryAction = () => {
     if (isUploadFailed) {
@@ -250,7 +359,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       );
     }
 
-    if (ACTIVE_PROCESSING_STATUSES.includes(status)) {
+    if (isAiActive) {
       const isQueuedForAI = status === 'pending_ai'
         || status === 'queued_ai'
         || queueStatus === 'queued'
@@ -320,9 +429,9 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         </div>
       ) : (
         <div
-          className="rounded-lg bg-secondary flex items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors"
+          className={`rounded-lg bg-secondary flex items-center justify-center transition-colors ${isUploadFailed || isUploading || !hasPrivateObject ? 'cursor-default' : 'cursor-pointer hover:bg-secondary/80'}`}
           style={{ aspectRatio: '16/9' }}
-          onClick={loadSignedUrl}
+          onClick={isUploadFailed || isUploading || !hasPrivateObject ? undefined : loadSignedUrl}
         >
           {loadingUrl ? (
             <Loader2 className="w-7 h-7 text-primary animate-spin" />
@@ -335,8 +444,16 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <Film className="w-8 h-8" />
-              <span className="text-[10px]">Click to preview</span>
+              {isUploading ? <Loader2 className="w-8 h-8 animate-spin text-primary" /> : isUploadFailed ? <AlertCircle className="w-8 h-8 text-red-500" /> : <Film className="w-8 h-8" />}
+              <span className="text-[10px] text-center px-3">
+                {isUploading
+                  ? 'Upload in progress'
+                  : isUploadFailed
+                    ? 'Upload failed'
+                    : hasPrivateObject
+                      ? 'Click to preview'
+                      : 'Private video not ready'}
+              </span>
             </div>
           )}
         </div>
@@ -373,6 +490,12 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         )}
 
         <AIJobStatusBadge status={status} jobStatus={jobStatus} />
+
+        <div className={`rounded-lg border p-2.5 text-[10px] leading-relaxed ${SUMMARY_TONE_CLASS[coachStatus.tone] || SUMMARY_TONE_CLASS.info}`}>
+          <div className="font-bold text-[11px]">{coachStatus.label}</div>
+          <div className="mt-0.5">{coachStatus.detail}</div>
+          <div className="mt-1 font-semibold">Next: {coachStatus.action}</div>
+        </div>
 
         <details className="rounded-lg border border-border bg-secondary/30">
           <summary className="cursor-pointer list-none px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -425,7 +548,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             {aiStarted && (
               <div className="flex flex-wrap gap-1.5">
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate('/ai-reviews')}>
-                  <FileText className="w-3 h-3 mr-1" /> Open Coach Studio
+                  <FileText className="w-3 h-3 mr-1" /> Open AI Reviews
                 </Button>
                 <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/ai-jobs')}>
                   <Activity className="w-3 h-3 mr-1" /> AI Jobs
@@ -445,7 +568,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <Button size="sm" variant="ghost"
           className="w-full h-7 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => onStartReview(upload)}>
-          <Play className="w-3 h-3 mr-1" /> Open Coach Studio
+          <Play className="w-3 h-3 mr-1" /> Continue Manual Review
         </Button>
       )}
 
@@ -549,8 +672,13 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          {uploads.length} Uploaded Video{uploads.length !== 1 ? 's' : ''}
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {uploads.length} Uploaded Video{uploads.length !== 1 ? 's' : ''}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Each row shows whether the video is uploading, ready for Coach Studio, queued for AI, processing, or needs retry.
+          </p>
         </div>
         <button
           className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"

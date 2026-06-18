@@ -5,14 +5,14 @@ export const JOB_STATUS_CONFIG = {
   // VideoUpload.processing_status
   preparing_upload:{ label: 'Preparing upload',                  color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
   uploading:        { label: 'Uploading private video',           color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true },
-  upload_failed:    { label: 'Upload Failed',                     color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
-  uploaded:         { label: 'Ready for AI Review',                color: 'text-green-600 bg-green-50 border-green-200',    icon: CheckCircle2, spin: false },
+  upload_failed:    { label: 'Upload failed',                     color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
+  uploaded:         { label: 'Uploaded — ready for review',        color: 'text-green-600 bg-green-50 border-green-200',    icon: CheckCircle2, spin: false },
   queued_ai:        { label: 'Queued for AI review',              color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
   pending_ai:       { label: 'Queued for AI review',              color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: Clock,        spin: false },
   processing_ai:    { label: 'AI Processing...',                  color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true },
   processing:       { label: 'AI Processing…',                    color: 'text-primary bg-primary/10 border-primary/20',   icon: Loader2,      spin: true },
-  completed:        { label: 'Pose Evidence Found',                color: 'text-cyan-600 bg-cyan-50 border-cyan-200',       icon: CheckCircle2, spin: false },
-  manual_review:    { label: 'Manual Review Recommended',          color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
+  completed:        { label: 'AI review ready',                    color: 'text-cyan-600 bg-cyan-50 border-cyan-200',       icon: CheckCircle2, spin: false },
+  manual_review:    { label: 'Manual review available',            color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   unreliable_pose:  { label: 'Pose Unreliable',                   color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   analysis_unreliable: { label: 'Pose Unreliable',               color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   error:            { label: 'Processing Failed',                  color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
@@ -32,7 +32,7 @@ export const JOB_STATUS_CONFIG = {
   manual_review_recommended: { label: 'Manual review recommended',       color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertTriangle, spin: false },
   retry_available:       { label: 'Retry available',                      color: 'text-orange-600 bg-orange-50 border-orange-200', icon: RotateCw,      spin: false },
   failed:                { label: 'Dispatch failed',                      color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
-  timed_out:              { label: 'Timed Out',                          color: 'text-red-600 bg-red-50 border-red-200',          icon: Clock,        spin: false },
+  timed_out:              { label: 'Timed out — retry available',         color: 'text-red-600 bg-red-50 border-red-200',          icon: Clock,        spin: false },
   cancelled:              { label: 'Cancelled',                          color: 'text-slate-600 bg-slate-50 border-slate-200',    icon: XCircle,      spin: false },
 };
 
