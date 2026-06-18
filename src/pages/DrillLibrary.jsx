@@ -366,14 +366,14 @@ export default function DrillLibrary({
       )}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 p-1 rounded-xl bg-slate-100 mb-6 w-fit">
+      <div className="mb-6 flex w-full gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 sm:w-fit">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex min-w-max items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab.id
                   ? 'bg-white text-primary shadow-sm border border-slate-200'
                   : 'text-slate-500 hover:text-slate-700'
@@ -395,12 +395,12 @@ export default function DrillLibrary({
       {activeTab === 'packs' && (
         <div>
           {/* Quick filters */}
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
             {QUICK_FILTERS.map(qf => (
               <button
                 key={qf.label}
                 onClick={() => applyQuickFilter(qf)}
-                className="text-xs px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-600 font-medium hover:border-primary/40 hover:text-primary transition-colors"
+                className="min-w-max text-xs px-3 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-medium hover:border-primary/40 hover:text-primary transition-colors"
               >
                 {qf.label}
               </button>

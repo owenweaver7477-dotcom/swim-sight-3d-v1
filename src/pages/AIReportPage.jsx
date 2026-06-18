@@ -254,16 +254,16 @@ function CoachStudioGuidedNav({
           <h2 className="text-base font-bold text-foreground">{current.label}</h2>
           <p className="text-xs text-muted-foreground mt-1 max-w-2xl">{current.helper}</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="h-9 text-xs" onClick={onBack} disabled={!canGoBack}>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-shrink-0">
+          <Button size="sm" variant="outline" className="h-11 text-xs sm:h-10" onClick={onBack} disabled={!canGoBack}>
             Back
           </Button>
-          <Button size="sm" className="h-9 text-xs bg-primary text-primary-foreground" onClick={onNext} disabled={!canGoNext}>
+          <Button size="sm" className="h-11 text-xs bg-primary text-primary-foreground sm:h-10" onClick={onNext} disabled={!canGoNext}>
             Next
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 xl:grid-cols-6">
         {COACH_STUDIO_GUIDED_STEPS.map((step, index) => {
           const complete = completion[step.id];
           const active = activeStep === step.id;
@@ -272,7 +272,7 @@ function CoachStudioGuidedNav({
               key={step.id}
               type="button"
               onClick={() => onStepChange(step.id)}
-              className={`text-left p-2.5 rounded-lg border transition-colors ${
+              className={`min-w-[9.5rem] text-left p-3 rounded-lg border transition-colors md:min-w-0 ${
                 active
                   ? 'bg-primary/10 border-primary/30 text-foreground'
                   : complete
@@ -284,7 +284,7 @@ function CoachStudioGuidedNav({
                 <span className="text-[10px] font-bold uppercase tracking-wider">Step {index + 1}</span>
                 {complete && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
               </div>
-              <div className="text-xs font-semibold mt-1">{step.label}</div>
+              <div className="text-xs font-semibold mt-1 leading-5">{step.label}</div>
             </button>
           );
         })}
@@ -305,9 +305,9 @@ function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coach
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
       {rows.map(row => (
-        <div key={row.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+        <div key={row.label} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
           <div className="text-[10px] text-slate-500">{row.label}</div>
           <div className="flex items-end justify-between gap-2 mt-1">
             <div className="text-lg font-bold text-slate-900">{row.value}</div>
@@ -316,7 +316,7 @@ function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coach
         </div>
       ))}
       {isReportFinalised && (
-        <div className="col-span-2 lg:col-span-4 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+        <div className="sm:col-span-2 lg:col-span-4 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
           This coach-approved report is finalised. Share and PDF actions are available in the final step.
         </div>
       )}
@@ -1279,7 +1279,7 @@ export default function AIReportPage() {
 
           {coachStudioStep === 'findings' && canEdit && !isReportFinalised && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-3">
                 <Plus className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-foreground uppercase tracking-wider">Add Coach-Created Finding</div>
@@ -1293,13 +1293,13 @@ export default function AIReportPage() {
                   Pose evidence was unreliable or unavailable. Add real coach observations here; no AI findings are fabricated.
                 </div>
               )}
-              <div className="rounded-xl border border-border bg-secondary/20 p-3 space-y-3">
+              <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">What happened</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <select
                     value={manualPhase}
                     onChange={e => setManualPhase(e.target.value)}
-                    className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                    className="h-11 rounded-md border border-input bg-background px-3 py-1 text-sm md:text-xs"
                   >
                     <option value="">Select stroke phase</option>
                     {studioPhases.map(phase => (
@@ -1309,7 +1309,7 @@ export default function AIReportPage() {
                   <select
                     value={manualSeverity}
                     onChange={e => setManualSeverity(e.target.value)}
-                    className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                    className="h-11 rounded-md border border-input bg-background px-3 py-1 text-sm md:text-xs"
                   >
                     <option value="low">Low severity</option>
                     <option value="medium">Medium severity</option>
@@ -1317,18 +1317,18 @@ export default function AIReportPage() {
                     <option value="critical">Critical severity</option>
                   </select>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <select
                     value={manualFaultTag}
                     onChange={e => setManualFaultTag(e.target.value)}
-                    className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                    className="h-11 rounded-md border border-input bg-background px-3 py-1 text-sm md:text-xs"
                   >
                     <option value="">Optional fault tag</option>
                     {COACH_STUDIO_FAULT_TAGS.map(tag => (
                       <option key={tag} value={tag}>{labelFromKey(tag)}</option>
                     ))}
                   </select>
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs">
+                  <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs">
                     <span className="text-muted-foreground">Video timestamp</span>
                     <span className="font-mono text-primary">
                       {manualTimestamp != null ? formatTimestamp(Number(manualTimestamp)) : 'Capture from Coach Studio'}
@@ -1338,70 +1338,70 @@ export default function AIReportPage() {
                 <Textarea
                   value={manualObservation}
                   onChange={e => setManualObservation(e.target.value)}
-                  className="text-xs min-h-[76px] bg-background"
+                  className="text-sm min-h-[92px] bg-background md:text-xs"
                   placeholder="What did the coach verify on video?"
                 />
               </div>
 
-              <div className="rounded-xl border border-border bg-white p-3 space-y-3">
+              <div className="rounded-xl border border-border bg-white p-4 space-y-3">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Coaching correction</div>
                 <Textarea
                   value={manualWhy}
                   onChange={e => setManualWhy(e.target.value)}
-                  className="text-xs min-h-[56px]"
+                  className="text-sm min-h-[72px] md:text-xs"
                   placeholder="Why does it matter for the swimmer?"
                 />
                 <Textarea
                   value={manualCue}
                   onChange={e => setManualCue(e.target.value)}
-                  className="text-xs min-h-[56px]"
+                  className="text-sm min-h-[72px] md:text-xs"
                   placeholder="What should the swimmer feel in the water?"
                 />
-              {manualDrillSuggestions.length > 0 && (
-                <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
-                  <div className="text-[10px] uppercase tracking-wider text-blue-700 font-bold">
-                    Suggested drills from phase/fault
+                {manualDrillSuggestions.length > 0 && (
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
+                    <div className="text-[10px] uppercase tracking-wider text-blue-700 font-bold">
+                      Suggested drills from phase/fault
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                      {manualDrillSuggestions.map(drill => (
+                        <button
+                          key={drill.id}
+                          type="button"
+                          onClick={() => {
+                            setManualDrill(drill.title);
+                            setManualLinkedDrill(drill);
+                          }}
+                          className={`text-left p-3 rounded-lg border transition-colors ${
+                            manualLinkedDrill?.id === drill.id || manualDrill === drill.title
+                              ? 'bg-green-50 border-green-200 text-green-800'
+                              : 'bg-white border-blue-100 text-slate-700 hover:border-primary/40'
+                          }`}
+                        >
+                          <div className="text-[11px] font-semibold">{drill.title}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">
+                            {drillSummary(drill)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-blue-700/70">
+                      Suggestions come from the Drill Library using stroke, phase, fault tag, and coach wording.
+                    </p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {manualDrillSuggestions.map(drill => (
-                      <button
-                        key={drill.id}
-                        type="button"
-                        onClick={() => {
-                          setManualDrill(drill.title);
-                          setManualLinkedDrill(drill);
-                        }}
-                        className={`text-left p-2 rounded-lg border transition-colors ${
-                          manualLinkedDrill?.id === drill.id || manualDrill === drill.title
-                            ? 'bg-green-50 border-green-200 text-green-800'
-                            : 'bg-white border-blue-100 text-slate-700 hover:border-primary/40'
-                        }`}
-                      >
-                        <div className="text-[11px] font-semibold">{drill.title}</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">
-                          {drillSummary(drill)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[9px] text-blue-700/70">
-                    Suggestions come from the Drill Library using stroke, phase, fault tag, and coach wording.
-                  </p>
-                </div>
-              )}
+                )}
                 <Textarea
                   value={manualDrill}
                   onChange={e => {
                     setManualDrill(e.target.value);
                     setManualLinkedDrill(null);
                   }}
-                  className="text-xs min-h-[44px]"
+                  className="text-sm min-h-[60px] md:text-xs"
                   placeholder="Drill recommendation..."
                 />
                 <Textarea
                   value={manualNextFocus}
                   onChange={e => setManualNextFocus(e.target.value)}
-                  className="text-xs min-h-[56px]"
+                  className="text-sm min-h-[72px] md:text-xs"
                   placeholder="Next focus..."
                 />
               </div>
@@ -1421,7 +1421,7 @@ export default function AIReportPage() {
               </details>
               <Button
                 size="sm"
-                className="h-10 text-xs bg-primary text-primary-foreground"
+                className="h-11 w-full text-xs bg-primary text-primary-foreground sm:w-auto"
                 onClick={() => createManualFinding.mutate()}
                 disabled={createManualFinding.isPending || !manualObservation.trim()}
               >
@@ -1543,7 +1543,7 @@ export default function AIReportPage() {
                   </p>
                 </div>
               )}
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-xs font-semibold text-foreground">Ready to finalise?</div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -1553,7 +1553,7 @@ export default function AIReportPage() {
                 </div>
                 <Button
                   size="sm"
-                  className="h-8 text-xs bg-green-700 hover:bg-green-600 text-white flex-shrink-0"
+                  className="h-11 w-full text-xs bg-green-700 hover:bg-green-600 text-white sm:w-auto sm:flex-shrink-0"
                   onClick={() => setShowQualityGate(true)}
                   disabled={finalising}
                 >

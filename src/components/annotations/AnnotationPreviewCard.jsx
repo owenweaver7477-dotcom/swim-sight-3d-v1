@@ -18,7 +18,7 @@ export default function AnnotationPreviewCard({
   });
 
   return (
-    <div className="rounded-xl bg-card border border-border overflow-hidden">
+    <div className="rounded-2xl bg-card border border-border overflow-hidden">
       <div
         className="bg-slate-950"
         style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
@@ -54,7 +54,7 @@ export default function AnnotationPreviewCard({
             <select
               value={annotation.finding_id || ''}
               onChange={e => onUpdate(annotation, { finding_id: e.target.value || null })}
-              className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+              className="w-full h-11 rounded-md border border-input bg-background px-2 text-sm md:text-xs"
             >
               <option value="">Attach to finding...</option>
               {findings.map(finding => (
@@ -63,11 +63,11 @@ export default function AnnotationPreviewCard({
                 </option>
               ))}
             </select>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-[1fr_auto] gap-2">
               <Button
                 size="sm"
                 variant={annotation.include_in_report ? 'default' : 'outline'}
-                className="h-8 text-xs flex-1"
+                className="h-10 text-xs"
                 onClick={() => onUpdate(annotation, {
                   include_in_report: !annotation.include_in_report,
                   is_public: !annotation.include_in_report,
@@ -76,7 +76,7 @@ export default function AnnotationPreviewCard({
                 <Link2 className="w-3.5 h-3.5 mr-1" />
                 {annotation.include_in_report ? 'Included in report' : 'Include in report'}
               </Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs text-destructive" onClick={() => onDelete(annotation)}>
+              <Button size="sm" variant="outline" className="h-10 text-xs text-destructive" onClick={() => onDelete(annotation)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>

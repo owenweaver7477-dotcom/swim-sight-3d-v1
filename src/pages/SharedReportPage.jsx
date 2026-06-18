@@ -122,9 +122,9 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
   const unlinkedAnnotations = coachAnnotations.filter(annotation => !linkedAnnotationSet.has(annotation));
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="max-w-4xl mx-auto bg-white shadow-xl overflow-hidden sm:rounded-2xl">
       {/* Header */}
-      <div className="px-8 py-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white print:bg-white print:text-slate-900 print:border-b-2 print:border-slate-900">
+      <div className="px-4 py-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white print:bg-white print:text-slate-900 print:border-b-2 print:border-slate-900 sm:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-5">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -136,7 +136,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                 <div className="text-[10px] text-slate-300 print:text-slate-500">Coach-reviewed swim analysis</div>
               </div>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">{report.title || 'Swimmer Improvement Plan'}</h1>
+            <h1 className="text-2xl font-bold tracking-tight mb-2 sm:text-3xl">{report.title || 'Swimmer Improvement Plan'}</h1>
             {report.coach_summary && (
               <p className="max-w-2xl text-sm leading-6 text-slate-300 print:text-slate-600">{report.coach_summary}</p>
             )}
@@ -163,7 +163,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       </div>
 
       {/* Athlete info */}
-      <div className="px-8 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+      <div className="px-4 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sm:px-8">
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div className="md:col-span-2">
             <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Swimmer</div>
@@ -185,7 +185,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       </div>
 
       {/* Weekly improvement plan */}
-      <div className="px-8 py-6 border-b border-slate-200">
+      <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
         <div className="mb-4 flex items-center gap-2">
           <Target className="w-4 h-4 text-cyan-600" />
           <h2 className="text-lg font-bold text-slate-900">This week’s focus</h2>
@@ -247,8 +247,8 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
 
       {/* Overall score */}
       {report.overall_score != null && (
-        <div className="px-8 py-6 border-b border-slate-200">
-          <div className="flex items-center gap-5">
+        <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex flex-col items-center justify-center text-white shadow-lg">
               <span className="text-4xl font-black">{report.overall_score}</span>
               <span className="text-[10px] font-semibold uppercase tracking-wider opacity-90">Score</span>
@@ -267,28 +267,28 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
 
       {/* Technical summary */}
       {report.coach_summary && (
-        <div className="px-8 py-6 border-b border-slate-200">
+        <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Coach Summary</h3>
           <p className="text-sm text-slate-700 leading-relaxed">{report.coach_summary}</p>
         </div>
       )}
 
       {report.technical_summary && (
-        <div className="px-8 py-6 border-b border-slate-200">
+        <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Technical Focus</h3>
           <p className="text-sm text-slate-700 leading-relaxed">{report.technical_summary}</p>
         </div>
       )}
 
       {report.next_focus && (
-        <div className="px-8 py-6 border-b border-slate-200">
+        <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Next Focus</h3>
           <p className="text-sm text-slate-700 leading-relaxed">{report.next_focus}</p>
         </div>
       )}
 
       {keyMoments.length > 0 && (
-        <div className="px-8 py-6 border-b border-slate-200">
+        <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
             Key Moments <span className="text-sm font-normal text-slate-500">({keyMoments.length})</span>
@@ -303,7 +303,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
 
       {/* Findings — public-safe: only approved, no internal fields */}
       {findings && findings.length > 0 && (
-        <div className="px-8 py-6">
+        <div className="px-4 py-6 sm:px-8">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-600 rounded-full"></span>
             Coach Findings <span className="text-sm font-normal text-slate-500">({findings.length})</span>
@@ -365,7 +365,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                     </div>
                   )}
                   {finding.drill && (
-                    <div className="flex items-start gap-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg px-4 py-2.5 border border-blue-100">
+                    <div className="flex flex-col gap-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg px-4 py-2.5 border border-blue-100 sm:flex-row">
                       <Dumbbell className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 mb-0.5">Recommended Drill</div>
@@ -380,7 +380,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                     </div>
                   )}
                   {finding.next_focus && (
-                    <div className="flex items-start gap-2.5 bg-slate-50 rounded-lg px-4 py-2.5 border border-slate-100">
+                    <div className="flex flex-col gap-2.5 bg-slate-50 rounded-lg px-4 py-2.5 border border-slate-100 sm:flex-row">
                       <Target className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Next focus</div>
@@ -413,7 +413,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       )}
 
       {unlinkedAnnotations.length > 0 && (
-        <div className="px-8 py-6 border-t border-slate-200">
+        <div className="px-4 py-6 border-t border-slate-200 sm:px-8">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
             Coach-Selected Key Moments <span className="text-sm font-normal text-slate-500">({unlinkedAnnotations.length})</span>
@@ -430,15 +430,15 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       <DragRiskReportSection dragItems={dragItems} />
 
       {/* Disclaimer */}
-      <div className="mx-8 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200">
+      <div className="mx-4 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200 sm:mx-8">
         <p className="text-[10px] text-slate-500 leading-relaxed text-center">
           AI suggests. Coaches decide. This shared report only includes coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not shown.
         </p>
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-slate-200">
-        <div className="flex items-center justify-between">
+      <div className="px-4 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-slate-200 sm:px-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
               <Waves className="w-4 h-4 text-white" />
@@ -449,7 +449,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
             </div>
           </div>
           {reportDate && (
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500 sm:text-right">
               {format(new Date(reportDate), 'dd MMMM yyyy')}
             </div>
           )}
@@ -513,7 +513,7 @@ export default function SharedReportPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Top branding bar */}
       <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 px-4 py-4 print:hidden sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             {club?.logo_url ? (
               <img src={club.logo_url} alt={club.name} className="w-9 h-9 rounded-lg object-contain bg-white/10 p-1" />

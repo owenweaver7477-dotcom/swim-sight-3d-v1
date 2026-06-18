@@ -32,7 +32,14 @@ export default function FeaturesPage() {
         actions={<Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Open App</Link>}
       />
       <PublicSection title="Core capabilities" description="These are the practical tools coaches use to turn footage into an improvement plan.">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-5 rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10">
+          <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Golden workflow</div>
+          <h2 className="mt-3 text-2xl font-bold">Upload → Coach Studio → findings → drills → shared report.</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
+            The feature set is designed to keep coaches moving through one review flow instead of jumping between disconnected tools.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(([title, description]) => (
             <PublicCard key={title} title={title} description={description} />
           ))}

@@ -47,13 +47,13 @@ export default function AnnotationToolbar({
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-4 gap-1.5 md:grid-cols-2 lg:grid-cols-3">
         {TOOLS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => onToolChange(id)}
-            className={`min-h-11 rounded-lg border px-2 py-1.5 text-[10px] font-semibold flex flex-col items-center justify-center gap-1 ${
+            className={`min-h-12 rounded-lg border px-2 py-1.5 text-[10px] font-semibold flex flex-col items-center justify-center gap-1 ${
               tool === id ? 'bg-cyan-500 text-slate-950 border-cyan-300' : 'bg-white/5 text-slate-200 border-white/10'
             }`}
           >
@@ -64,7 +64,7 @@ export default function AnnotationToolbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {COLORS.map(item => (
             <button
               key={item}
@@ -76,7 +76,7 @@ export default function AnnotationToolbar({
             />
           ))}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {SIZES.map(item => (
             <button
               key={item}
@@ -90,7 +90,7 @@ export default function AnnotationToolbar({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
         <Button size="sm" variant="outline" className="h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10" onClick={onUndo} disabled={!canUndo}>
           <RotateCcw className="w-3.5 h-3.5 mr-1" />Undo
         </Button>
@@ -100,7 +100,7 @@ export default function AnnotationToolbar({
         <Button size="sm" variant="outline" className="h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10" onClick={onClear}>
           <Trash2 className="w-3.5 h-3.5 mr-1" />Clear
         </Button>
-        <Button size="sm" className="h-9 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400 ml-auto" onClick={onSave} disabled={saving || !canSave}>
+        <Button size="sm" className="h-10 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400 lg:col-span-1" onClick={onSave} disabled={saving || !canSave}>
           <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : canSave ? 'Save Annotation' : 'Draw first'}
         </Button>
       </div>

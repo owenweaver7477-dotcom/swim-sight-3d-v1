@@ -258,14 +258,14 @@ export default function CoachDrawStudio({
 
   const controlButtons = (compact = false) => (
     <div className="flex flex-wrap gap-2 items-center">
-      <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-1">
+      <div className="flex w-full flex-wrap items-center gap-1 rounded-lg border border-border bg-background p-1 sm:w-auto">
         <Gauge className="w-3.5 h-3.5 text-muted-foreground mx-1" />
         {PLAYBACK_SPEEDS.map(speed => (
           <button
             key={speed}
             type="button"
             onClick={() => setPlaybackRate(speed)}
-            className={`${compact ? 'h-9 min-w-12' : 'h-8 min-w-11'} rounded-md px-2 text-xs font-semibold transition-colors ${
+            className={`${compact ? 'h-10 min-w-12' : 'h-10 min-w-12'} flex-1 rounded-md px-2 text-xs font-semibold transition-colors sm:flex-none ${
               playbackRate === speed
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-secondary'
@@ -275,22 +275,22 @@ export default function CoachDrawStudio({
           </button>
         ))}
       </div>
-      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => seekBy(-1)} disabled={!signedVideoUrl}>
+      <Button size="sm" variant="outline" className="h-11 flex-1 text-xs sm:flex-none" onClick={() => seekBy(-1)} disabled={!signedVideoUrl}>
         <Rewind className="w-3.5 h-3.5 mr-1" /> 1s
       </Button>
-      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => seekBy(1)} disabled={!signedVideoUrl}>
+      <Button size="sm" variant="outline" className="h-11 flex-1 text-xs sm:flex-none" onClick={() => seekBy(1)} disabled={!signedVideoUrl}>
         <FastForward className="w-3.5 h-3.5 mr-1" /> 1s
       </Button>
-      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => seekBy(-APPROX_FRAME_STEP)} disabled={!signedVideoUrl}>
+      <Button size="sm" variant="outline" className="h-11 flex-1 text-xs sm:flex-none" onClick={() => seekBy(-APPROX_FRAME_STEP)} disabled={!signedVideoUrl}>
         <SkipBack className="w-3.5 h-3.5 mr-1" /> Step approx
       </Button>
-      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => seekBy(APPROX_FRAME_STEP)} disabled={!signedVideoUrl}>
+      <Button size="sm" variant="outline" className="h-11 flex-1 text-xs sm:flex-none" onClick={() => seekBy(APPROX_FRAME_STEP)} disabled={!signedVideoUrl}>
         <SkipForward className="w-3.5 h-3.5 mr-1" /> Step approx
       </Button>
-      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={pauseAndCapture} disabled={!signedVideoUrl || !canEdit}>
+      <Button size="sm" variant="outline" className="h-11 flex-1 text-xs sm:flex-none" onClick={pauseAndCapture} disabled={!signedVideoUrl || !canEdit}>
         Use timestamp
       </Button>
-      <Button size="sm" className="h-10 text-xs bg-primary text-primary-foreground" onClick={startFindingFromMoment} disabled={!signedVideoUrl || !canEdit}>
+      <Button size="sm" className="h-11 w-full text-xs bg-primary text-primary-foreground sm:w-auto" onClick={startFindingFromMoment} disabled={!signedVideoUrl || !canEdit}>
         <Plus className="w-3.5 h-3.5 mr-1" /> Finding from moment
       </Button>
     </div>
@@ -300,7 +300,7 @@ export default function CoachDrawStudio({
     <div className="flex flex-wrap gap-2 items-center">
       <Button
         size="sm"
-        className="h-10 text-xs bg-primary text-primary-foreground"
+        className="h-11 flex-1 text-xs bg-primary text-primary-foreground sm:flex-none"
         onClick={startDrawing}
         disabled={!signedVideoUrl || !canEdit}
       >
@@ -310,14 +310,14 @@ export default function CoachDrawStudio({
         <Button
           size="sm"
           variant="outline"
-          className="h-10 text-xs"
+          className="h-11 flex-1 text-xs sm:flex-none"
           onClick={saveMarker}
           disabled={!signedVideoUrl || !canEdit || savingMarker}
         >
           <BookmarkPlus className="w-3.5 h-3.5 mr-1.5" /> {savingMarker ? 'Saving...' : 'Save Key Stamp'}
         </Button>
       )}
-      <div className="text-[10px] text-muted-foreground">
+      <div className="w-full text-[10px] text-muted-foreground sm:w-auto">
         Pause the video, then mark the frame with finger, Apple Pencil, stylus, or mouse.
       </div>
     </div>
@@ -366,14 +366,14 @@ export default function CoachDrawStudio({
       {actionButtons}
 
       {onSaveMarker && (
-        <div className="p-3 rounded-xl bg-card border border-border space-y-2">
-          <div className="flex flex-wrap gap-1.5">
+        <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+          <div className="flex flex-wrap gap-2">
             {quickLabels.map(label => (
               <button
                 key={label}
                 type="button"
                 onClick={() => setMarkerLabel(label)}
-                className={`h-7 rounded-full border px-2 text-[10px] font-semibold ${
+                className={`h-9 rounded-full border px-3 text-[10px] font-semibold ${
                   markerLabel === label
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background text-muted-foreground border-border hover:border-primary/40'
@@ -383,20 +383,20 @@ export default function CoachDrawStudio({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,220px)_1fr_auto] gap-2 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,220px)_1fr_auto] gap-3 items-start">
             <Input
               value={markerLabel}
               onChange={e => setMarkerLabel(e.target.value)}
-              className="h-9 text-xs"
+              className="h-11 text-sm md:text-xs"
               placeholder="Marker label, e.g. Catch"
             />
             <Input
               value={markerNote}
               onChange={e => setMarkerNote(e.target.value)}
-              className="h-9 text-xs"
+              className="h-11 text-sm md:text-xs"
               placeholder="Optional coach note for this timestamp"
             />
-            <label className="flex items-center gap-2 text-xs text-muted-foreground h-9">
+            <label className="flex min-h-11 items-center gap-2 rounded-md border border-border bg-secondary/30 px-3 text-xs text-muted-foreground">
               <input
                 type="checkbox"
                 checked={markerIncludeInReport}
@@ -424,7 +424,7 @@ export default function CoachDrawStudio({
                 <div className="text-xs font-mono text-slate-200 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
                   Approx frame ~{approxFrame}
                 </div>
-                <Button size="sm" variant="outline" className="h-10 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={closeFullscreen}>
+                <Button size="sm" variant="outline" className="h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={closeFullscreen}>
                   <X className="w-3.5 h-3.5 mr-1.5" /> Exit
                 </Button>
               </div>
@@ -436,14 +436,14 @@ export default function CoachDrawStudio({
               {controlButtons(true)}
               {actionButtons}
               {onSaveMarker && (
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr_auto] gap-2 items-start">
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_2fr_auto] gap-3 items-start">
+                  <div className="flex flex-wrap gap-2">
                     {quickLabels.map(label => (
                       <button
                         key={label}
                         type="button"
                         onClick={() => setMarkerLabel(label)}
-                        className={`h-8 rounded-full border px-2.5 text-[10px] font-semibold ${
+                        className={`h-9 rounded-full border px-3 text-[10px] font-semibold ${
                           markerLabel === label
                             ? 'bg-cyan-300 text-slate-950 border-cyan-300'
                             : 'bg-white/5 text-slate-200 border-white/15 hover:border-cyan-300/50'
@@ -456,10 +456,10 @@ export default function CoachDrawStudio({
                   <Input
                     value={markerNote}
                     onChange={e => setMarkerNote(e.target.value)}
-                    className="h-10 text-xs bg-white text-slate-950"
+                    className="h-11 text-sm bg-white text-slate-950 md:text-xs"
                     placeholder="Optional note for this key stamp"
                   />
-                  <label className="flex items-center gap-2 text-xs text-slate-200 h-10">
+                  <label className="flex min-h-11 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-slate-200">
                     <input
                       type="checkbox"
                       checked={markerIncludeInReport}

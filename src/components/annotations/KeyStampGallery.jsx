@@ -60,7 +60,7 @@ function KeyStampCard({
   };
 
   return (
-    <div className={`rounded-xl bg-card border overflow-hidden transition-colors ${
+    <div className={`rounded-2xl bg-card border overflow-hidden transition-colors ${
       stamp.include_in_report ? 'border-green-200 shadow-sm' : 'border-border'
     }`}>
       <div className="relative bg-slate-950" style={{ aspectRatio: '16/9' }}>
@@ -87,19 +87,19 @@ function KeyStampCard({
       <div className="p-3 space-y-3">
         {editing ? (
           <div className="space-y-2">
-            <Input value={title} onChange={event => setTitle(event.target.value)} className="h-9 text-xs" />
+            <Input value={title} onChange={event => setTitle(event.target.value)} className="h-11 text-sm md:text-xs" />
             <Input
               value={phaseValue}
               onChange={event => setPhaseValue(event.target.value)}
-              className="h-9 text-xs"
+              className="h-11 text-sm md:text-xs"
               placeholder="Stroke phase, e.g. kick_setup"
             />
-            <Textarea value={coachNote} onChange={event => setCoachNote(event.target.value)} className="text-xs min-h-[56px]" />
-            <div className="flex gap-2">
-              <Button size="sm" className="h-8 text-xs" onClick={saveEdit}>
+            <Textarea value={coachNote} onChange={event => setCoachNote(event.target.value)} className="text-sm min-h-[72px] md:text-xs" />
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" className="h-10 text-xs" onClick={saveEdit}>
                 <Save className="w-3.5 h-3.5 mr-1" /> Save
               </Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setEditing(false)}>
+              <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => setEditing(false)}>
                 Cancel
               </Button>
             </div>
@@ -131,11 +131,11 @@ function KeyStampCard({
 
             {canEdit && (
               <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Button
                     size="sm"
                     variant={stamp.include_in_report ? 'default' : 'outline'}
-                    className="h-10 text-xs"
+                    className="h-11 text-xs"
                     onClick={() => onUpdate(stamp, {
                       include_in_report: !stamp.include_in_report,
                       is_public: !stamp.include_in_report,
@@ -144,7 +144,7 @@ function KeyStampCard({
                     <Link2 className="w-3.5 h-3.5 mr-1" />
                     {stamp.include_in_report ? 'Remove' : 'Approve'}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => onCreateFinding(stamp)}>
+                  <Button size="sm" variant="outline" className="h-11 text-xs" onClick={() => onCreateFinding(stamp)}>
                     <Plus className="w-3.5 h-3.5 mr-1" /> Finding
                   </Button>
                 </div>
@@ -158,7 +158,7 @@ function KeyStampCard({
                     <select
                       value={stamp.finding_id || ''}
                       onChange={event => onUpdate(stamp, { finding_id: event.target.value || null })}
-                      className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs"
+                      className="w-full h-11 rounded-md border border-input bg-background px-2 text-sm md:text-xs"
                     >
                       <option value="">Attach to finding...</option>
                       {findings.map(finding => (
@@ -167,15 +167,15 @@ function KeyStampCard({
                         </option>
                       ))}
                     </select>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => onOpenDraw(stamp)}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => onOpenDraw(stamp)}>
                         <PencilLine className="w-3.5 h-3.5 mr-1" /> Coach Draw
                       </Button>
-                      <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => setEditing(true)}>
+                      <Button size="sm" variant="outline" className="h-10 text-xs" onClick={() => setEditing(true)}>
                         <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
                       </Button>
                     </div>
-                    <Button size="sm" variant="outline" className="h-8 text-xs text-destructive w-full" onClick={() => onDelete(stamp)}>
+                    <Button size="sm" variant="outline" className="h-10 text-xs text-destructive w-full" onClick={() => onDelete(stamp)}>
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete key stamp
                     </Button>
                   </div>
@@ -216,7 +216,7 @@ export default function KeyStampGallery({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <div className="text-xs font-bold text-foreground uppercase tracking-wider">Key Moment Gallery</div>
@@ -224,11 +224,11 @@ export default function KeyStampGallery({
             Review saved timestamps, approve public-safe moments, and turn them into findings or Coach Draw annotations.
           </p>
         </div>
-        <div className="text-[10px] text-muted-foreground">
+        <div className="rounded-full border border-border bg-secondary/40 px-3 py-1 text-[10px] font-semibold text-muted-foreground">
           {keyStamps.filter(stamp => stamp.include_in_report).length} approved of {keyStamps.length}
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {keyStamps.map(stamp => (
           <KeyStampCard
             key={stamp.id}
