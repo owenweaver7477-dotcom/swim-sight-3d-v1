@@ -31,7 +31,7 @@ const NAV_CLUB = [
 
 // Admin-only — all advanced/debug tools collapsed under single section
 const NAV_ADMIN = [
-  { to: '/biomechanics-hud', label: 'Biomechanics HUD', icon: Cpu },
+  { to: '/biomechanics-hud', label: 'Elite Lab Preview', icon: Cpu },
   { to: '/technical-standards', label: 'Technical Standards', icon: Target },
   { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
   { to: '/ai-jobs',       label: 'AI Job Monitor',  icon: Activity },

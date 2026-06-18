@@ -1,17 +1,35 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Lock } from 'lucide-react';
 import PublicLayout, { PublicHero, PublicSection } from '@/components/public/PublicLayout';
 import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
 import { breadcrumbStructuredData } from './publicStructuredData';
+import { PLAN_DEFINITIONS, PLAN_KEYS, AI_CREDIT_COPY } from '@/lib/plans/featureGates';
 
 const tiers = [
-  ['Coach Studio', 'For individual coaches testing video review, Coach Studio, reports, and manual delivery.', ['Coach Studio', 'Manual findings', 'Secure report links'], 'Pricing is being finalised for pilot coaches.'],
-  ['AI Assist', 'For coaches testing AI-assisted draft evidence with strict coach approval and manual review fallback.', ['AI draft findings', 'Quality-gated review', 'Coach approval workflow'], 'Pilot access depends on current AI processing capacity.'],
-  ['Club Pro', 'For clubs testing squads, roles, shared coaching language, swimmer profiles, and report workflows.', ['Squads and roles', 'Shared technical language', 'Club report history'], 'Pilot club setup is scoped with the coaching team.'],
-  ['Elite Lab', 'For future deeper club rollout planning, support, and advanced workflow scoping.', ['Custom onboarding', 'Workflow support', 'Future capability planning'], 'Custom setup is discussed directly before rollout.'],
+  {
+    plan: PLAN_DEFINITIONS[PLAN_KEYS.COACH_STUDIO],
+    items: ['Manual Coach Studio', 'Key moments and Coach Draw', 'Manual findings and drill suggestions', 'Secure shared reports'],
+    note: 'Pricing is being finalised for pilot coaches.',
+  },
+  {
+    plan: PLAN_DEFINITIONS[PLAN_KEYS.AI_ASSIST],
+    items: ['AI draft findings', 'AI review credits', 'Quality-gated fallback to manual review', 'Coach approval required'],
+    note: 'Pilot access depends on current AI processing capacity.',
+    featured: true,
+  },
+  {
+    plan: PLAN_DEFINITIONS[PLAN_KEYS.CLUB_PRO],
+    items: ['Squads and swimmer profiles', 'Multi-coach roles', 'Shared technical language', 'Club report history'],
+    note: 'Pilot club setup is scoped with the coaching team.',
+  },
+  {
+    plan: PLAN_DEFINITIONS[PLAN_KEYS.ELITE_LAB],
+    items: ['Future multi-angle review', 'Future reference comparison', 'Future priority AI', 'Premium export planning'],
+    note: 'Future premium lab tier. Not a live 3D or measurement product today.',
+  },
 ];
 
 export default function PricingPage() {
@@ -28,11 +46,11 @@ export default function PricingPage() {
       />
       <PublicSection title="Pilot options" description="These are product access lanes, not live payment plans. Pricing is being finalised for pilot coaches and clubs.">
         <div className="grid gap-4 lg:grid-cols-4">
-          {tiers.map(([title, description, items, note], index) => (
-            <article key={title} className={`rounded-3xl border p-5 shadow-sm ${index === 1 ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'}`}>
+          {tiers.map(({ plan, items, note, featured }) => (
+            <article key={plan.key} className={`rounded-3xl border p-5 shadow-sm ${featured ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'}`}>
               <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Pilot lane</div>
-              <h2 className="mt-3 text-xl font-bold text-slate-950">{title}</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
+              <h2 className="mt-3 text-xl font-bold text-slate-950">{plan.label}</h2>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{plan.description}</p>
               <div className="mt-5 grid gap-2">
                 {items.map(item => (
                   <div key={item} className="flex items-start gap-2 text-sm font-semibold leading-6 text-slate-800">
@@ -41,12 +59,26 @@ export default function PricingPage() {
                   </div>
                 ))}
               </div>
+              {plan.key === PLAN_KEYS.AI_ASSIST && (
+                <div className="mt-4 rounded-2xl border border-sky-200 bg-white/80 p-3 text-xs leading-6 text-slate-700">
+                  {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport}
+                </div>
+              )}
+              {plan.key === PLAN_KEYS.ELITE_LAB && (
+                <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-800">
+                  <Lock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  Elite Lab is future premium access. It is not a live measurement or swimmer-specific 3D analysis product today.
+                </div>
+              )}
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm font-semibold leading-6 text-slate-700">{note}</div>
+              <Link to="/login" className="mt-4 inline-flex w-full justify-center rounded-full bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800">
+                {plan.ctaLabel}
+              </Link>
             </article>
           ))}
         </div>
       </PublicSection>
-      <PublicSection subtle title="No payment flow yet" description="This phase only creates public pricing structure. It does not add billing, payment collection, or subscription logic." />
+      <PublicSection subtle title="No payment flow yet" description="This page shows the plan structure Swim Sight 3D is preparing for. It does not add billing, checkout, payment collection, subscription logic, or a billing portal." />
     </PublicLayout>
   );
 }

@@ -111,7 +111,7 @@ export default function DragRiskReportSection({ dragItems = [] }) {
       </div>
 
       <p className="text-[10px] text-slate-400 mt-4 italic">
-        Drag risk overlays estimate likely resistance areas from video evidence. They do not represent measured drag force values.
+        Resistance overlays estimate likely friction areas from video evidence. They do not represent lab-measured force values.
       </p>
     </div>
   );

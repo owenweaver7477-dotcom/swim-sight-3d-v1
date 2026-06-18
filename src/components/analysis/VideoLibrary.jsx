@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
 import AIJobStatusBadge from './AIJobStatusBadge';
+import { AI_CREDIT_COPY } from '@/lib/plans/featureGates';
 
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'finalising_upload'];
@@ -678,6 +679,9 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
           </div>
           <p className="mt-1 text-[10px] text-muted-foreground">
             Each row shows whether the video is uploading, ready for Coach Studio, queued for AI, processing, or needs retry.
+          </p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport}
           </p>
         </div>
         <button

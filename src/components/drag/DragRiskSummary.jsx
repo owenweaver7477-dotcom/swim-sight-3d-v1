@@ -55,7 +55,7 @@ export default function DragRiskSummary({ dragItems }) {
         </div>
       ))}
       <p className="text-[10px] text-muted-foreground pt-1 border-t border-border">
-        Based on approved drag overlays only. Not a measured drag coefficient.
+        Based on approved resistance overlays only. Not a lab-measured value.
       </p>
     </div>
   );

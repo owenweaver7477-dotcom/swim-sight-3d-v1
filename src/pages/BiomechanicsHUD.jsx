@@ -269,6 +269,10 @@ export default function BiomechanicsHUD() {
           </Link>
         </div>
 
+        <div className="pointer-events-auto fixed left-1/2 top-4 z-[85] hidden w-[min(32rem,calc(100vw-10rem))] -translate-x-1/2 rounded-full border border-amber-200/20 bg-slate-950/70 px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-xl shadow-cyan-950/20 backdrop-blur-xl md:block">
+          Elite Lab preview - future premium reference comparison. Coach-guided only; not a live measurement tool.
+        </div>
+
         <div className="hidden xl:block fixed left-4 top-16 z-[82]">
           <TrialRail />
         </div>

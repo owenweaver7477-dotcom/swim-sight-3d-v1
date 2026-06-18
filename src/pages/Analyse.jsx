@@ -31,6 +31,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import ReviewSetupPanel from '@/components/analysis/ReviewSetupPanel';
+import { AI_CREDIT_COPY, getFeatureGateState, getPlanKey } from '@/lib/plans/featureGates';
 
 // ─── Stroke phase sets ────────────────────────────────────────────────────────
 const STROKE_PHASES = {
@@ -114,6 +115,8 @@ export default function Analyse() {
   const { user } = useAuth();
   const { club } = useClubContext();
   const queryClient = useQueryClient();
+  const planKey = getPlanKey(club);
+  const aiGate = getFeatureGateState('ai_review', planKey);
 
   // Never auto-resume a stale session — always start at step 0
   // The session is only used once the coach explicitly progresses through steps
@@ -1249,6 +1252,17 @@ export default function Analyse() {
                 {startAiError}
               </div>
             )}
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
+              <div className="font-semibold">AI Assist plan note</div>
+              <p className="mt-1">
+                {aiGate.isEnforced && !aiGate.isAllowed
+                  ? `${aiGate.message} Coach Studio/manual review remains available.`
+                  : 'AI review is available for current pilot testing. Coach approval is required before report sharing.'}
+              </p>
+              <p className="mt-1 text-[10px] text-blue-800/80">
+                {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport} {AI_CREDIT_COPY.pilotUnknown}
+              </p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Button
                 className="w-full bg-primary text-primary-foreground"

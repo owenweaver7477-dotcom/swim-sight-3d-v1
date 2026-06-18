@@ -200,7 +200,7 @@ function HydrodynamicReviewPanel({ report, findings }) {
         <div>
           <div className="text-xs font-bold text-foreground uppercase tracking-wider">Hydrodynamic Risk Review</div>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            Coach-reviewed resistance cues only. This is not a measured drag coefficient.
+            Coach-reviewed resistance cues only. This is not a lab-measured value.
           </p>
         </div>
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
@@ -1488,6 +1488,9 @@ export default function AIReportPage() {
                   Download PDF
                 </Button>
               )}
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] leading-relaxed text-slate-600">
+              Browser print/PDF is available now. Premium export controls will be part of future plan settings.
             </div>
             <ApprovedCoachReport
               report={report}
