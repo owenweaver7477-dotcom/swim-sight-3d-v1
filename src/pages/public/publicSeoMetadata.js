@@ -22,7 +22,7 @@ export const publicSeoMetadata = {
   sampleReport: {
     path: '/sample-report',
     title: 'Sample Swimming Analysis Report | Swim Sight 3D',
-    description: 'Preview a sample Swim Sight 3D swimmer improvement report with coach-approved findings, key moments, drills, next focus, and secure sharing structure.',
+    description: 'View a sample Swim Sight 3D swimming analysis report with key moments, coach findings, correction cues, recommended drills, and next focus areas.',
   },
   strokeAnalysis: {
     path: '/stroke-analysis',
