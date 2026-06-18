@@ -23,6 +23,37 @@ function SeverityBadge({ severity }) {
   );
 }
 
+function labelFromKey(value = '') {
+  return String(value)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function uniqueTruthy(items = []) {
+  return Array.from(new Set(items.filter(Boolean).map(item => String(item).trim()).filter(Boolean)));
+}
+
+function buildWeeklyPlan(report, findings = []) {
+  const cues = uniqueTruthy(findings.map(finding => finding.cue || finding.correction_cue));
+  const drills = uniqueTruthy(findings.map(finding => finding.linked_drill_title || finding.drill));
+  const focus = report.next_focus || findings.find(finding => finding.next_focus)?.next_focus || '';
+
+  return {
+    focus,
+    cues: cues.slice(0, 3),
+    drills: drills.slice(0, 3),
+    avoid: findings.length
+      ? 'Rushing the correction before the swimmer can repeat it cleanly in the water.'
+      : '',
+    nextReview: videoReviewLabel(report),
+  };
+}
+
+function videoReviewLabel(report) {
+  const stroke = report.stroke_type || 'technique';
+  return `Film another ${String(stroke).toLowerCase()} clip after the next focused training block.`;
+}
+
 function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
   const safeThumbnail = typeof annotation.thumbnail_data_url === 'string'
     && annotation.thumbnail_data_url.startsWith('data:image/')
@@ -51,8 +82,15 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
           <PencilLine className="w-3 h-3" /> {label}
         </div>
         <div className="text-sm font-bold text-slate-900">{annotation.title || 'Marked frame'}</div>
-        <div className="text-[10px] font-mono text-blue-600 mt-0.5">
-          Frame {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-mono font-semibold text-cyan-700">
+            {annotation.frame_label || annotation.video_frame_time_label || formatTimestamp(annotation.timestamp_seconds)}
+          </span>
+          {annotation.phase && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              {labelFromKey(annotation.phase)}
+            </span>
+          )}
         </div>
         {linkedFindingTitle && (
           <div className="text-[10px] text-slate-500 mt-1">
@@ -68,8 +106,11 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
 // Clean public-facing report — no internal links, no debug info, no approval controls
 function PublicReportContent({ report, swimmer, club, video_meta, findings, annotations = [], dragItems = [] }) {
   const reportDate = report.ai_completed_at || report.created_date;
+  const keyMoments = annotations.filter(annotation => annotation.annotation_type === 'key_frame');
+  const coachAnnotations = annotations.filter(annotation => annotation.annotation_type !== 'key_frame');
+  const weeklyPlan = buildWeeklyPlan(report, findings);
   const annotationsByFindingTitle = new Map();
-  annotations.forEach(annotation => {
+  coachAnnotations.forEach(annotation => {
     if (!annotation.linked_finding_title) return;
     const group = annotationsByFindingTitle.get(annotation.linked_finding_title) || [];
     group.push(annotation);
@@ -78,13 +119,13 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
   const linkedAnnotationSet = new Set(
     Array.from(annotationsByFindingTitle.values()).flat()
   );
-  const unlinkedAnnotations = annotations.filter(annotation => !linkedAnnotationSet.has(annotation));
+  const unlinkedAnnotations = coachAnnotations.filter(annotation => !linkedAnnotationSet.has(annotation));
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
       {/* Header */}
       <div className="px-8 py-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white print:bg-white print:text-slate-900 print:border-b-2 print:border-slate-900">
-        <div className="flex items-start justify-between mb-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-5">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
@@ -95,19 +136,26 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                 <div className="text-[10px] text-slate-300 print:text-slate-500">Coach-reviewed swim analysis</div>
               </div>
             </div>
-            <h1 className="text-2xl font-bold mb-1">{report.title || 'Swimmer Improvement Plan'}</h1>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">{report.title || 'Swimmer Improvement Plan'}</h1>
+            {report.coach_summary && (
+              <p className="max-w-2xl text-sm leading-6 text-slate-300 print:text-slate-600">{report.coach_summary}</p>
+            )}
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-400/30 print:bg-green-50 print:border-green-300">
+          <div className="flex w-fit items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-400/30 print:bg-green-50 print:border-green-300">
             <CheckCircle2 className="w-4 h-4 text-green-400 print:text-green-600" />
             <span className="text-[10px] font-bold text-green-300 print:text-green-700 uppercase tracking-wider">Coach Approved</span>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 print:border-slate-200">
+        <div className="grid gap-4 pt-4 border-t border-white/10 print:border-slate-200 sm:grid-cols-3">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-slate-400 print:text-slate-500 mb-0.5">Club</div>
             <div className="font-semibold">{club?.name || 'Swim Club'}</div>
           </div>
-          <div className="text-right">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 print:text-slate-500 mb-0.5">Swimmer</div>
+            <div className="font-semibold">{swimmer?.name || '—'}</div>
+          </div>
+          <div className="sm:text-right">
             <div className="text-[10px] uppercase tracking-wider text-slate-400 print:text-slate-500 mb-0.5">Report Date</div>
             <div className="font-semibold">{reportDate ? format(new Date(reportDate), 'dd MMMM yyyy') : '—'}</div>
           </div>
@@ -116,7 +164,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
 
       {/* Athlete info */}
       <div className="px-8 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div className="md:col-span-2">
             <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Swimmer</div>
             <div className="text-lg font-bold text-slate-900">{swimmer?.name || '—'}</div>
@@ -134,6 +182,67 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
             </div>
           )}
         </div>
+      </div>
+
+      {/* Weekly improvement plan */}
+      <div className="px-8 py-6 border-b border-slate-200">
+        <div className="mb-4 flex items-center gap-2">
+          <Target className="w-4 h-4 text-cyan-600" />
+          <h2 className="text-lg font-bold text-slate-900">This week’s focus</h2>
+        </div>
+        {weeklyPlan.focus || weeklyPlan.cues.length || weeklyPlan.drills.length ? (
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-600">Coach focus</div>
+              <p className="mt-2 text-lg font-bold leading-7 text-slate-950">
+                {weeklyPlan.focus || 'Keep the approved findings clear and repeatable in the next training block.'}
+              </p>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-xl bg-white p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Coach cues</div>
+                  {weeklyPlan.cues.length ? (
+                    <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+                      {weeklyPlan.cues.map(cue => <li key={cue}>• {cue}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500">Coach cues will appear here once added to the report.</p>
+                  )}
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Next review target</div>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">{weeklyPlan.nextReview}</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-700">
+                <Dumbbell className="w-4 h-4" />
+                Recommended drills
+              </div>
+              {weeklyPlan.drills.length ? (
+                <div className="mt-3 grid gap-2">
+                  {weeklyPlan.drills.map(drill => (
+                    <div key={drill} className="rounded-xl bg-white p-3 text-sm font-semibold leading-6 text-slate-800 shadow-sm">
+                      {drill}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-blue-900/70">Drill recommendations will appear here once selected by the coach.</p>
+              )}
+              {weeklyPlan.avoid && (
+                <div className="mt-4 rounded-xl border border-blue-100 bg-white/70 p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Avoid</div>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">{weeklyPlan.avoid}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">
+            Coach focus will appear here once added to the report.
+          </div>
+        )}
       </div>
 
       {/* Overall score */}
@@ -178,12 +287,26 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
         </div>
       )}
 
+      {keyMoments.length > 0 && (
+        <div className="px-8 py-6 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
+            <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
+            Key Moments <span className="text-sm font-normal text-slate-500">({keyMoments.length})</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {keyMoments.map((annotation, index) => (
+              <PublicAnnotationCard key={`${annotation.title || 'key-moment'}-${index}`} annotation={annotation} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Findings — public-safe: only approved, no internal fields */}
       {findings && findings.length > 0 && (
         <div className="px-8 py-6">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
             <span className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-600 rounded-full"></span>
-            Improvement Plan <span className="text-sm font-normal text-slate-500">({findings.length})</span>
+            Coach Findings <span className="text-sm font-normal text-slate-500">({findings.length})</span>
           </h2>
           <div className="space-y-4">
             {findings.map((finding, index) => {
@@ -217,7 +340,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                        What We Saw
+                        What we saw
                       </div>
                       <p className="text-sm text-slate-700 leading-relaxed">
                         {finding.coach_sees.split('\n\nCoach should check:')[0]}
@@ -228,7 +351,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        Why It Matters
+                        Why it matters
                       </div>
                       <p className="text-sm text-slate-700 leading-relaxed">{finding.why_it_matters}</p>
                     </div>
@@ -236,7 +359,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                   {finding.cue && (
                     <div className="pl-4 border-l-4 border-cyan-500 bg-cyan-50/50 rounded-r-lg p-3">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 mb-1.5 flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5" /> What To Feel
+                        <Target className="w-3.5 h-3.5" /> What to feel in the water
                       </div>
                       <p className="text-sm font-semibold text-slate-900 leading-relaxed">{finding.cue}</p>
                     </div>
@@ -248,7 +371,10 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                         <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 mb-0.5">Recommended Drill</div>
                         <p className="text-sm text-slate-800 leading-relaxed">{finding.drill}</p>
                         {finding.linked_drill_summary && (
-                          <p className="text-xs text-slate-600 leading-relaxed mt-1">{finding.linked_drill_summary}</p>
+                          <div className="mt-2 rounded-lg bg-white/70 px-3 py-2">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Why it helps</div>
+                            <p className="text-xs text-slate-600 leading-relaxed mt-1">{finding.linked_drill_summary}</p>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -257,7 +383,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                     <div className="flex items-start gap-2.5 bg-slate-50 rounded-lg px-4 py-2.5 border border-slate-100">
                       <Target className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Next Focus</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Next focus</div>
                         <p className="text-sm text-slate-700 leading-relaxed">{finding.next_focus}</p>
                       </div>
                     </div>
@@ -306,7 +432,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       {/* Disclaimer */}
       <div className="mx-8 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200">
         <p className="text-[10px] text-slate-500 leading-relaxed text-center">
-          This report is coach-reviewed and may include AI-assisted draft evidence approved by the coach. It includes approved findings only and does not include private video links, raw AI data, or internal coach notes.
+          AI suggests. Coaches decide. This shared report only includes coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not shown.
         </p>
       </div>
 

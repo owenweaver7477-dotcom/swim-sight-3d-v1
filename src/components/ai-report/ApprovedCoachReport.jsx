@@ -1,6 +1,6 @@
 import React from 'react';
 import { SeverityBadge } from './AIFindingCard';
-import { CheckCircle2, Star, Activity, Target, PencilLine } from 'lucide-react';
+import { CheckCircle2, Star, Activity, Target, PencilLine, Dumbbell } from 'lucide-react';
 import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
 
 function AnnotationCard({ annotation, linkedFinding }) {
@@ -105,7 +105,7 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
           <div className="flex items-center gap-2 mb-2.5">
             <Activity className="w-3.5 h-3.5 text-primary" />
             <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Technical Findings ({approvedFindings.length})
+              Coach Findings ({approvedFindings.length})
             </span>
           </div>
           <div className="space-y-3">
@@ -134,8 +134,15 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
 
                 {f.cue && (
                   <div className="pl-4 border-l-2 border-primary/30 ml-4">
-                    <div className="text-[10px] uppercase tracking-wider text-primary font-semibold mb-0.5">Correction</div>
+                    <div className="text-[10px] uppercase tracking-wider text-primary font-semibold mb-0.5">What to feel in the water</div>
                     <p className="text-xs text-foreground font-medium">{f.cue}</p>
+                  </div>
+                )}
+
+                {f.drill && (
+                  <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
+                    <Dumbbell className="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-600" />
+                    <span><strong className="text-blue-700">Recommended drill:</strong> {f.drill}</span>
                   </div>
                 )}
 

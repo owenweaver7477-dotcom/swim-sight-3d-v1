@@ -26,9 +26,12 @@ function sanitizeAnnotation(annotation, findingTitlesById) {
     && annotation.thumbnail_data_url.startsWith('data:image/')
     ? annotation.thumbnail_data_url
     : null;
+  const drawingData = annotation.drawing_data && typeof annotation.drawing_data === 'object'
+    ? annotation.drawing_data
+    : {};
   const renderedSvg = thumbnail
     ? null
-    : drawingToSvg(annotation.drawing_data || {}, {
+    : drawingToSvg(drawingData, {
       width: annotation.canvas_width,
       height: annotation.canvas_height,
     });
@@ -38,6 +41,7 @@ function sanitizeAnnotation(annotation, findingTitlesById) {
     timestamp_seconds: annotation.timestamp_seconds,
     frame_label: annotation.frame_label || annotation.video_frame_time_label,
     video_frame_time_label: annotation.video_frame_time_label || annotation.frame_label,
+    phase: typeof drawingData.phase === 'string' ? drawingData.phase : null,
     canvas_width: annotation.canvas_width,
     canvas_height: annotation.canvas_height,
     rendered_svg: renderedSvg,

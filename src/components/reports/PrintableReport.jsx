@@ -21,6 +21,20 @@ function SeverityBadge({ severity }) {
   );
 }
 
+function uniqueTruthy(items = []) {
+  return Array.from(new Set(items.filter(Boolean).map(item => String(item).trim()).filter(Boolean)));
+}
+
+function buildPrintablePlan(report, findings = []) {
+  const cues = uniqueTruthy(findings.map(finding => finding.cue || finding.correction_cue));
+  const drills = uniqueTruthy(findings.map(finding => finding.linked_drill_title || finding.drill));
+  return {
+    focus: report.next_focus || findings.find(finding => finding.next_focus)?.next_focus || '',
+    cues: cues.slice(0, 3),
+    drills: drills.slice(0, 3),
+  };
+}
+
 function AnnotationPrintCard({ annotation, linkedFinding }) {
   const safeThumbnail = typeof annotation.thumbnail_data_url === 'string' && annotation.thumbnail_data_url.startsWith('data:image/')
     ? annotation.thumbnail_data_url
@@ -63,6 +77,7 @@ function AnnotationPrintCard({ annotation, linkedFinding }) {
 
 export default function PrintableReport({ report, swimmer, club, video_meta, findings, annotations = [], dragItems = [], share_link, showPrintButton = false }) {
   const reportDate = report.ai_completed_at || report.created_date;
+  const weeklyPlan = buildPrintablePlan(report, findings || []);
   const findingIds = new Set((findings || []).map(finding => finding.id));
   const annotationsByFinding = new Map();
   (annotations || []).forEach(annotation => {
@@ -106,10 +121,13 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                 </div>
                 <div>
                   <div className="text-xs font-semibold tracking-wider uppercase text-cyan-300 print:text-cyan-700">Swim Sight 3D</div>
-                  <div className="text-[10px] text-slate-300 print:text-slate-500">Professional Video Analysis</div>
+                  <div className="text-[10px] text-slate-300 print:text-slate-500">Coach-reviewed swim analysis</div>
                 </div>
               </div>
-              <h1 className="text-2xl font-bold mb-1">{report.title || 'Technical Analysis Report'}</h1>
+              <h1 className="text-2xl font-bold mb-1">{report.title || 'Swimmer Improvement Plan'}</h1>
+              {report.coach_summary && (
+                <p className="text-sm leading-6 text-slate-300 print:text-slate-600 max-w-2xl">{report.coach_summary}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-400/30 print:bg-green-50 print:border-green-300">
               <CheckCircle2 className="w-4 h-4 text-green-400 print:text-green-600" />
@@ -158,6 +176,40 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           </div>
         </div>
 
+        {(weeklyPlan.focus || weeklyPlan.cues.length || weeklyPlan.drills.length) && (
+          <div className="px-8 py-6 border-b border-slate-200 print:break-inside-avoid">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">This week’s focus</h2>
+            <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 mb-1">Coach focus</div>
+                <p className="text-sm font-semibold leading-6 text-slate-900">
+                  {weeklyPlan.focus || 'Keep the approved findings clear and repeatable in the next training block.'}
+                </p>
+                {weeklyPlan.cues.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Coach cues</div>
+                    <ul className="mt-1 space-y-1 text-sm leading-6 text-slate-700">
+                      {weeklyPlan.cues.map(cue => <li key={cue}>• {cue}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 mb-2">Recommended drills</div>
+                {weeklyPlan.drills.length ? (
+                  <div className="grid gap-2">
+                    {weeklyPlan.drills.map(drill => (
+                      <div key={drill} className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-800">{drill}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-blue-900/70">Drill recommendations will appear here once selected by the coach.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Overall Score */}
         {report.overall_score != null && (
           <div className="px-8 py-6 border-b border-slate-200 print:break-inside-avoid">
@@ -198,7 +250,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           <div className="px-8 py-6">
             <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
               <span className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-600 rounded-full"></span>
-              Technical Findings <span className="text-sm font-normal text-slate-500">({findings.length})</span>
+              Coach Findings <span className="text-sm font-normal text-slate-500">({findings.length})</span>
             </h2>
 
             <div className="space-y-4">
@@ -233,7 +285,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                          Observation
+                          What we saw
                         </div>
                         <p className="text-sm text-slate-700 leading-relaxed">
                           {finding.coach_sees.split('\n\nCoach should check: ')[0]}
@@ -264,6 +316,12 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                         <div>
                           <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 mb-0.5">Recommended Drill</div>
                           <p className="text-sm text-slate-800 leading-relaxed">{finding.drill}</p>
+                          {finding.linked_drill_summary && (
+                            <div className="mt-2 rounded-lg bg-white/70 px-3 py-2">
+                              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Why it helps</div>
+                              <p className="text-xs text-slate-600 leading-relaxed mt-1">{finding.linked_drill_summary}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -313,6 +371,12 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
         {/* Drag Risk Section */}
         <DragRiskReportSection dragItems={dragItems} />
 
+        <div className="mx-8 mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <p className="text-center text-[10px] leading-relaxed text-slate-500">
+            AI suggests. Coaches decide. This report only includes coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not shown.
+          </p>
+        </div>
+
         {/* Footer */}
         <div className="px-8 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-slate-200 print:bg-slate-50 print:border-slate-300">
           <div className="flex items-center justify-between">
@@ -322,7 +386,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-700">Swim Sight 3D</div>
-                <div className="text-[10px] text-slate-500">Professional Video Analysis Platform</div>
+                <div className="text-[10px] text-slate-500">Coach-reviewed swimming analysis</div>
               </div>
             </div>
             <div className="text-right space-y-0.5">
