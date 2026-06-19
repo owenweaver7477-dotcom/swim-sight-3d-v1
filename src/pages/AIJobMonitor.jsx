@@ -19,9 +19,15 @@ const STATUS_CONFIG = {
   accepted:            { label: 'Accepted',          color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   running:             { label: 'Running',           color: 'text-primary bg-primary/10 border-primary/20' },
   downloading_video:   { label: 'Downloading',       color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
+  reading_video_metadata: { label: 'Reading Metadata', color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
+  metadata_read:       { label: 'Metadata Ready',     color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
+  processing_tier_selected: { label: 'Workload Ready', color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   extracting_frames:   { label: 'Extracting Frames', color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
+  frames_extracted:    { label: 'Frames Ready',       color: 'text-blue-400 bg-blue-900/20 border-blue-700/30' },
   running_pose_detection: { label: 'Pose Detection', color: 'text-primary bg-primary/10 border-primary/20' },
   analysing_stroke:    { label: 'Analysing',         color: 'text-primary bg-primary/10 border-primary/20' },
+  analysing_stroke_phases: { label: 'Stroke Phases', color: 'text-primary bg-primary/10 border-primary/20' },
+  generating_findings: { label: 'Draft Findings',    color: 'text-primary bg-primary/10 border-primary/20' },
   generating_outputs:  { label: 'Generating',        color: 'text-primary bg-primary/10 border-primary/20' },
   callback_sending:    { label: 'Callback',          color: 'text-yellow-400 bg-yellow-900/20 border-yellow-700/30' },
   completed:           { label: 'Completed',         color: 'text-green-400 bg-green-900/20 border-green-700/30' },
@@ -54,7 +60,12 @@ const FILTERS = [
   { key: 'error',          label: 'Error' },
 ];
 
-const RUNNING_STATUSES = ['accepted','running','downloading_video','extracting_frames','running_pose_detection','analysing_stroke','generating_outputs','callback_sending'];
+const RUNNING_STATUSES = [
+  'accepted', 'running', 'downloading_video', 'reading_video_metadata', 'metadata_read',
+  'processing_tier_selected', 'extracting_frames', 'frames_extracted', 'running_pose_detection',
+  'analysing_stroke', 'analysing_stroke_phases', 'generating_findings', 'generating_outputs',
+  'callback_sending',
+];
 const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing'];
 
 function asQualityFlags(value) {
@@ -83,6 +94,51 @@ function isQueuedJob(job) {
 
 function isActiveJob(job) {
   return ACTIVE_QUEUE_STATUSES.includes(job.queue_status) || RUNNING_STATUSES.includes(job.status);
+}
+
+function TelemetryValue({ label, value }) {
+  return (
+    <div className="rounded-md border border-border bg-secondary/40 px-3 py-2">
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-xs font-semibold text-foreground">{value ?? 'Not available'}</div>
+    </div>
+  );
+}
+
+function SafeTelemetry({ job }) {
+  const fallbackTriggered = [
+    'manual_review', 'manual_review_recommended', 'unreliable_pose', 'error', 'timed_out',
+  ].includes(job.status);
+  const hasTelemetry = [
+    job.frame_count_processed,
+    job.detection_ratio,
+    job.detected_keypoints_count,
+    job.processing_duration_seconds,
+    job.stage,
+  ].some(value => value != null && value !== '');
+  const stageConfig = STATUS_CONFIG[job.stage];
+
+  if (!hasTelemetry) {
+    return (
+      <div className="rounded-md border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
+        Telemetry will appear after worker output includes this field.
+      </div>
+    );
+  }
+
+  return (
+    <section aria-label="Safe worker telemetry">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Safe worker telemetry</div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <TelemetryValue label="Frames analysed" value={job.frame_count_processed ?? null} />
+        <TelemetryValue label="Pose coverage" value={job.detection_ratio != null ? `${(job.detection_ratio * 100).toFixed(0)}%` : null} />
+        <TelemetryValue label="Average keypoints" value={job.detected_keypoints_count ?? null} />
+        <TelemetryValue label="Fallback triggered" value={fallbackTriggered ? 'Yes - Coach Studio' : 'No'} />
+        <TelemetryValue label="Stage" value={stageConfig?.label || job.stage || null} />
+        <TelemetryValue label="Processing time" value={job.processing_duration_seconds != null ? `${Number(job.processing_duration_seconds).toFixed(1)}s` : null} />
+      </div>
+    </section>
+  );
 }
 
 function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
@@ -155,9 +211,6 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             <div><span className="text-muted-foreground">Pose Reliability</span>
               <div className={relCfg?.color || 'text-muted-foreground'}>{relCfg?.label || '—'}</div>
             </div>
-            <div><span className="text-muted-foreground">Frames Processed</span><div className="text-foreground">{job.frame_count_processed ?? '—'}</div></div>
-            <div><span className="text-muted-foreground">Avg Keypoints</span><div className="text-foreground">{job.detected_keypoints_count ?? '—'}</div></div>
-            <div><span className="text-muted-foreground">Detection Ratio</span><div className="text-foreground">{job.detection_ratio != null ? `${(job.detection_ratio * 100).toFixed(0)}%` : '—'}</div></div>
             <div><span className="text-muted-foreground">Analysis Mode</span><div className="text-foreground capitalize">{job.analysis_mode || '—'}</div></div>
             <div><span className="text-muted-foreground">Callback Received</span><div className={job.callback_received ? 'text-green-400' : 'text-muted-foreground'}>{job.callback_received ? 'Yes' : 'No'}</div></div>
             <div><span className="text-muted-foreground">Attempts</span><div className="text-foreground">{attemptCount}/{maxAttempts}</div></div>
@@ -170,8 +223,9 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
             {job.failed_at && <div><span className="text-muted-foreground">Failed</span><div className="text-foreground">{format(new Date(job.failed_at), 'dd MMM, HH:mm')}</div></div>}
             {job.timed_out_at && <div><span className="text-muted-foreground">Timed out</span><div className="text-foreground">{format(new Date(job.timed_out_at), 'dd MMM, HH:mm')}</div></div>}
             {job.completed_at && <div><span className="text-muted-foreground">Completed</span><div className="text-foreground">{format(new Date(job.completed_at), 'dd MMM, HH:mm')}</div></div>}
-            {job.processing_duration_seconds && <div><span className="text-muted-foreground">Duration</span><div className="text-foreground">{job.processing_duration_seconds.toFixed(1)}s</div></div>}
           </div>
+
+          <SafeTelemetry job={job} />
 
           {qualityFlags.length > 0 && (
             <div>

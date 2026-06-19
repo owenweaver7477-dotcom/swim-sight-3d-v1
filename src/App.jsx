@@ -49,6 +49,9 @@ import PerformanceHub from './pages/PerformanceHub';
 import AIJobMonitor from './pages/AIJobMonitor';
 import AICalibration from './pages/AICalibration';
 import BiomechanicsHUD from './pages/BiomechanicsHUD';
+import AIInfrastructureStatus from './pages/AIInfrastructureStatus';
+import EliteLabRoadmap from './pages/EliteLabRoadmap';
+import FootageChecklist from './pages/FootageChecklist';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -163,6 +166,9 @@ const AuthenticatedApp = () => {
           <Route path="/ai-jobs" element={<AIJobMonitor />} />
           <Route path="/ai-calibration" element={<AICalibration />} />
           <Route path="/biomechanics-hud" element={<BiomechanicsHUD />} />
+          <Route path="/ai-infrastructure-status" element={<AIInfrastructureStatus />} />
+          <Route path="/elite-lab-roadmap" element={<EliteLabRoadmap />} />
+          <Route path="/footage-checklist" element={<FootageChecklist />} />
           <Route path="/coach-testing" element={<Navigate to="/roadmap" replace />} />
           <Route path="/roadmap" element={<Roadmap />} />
           {/* Legacy redirects — keep old links working */}

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, Waves, ChevronsUpDown, Check, Brain,
-  ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3, Cpu
+  ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3, Cpu, ClipboardCheck, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -32,6 +32,8 @@ const NAV_CLUB = [
 // Admin-only — all advanced/debug tools collapsed under single section
 const NAV_ADMIN = [
   { to: '/biomechanics-hud', label: 'Elite Lab Preview', icon: Cpu },
+  { to: '/elite-lab-roadmap', label: 'Elite Lab Roadmap', icon: Map },
+  { to: '/ai-infrastructure-status', label: 'AI Infrastructure', icon: Server },
   { to: '/technical-standards', label: 'Technical Standards', icon: Target },
   { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
   { to: '/ai-jobs',       label: 'AI Job Monitor',  icon: Activity },
@@ -42,6 +44,7 @@ const ADMIN_ROLES = ['owner', 'admin'];
 const CALIBRATION_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const NAV_CALIBRATION = [
   { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
+  { to: '/footage-checklist', label: 'Footage Checklist', icon: ClipboardCheck },
 ];
 
 export default function Sidebar() {

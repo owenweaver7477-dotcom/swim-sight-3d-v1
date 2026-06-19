@@ -250,7 +250,7 @@ function EliteLabAccessPanel({ gate }) {
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100">Future Premium</div>
           <h1 className="mt-1 text-lg font-semibold text-white">Elite Lab Preview</h1>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Future premium reference-comparison tools for coach-guided swim analysis.
+            Prototype 3D reference visualisation for future calibrated, coach-reviewed movement comparison.
           </p>
         </div>
       </div>
@@ -261,7 +261,11 @@ function EliteLabAccessPanel({ gate }) {
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
         <span className="rounded-full border border-cyan-200/20 bg-cyan-300/10 px-2.5 py-1 text-cyan-100">In development</span>
         <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">Not a live measurement tool</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">Requires calibration before use</span>
       </div>
+      <Link to="/elite-lab-roadmap" className="mt-3 inline-flex text-xs font-semibold text-cyan-100 hover:text-white">
+        View readiness roadmap
+      </Link>
     </div>
   );
 }
@@ -283,6 +287,7 @@ function MovementHelpPanel() {
 
 export default function BiomechanicsHUD() {
   const { club } = useClubContext();
+  const canView = ['owner', 'admin'].includes(club?._memberRole);
   const planKey = getPlanKey(club);
   const eliteGate = getFeatureGateState('elite_3d_comparison', planKey);
   const [cameraPreset, setCameraPreset] = useState('side');
@@ -298,6 +303,19 @@ export default function BiomechanicsHUD() {
     setCameraPreset('side');
     setViewKey((value) => value + 1);
   };
+
+  if (!canView) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#030712] px-4 text-center text-slate-100">
+        <div className="max-w-md rounded-lg border border-white/10 bg-slate-950/70 p-6">
+          <Lock className="mx-auto h-8 w-8 text-amber-100" />
+          <h1 className="mt-3 text-lg font-semibold">Owner or admin access required</h1>
+          <p className="mt-2 text-xs leading-relaxed text-slate-400">Elite Lab is an internal prototype visualisation and is not a live measurement tool.</p>
+          <Link to="/dashboard" className="mt-4 inline-flex text-xs font-semibold text-cyan-100 hover:text-white">Return to Coach App</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[70] overflow-hidden bg-[#030712] text-slate-100">
@@ -328,7 +346,7 @@ export default function BiomechanicsHUD() {
         </div>
 
         <div className="pointer-events-auto fixed left-1/2 top-4 z-[85] hidden w-[min(36rem,calc(100vw-10rem))] -translate-x-1/2 rounded-full border border-amber-200/20 bg-slate-950/70 px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-xl shadow-cyan-950/20 backdrop-blur-xl md:block">
-          Elite Lab Preview - future premium reference comparison. Coach-guided only; not part of standard reports.
+          Elite Lab Preview - future calibrated comparison. Coach-reviewed prototype; not part of standard reports.
         </div>
 
         <EliteLabAccessPanel gate={eliteGate} />
