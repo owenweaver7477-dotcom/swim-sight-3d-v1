@@ -31,3 +31,10 @@ dist-ssr
 
 .env
 .vite
+
+# Private coach workflow-pilot responses
+pilot/responses/*.json
+
+# Python cache
+__pycache__/
+*.pyc

@@ -124,3 +124,6 @@ fit — it's still a workflow pilot of coach-approved, AI-assisted draft finding
 - Would a club pay for it?
 - Changes needed before next pilot:
 - Go / iterate / stop decision:
+
+Capture with `python3 pilot/collect.py`; summarise with
+`python3 pilot/summarize.py`.
