@@ -2,6 +2,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const ALLOWED_ROLES = ['owner', 'admin', 'coach'];
 
+function envFlagEnabled(value: string | undefined | null) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+}
+
 function generateJobId() {
   return 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
 }
@@ -48,6 +52,22 @@ Deno.serve(async (req) => {
     }
     if (!ALLOWED_ROLES.includes(membership.role)) {
       return Response.json({ error: 'Forbidden: insufficient role to trigger AI analysis' }, { status: 403 });
+    }
+
+    // This remains off unless production explicitly enables the safeguarding
+    // gate after the consent process and records are ready.
+    if (envFlagEnabled(Deno.env.get('REQUIRE_CONSENT')) && upload.swimmer_id) {
+      const consentRecords = await base44.asServiceRole.entities.ConsentRecord.filter({
+        swimmer_id: upload.swimmer_id,
+      });
+      const consent = consentRecords?.[0] || null;
+      if (consent?.is_minor === true && consent.consent_status !== 'granted') {
+        return Response.json({
+          error: 'Guardian consent is required before this minor swimmer can be sent for AI Review. Open the swimmer consent step, record granted consent, then try again.',
+          code: 'minor_guardian_consent_required',
+          next_action: 'record_guardian_consent',
+        }, { status: 409 });
+      }
     }
 
     // 4. Validate stroke_type

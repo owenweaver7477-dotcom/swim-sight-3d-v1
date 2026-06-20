@@ -5,7 +5,7 @@ import {
   requireClubRole,
   requireUser,
   sendJson,
-} from '../../_lib/server.js';
+} from './server.js';
 
 const CONSENT_ROLES = ['owner', 'admin', 'coach'];
 const CONSENT_STATUSES = ['none', 'granted', 'withdrawn'];
@@ -25,7 +25,7 @@ function cleanEmail(value) {
   return email;
 }
 
-export default async function handler(req, res) {
+export async function handleSwimmerConsent(req, res) {
   if (!['GET', 'POST', 'PATCH'].includes(req.method)) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }

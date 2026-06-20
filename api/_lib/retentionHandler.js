@@ -6,13 +6,13 @@ import {
   requireClubRole,
   requireUser,
   sendJson,
-} from '../../_lib/server.js';
-import { deleteRawFootageObject } from '../../_lib/dataDeletion.js';
+} from './server.js';
+import { deleteRawFootageObject } from './dataDeletion.js';
 import {
   COMPLETED_REPORT_STATUSES,
   footageRetentionDays,
   selectUploadsDueForDeletion,
-} from '../../_lib/safeguarding.js';
+} from './safeguarding.js';
 
 function cronAuthorized(req) {
   const secret = process.env.CRON_SECRET;
@@ -20,7 +20,7 @@ function cronAuthorized(req) {
   return Boolean(secret && authorization === `Bearer ${secret}`);
 }
 
-export default async function handler(req, res) {
+export async function handleRetentionCleanup(req, res) {
   if (!['GET', 'POST'].includes(req.method)) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }

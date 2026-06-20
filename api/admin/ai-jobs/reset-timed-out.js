@@ -9,6 +9,7 @@ import {
   sendJson,
 } from '../../_lib/server.js';
 import { dispatchNextQueuedAIJob, getAIQueueSummary } from '../../_lib/aiQueue.js';
+import { handleRetentionCleanup } from '../../_lib/retentionHandler.js';
 
 const ACTIVE_JOB_STATUSES = [
   'accepted',
@@ -56,6 +57,10 @@ function sanitizeDispatchForClub(result, clubId) {
 }
 
 export default async function handler(req, res) {
+  if (req.query?.action === 'retention_cleanup') {
+    return handleRetentionCleanup(req, res);
+  }
+
   if (!['GET', 'POST'].includes(req.method)) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }

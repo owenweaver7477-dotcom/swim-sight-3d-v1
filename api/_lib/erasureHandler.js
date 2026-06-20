@@ -5,16 +5,16 @@ import {
   requireClubRole,
   requireUser,
   sendJson,
-} from '../../_lib/server.js';
+} from './server.js';
 import {
   deleteArtifactPreviews,
   deleteRawFootageObject,
   deleteRowsByIds,
-} from '../../_lib/dataDeletion.js';
+} from './dataDeletion.js';
 
 const ERASURE_ROLES = ['owner', 'admin', 'coach'];
 
-export default async function handler(req, res) {
+export async function handleSwimmerErasure(req, res) {
   if (req.method !== 'POST') {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }

@@ -1,6 +1,18 @@
 {
   "rewrites": [
     {
+      "source": "/api/swimmers/:id/consent",
+      "destination": "/api/reports/:id?action=swimmer_consent"
+    },
+    {
+      "source": "/api/swimmers/:id/erase",
+      "destination": "/api/reports/:id?action=swimmer_erasure"
+    },
+    {
+      "source": "/api/admin/retention/delete-expired-footage",
+      "destination": "/api/admin/ai-jobs/reset-timed-out?action=retention_cleanup"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

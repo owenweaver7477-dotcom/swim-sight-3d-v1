@@ -7,6 +7,8 @@ import {
   requireUser,
   sendJson,
 } from '../_lib/server.js';
+import { handleSwimmerConsent } from '../_lib/consentHandler.js';
+import { handleSwimmerErasure } from '../_lib/erasureHandler.js';
 
 const RECIPIENT_TYPES = ['swimmer', 'parent', 'coach', 'other'];
 const DELIVERY_METHODS = ['manual_copy', 'email'];
@@ -74,6 +76,13 @@ async function handleDeliveryLog(req, res, service, user, report) {
 }
 
 export default async function handler(req, res) {
+  if (req.query?.action === 'swimmer_consent') {
+    return handleSwimmerConsent(req, res);
+  }
+  if (req.query?.action === 'swimmer_erasure') {
+    return handleSwimmerErasure(req, res);
+  }
+
   if (!['DELETE', 'POST'].includes(req.method)) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
