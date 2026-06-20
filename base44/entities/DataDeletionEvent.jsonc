@@ -1,0 +1,21 @@
+{
+  "name": "DataDeletionEvent",
+  "type": "object",
+  "description": "Internal path-free audit marker for swimmer data deletion requests.",
+  "properties": {
+    "club_id": { "type": "string" },
+    "swimmer_id": { "type": "string" },
+    "requested_by": { "type": "string" },
+    "request_reason": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["requested", "completed", "partial", "failed"],
+      "default": "requested"
+    },
+    "deleted_counts": { "type": "object" },
+    "error_code": { "type": "string" },
+    "requested_at": { "type": "string" },
+    "completed_at": { "type": "string" }
+  },
+  "required": ["club_id", "swimmer_id", "status"]
+}

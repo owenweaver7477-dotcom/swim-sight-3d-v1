@@ -61,7 +61,7 @@ export default function CoachApprovedAIPage() {
         }
       />
 
-      <PublicSection title="AI suggests. Coaches decide." description="Coach-approved AI swimming analysis means AI output is treated as draft evidence. The coach decides what is accurate, what needs editing, and what belongs in the final swimmer improvement report.">
+      <PublicSection title="AI suggests. Coaches decide." description="Coach-approved AI swimming analysis means AI output is treated as draft evidence. The coach decides what is supported by the video, what needs editing, and what belongs in the final swimmer improvement report.">
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/10 text-cyan-200">

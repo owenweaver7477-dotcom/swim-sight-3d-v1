@@ -20,6 +20,7 @@ import {
   getClubAIEntitlement,
   publicEntitlementResponse,
 } from '../_lib/entitlements.js';
+import { consentGate, envFlagEnabled } from '../_lib/safeguarding.js';
 
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
@@ -77,6 +78,27 @@ export default async function handler(req, res) {
     upload = uploadRow;
 
     await requireClubRole(service, upload.club_id, user.id, COACH_ROLES);
+
+    if (envFlagEnabled(process.env.REQUIRE_CONSENT)) {
+      const { data: consentRecord, error: consentError } = await service
+        .from('swimmer_consent_records')
+        .select('is_minor,consent_status')
+        .eq('club_id', upload.club_id)
+        .eq('swimmer_id', upload.swimmer_id)
+        .maybeSingle();
+      if (consentError) throw consentError;
+      const consent = consentGate(consentRecord, { required: true });
+      if (!consent.allowed) {
+        return sendJson(res, 409, {
+          error: consent.message,
+          code: consent.reason,
+          next_action: consent.next_action,
+          video_upload_id: upload.id,
+          swimmer_id: upload.swimmer_id,
+          processing_status: upload.processing_status || 'uploaded',
+        });
+      }
+    }
 
     if (!upload.stroke_type) {
       return sendJson(res, 400, {

@@ -42,7 +42,7 @@ Use this 20-minute test with a real coach, one real swimmer, and one short swim 
     - Expected: coach sees source video, AI evidence status, returned/accepted/filtered counts, and findings if the quality gate passed.
 
 11. Review findings.
-    - Approve one finding if it is accurate.
+    - Approve one finding if the video evidence supports it and the coach agrees.
     - Edit one cue if wording needs coach adjustment.
     - Reject one finding if it is not visible in the video.
 

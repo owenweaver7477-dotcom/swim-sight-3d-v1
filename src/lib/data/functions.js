@@ -116,6 +116,18 @@ export const functions = {
     return postJson('/api/admin/ai-jobs/reset-timed-out', { ...payload, action: 'dispatch_next' });
   },
 
+  getSwimmerConsent(swimmerId) {
+    return getJson(`/api/swimmers/${encodeURIComponent(swimmerId)}/consent`);
+  },
+
+  saveSwimmerConsent(swimmerId, payload) {
+    return postJson(`/api/swimmers/${encodeURIComponent(swimmerId)}/consent`, payload);
+  },
+
+  eraseSwimmerData(swimmerId, payload) {
+    return postJson(`/api/swimmers/${encodeURIComponent(swimmerId)}/erase`, payload);
+  },
+
   async getSharedReport(token) {
     const response = await fetch(`/api/shared-reports/${encodeURIComponent(token)}`);
     return parseResponse(response);

@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import SwimmerProgressAnalytics from '@/components/analytics/SwimmerProgressAnalytics';
 import ReportHistoryList from '@/components/analytics/ReportHistoryList';
 import { activeCompletedReports, PENDING_STATUSES } from '@/components/analytics/analyticsHelpers';
+import SwimmerSafeguardingPanel from '@/components/swimmers/SwimmerSafeguardingPanel';
 
 const MANAGE_SWIMMER_ROLES = ['owner', 'admin', 'coach'];
 const EMPTY_FORM = {
@@ -204,6 +205,7 @@ export default function Swimmers() {
 
         {/* Progress Analytics — full width below */}
         <div className="space-y-4 mt-4">
+          {canManageSwimmers && <SwimmerSafeguardingPanel swimmer={selected} />}
           <SwimmerProgressAnalytics swimmer={selected} />
           <ReportHistoryList swimmerReports={activeReports} allFindings={swimmerFindings} />
 

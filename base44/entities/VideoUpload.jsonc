@@ -158,6 +158,18 @@
       "type": "string",
       "description": "Error message if AI processing failed"
     },
+    "raw_footage_deleted_at": {
+      "type": "string",
+      "description": "ISO timestamp when the private raw video object was deleted"
+    },
+    "raw_footage_deletion_reason": {
+      "type": "string",
+      "description": "Path-free retention or erasure reason code"
+    },
+    "raw_footage_deleted_by": {
+      "type": "string",
+      "description": "User ID for requested deletion; null for scheduled retention"
+    },
     "review_goal": {
       "type": "string",
       "description": "Coach's main goal for this review session"

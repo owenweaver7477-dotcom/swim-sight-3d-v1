@@ -1,0 +1,23 @@
+{
+  "name": "ConsentRecord",
+  "type": "object",
+  "description": "SERVER-SIDE safeguarding record. Guardian contact must never appear in shared/public reports.",
+  "properties": {
+    "club_id": { "type": "string" },
+    "swimmer_id": { "type": "string" },
+    "is_minor": { "type": "boolean", "default": false },
+    "consent_status": {
+      "type": "string",
+      "enum": ["none", "granted", "withdrawn"],
+      "default": "none"
+    },
+    "guardian_name": { "type": "string" },
+    "guardian_email": { "type": "string" },
+    "consent_granted_at": { "type": "string" },
+    "consent_source": { "type": "string" },
+    "consent_withdrawn_at": { "type": "string" },
+    "created_by": { "type": "string" },
+    "updated_by": { "type": "string" }
+  },
+  "required": ["club_id", "swimmer_id"]
+}

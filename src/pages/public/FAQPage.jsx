@@ -10,7 +10,7 @@ const faqGroups = [
   {
     category: 'Product',
     items: [
-      ['Does Swim Sight 3D replace the coach?', 'No. The product is built around coach approval. AI can assist, but coaches decide what is accurate and what appears in a report.'],
+      ['Does Swim Sight 3D replace the coach?', 'No. The product is built around coach approval. AI can assist, but coaches decide what is supported by the video and what appears in a report.'],
       ['Is manual review available?', 'Yes. Coach Studio supports manual video review, timestamps, key moments, drawing, findings, drills, and reports without relying on AI.'],
       ['What video length works best?', 'For pilot testing, short 5–15 second clips, side view, and 720p or compressed 1080p footage are recommended.'],
     ],
