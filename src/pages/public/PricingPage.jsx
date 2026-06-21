@@ -41,10 +41,10 @@ export default function PricingPage() {
       <PublicHero
         eyebrow="Pricing"
         title="Swim Sight 3D pricing for coaches and clubs."
-        description="Swim Sight 3D is currently being prepared for serious coach and club pilot use. Billing is not enabled on this public website."
+        description="Being prepared for serious coach and club pilots. Billing isn't enabled on this public site."
         actions={<Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Request access through the app</Link>}
       />
-      <PublicSection title="Pilot options" description="These are product access lanes, not live payment plans. Pricing is being finalised for pilot coaches and clubs.">
+      <PublicSection title="Pilot options" description="Access lanes, not live payment plans. Pricing is being finalised for pilots.">
         <div className="grid gap-4 lg:grid-cols-4">
           {tiers.map(({ plan, items, note, featured }) => (
             <article key={plan.key} className={`rounded-3xl border p-5 shadow-sm ${featured ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'}`}>
@@ -78,7 +78,7 @@ export default function PricingPage() {
           ))}
         </div>
       </PublicSection>
-      <PublicSection subtle title="No payment flow yet" description="This page shows the plan structure Swim Sight 3D is preparing for. It does not add billing, checkout, payment collection, subscription logic, or a billing portal." />
+      <PublicSection subtle title="No payment flow yet" description="Shows the planned structure only — no billing, checkout, or subscriptions yet." />
     </PublicLayout>
   );
 }

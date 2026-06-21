@@ -51,7 +51,7 @@ export default function CoachApprovedAIPage() {
       <PublicHero
         eyebrow="Coach-approved AI"
         title="AI-assisted swimming analysis, controlled by the coach."
-        description="Swim Sight 3D can support coach review with draft AI evidence, but every swimmer report is built around coach approval, manual review, and public-safe report sharing."
+        description="Draft AI evidence supports review; every report is coach-approved, manual-friendly, and public-safe."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
@@ -61,7 +61,7 @@ export default function CoachApprovedAIPage() {
         }
       />
 
-      <PublicSection title="AI suggests. Coaches decide." description="Coach-approved AI swimming analysis means AI output is treated as draft evidence. The coach decides what is supported by the video, what needs editing, and what belongs in the final swimmer improvement report.">
+      <PublicSection title="AI suggests. Coaches decide." description="AI output is draft evidence. The coach decides what's supported, what to edit, and what ships.">
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/10 text-cyan-200">
@@ -69,7 +69,7 @@ export default function CoachApprovedAIPage() {
             </div>
             <h2 className="mt-4 text-2xl font-bold">Draft evidence, not automatic truth.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              When video quality is suitable, AI may suggest findings. Coaches can approve, edit, reject, or ignore those suggestions. Reports only show content the coach has chosen to include.
+              AI may suggest findings; coaches approve, edit, reject, or ignore them. Reports show only what the coach chose.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -89,7 +89,7 @@ export default function CoachApprovedAIPage() {
         </div>
       </PublicSection>
 
-      <PublicSection subtle title="Manual review vs AI-assisted review" description="Both paths lead to the same coach-approved report structure. AI is an assistant inside the workflow, not a separate replacement for the coach.">
+      <PublicSection subtle title="Manual review vs AI-assisted review" description="Both paths reach the same coach-approved report. AI assists; it doesn't replace the coach.">
         <div className="grid gap-5 lg:grid-cols-2">
           {reviewModes.map((mode) => (
             <article key={mode.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -108,7 +108,7 @@ export default function CoachApprovedAIPage() {
         </div>
       </PublicSection>
 
-      <PublicSection title="Video quality and manual fallback" description="AI-assisted review works best when the swimmer is clearly visible. If evidence is weak, Swim Sight 3D should guide the coach toward manual review instead of inventing findings.">
+      <PublicSection title="Video quality and manual fallback" description="AI works best when the swimmer is clearly visible. Weak evidence routes to manual review, not invented findings.">
         <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
@@ -127,13 +127,13 @@ export default function CoachApprovedAIPage() {
             </div>
             <h2 className="mt-4 text-2xl font-bold text-slate-950">Weak evidence becomes coach review.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-700">
-              If pose evidence is unclear, the coach can continue with manual Coach Studio review, save key moments, add findings, assign drills, and still finalise a useful swimming analysis report.
+              If pose evidence is unclear, the coach reviews manually — key moments, findings, drills — and still finalises a useful report.
             </p>
           </div>
         </div>
       </PublicSection>
 
-      <PublicSection subtle title="Privacy and report safety" description="Public reports should be useful to swimmers and parents without exposing private video data or internal review details.">
+      <PublicSection subtle title="Privacy and report safety" description="Useful to swimmers and parents — without exposing private video or internal review details.">
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export default function CoachApprovedAIPage() {
               <h2 className="text-xl font-bold text-slate-950">Private swim video review</h2>
             </div>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Uploaded videos belong inside the authenticated club workflow. Shared reports are designed to show the approved improvement plan, not private storage paths or playback URLs.
+              Videos stay inside the authenticated club workflow. Shared reports show the approved plan — never storage paths or playback URLs.
             </p>
           </div>
           <div className="grid gap-3">
@@ -155,7 +155,7 @@ export default function CoachApprovedAIPage() {
         </div>
       </PublicSection>
 
-      <PublicSection title="Why this matters for clubs" description="Club trust comes from consistent language, coach-approved reports, and a private workspace that supports squads without making AI sound more certain than it is.">
+      <PublicSection title="Why this matters for clubs" description="Trust comes from consistent language, coach-approved reports, and a private workspace — without overclaiming AI.">
         <div className="grid gap-4 md:grid-cols-3">
           {[
             ['Consistent technical language', 'Coaches can use shared phases, fault tags, cues, and drills across the club.'],

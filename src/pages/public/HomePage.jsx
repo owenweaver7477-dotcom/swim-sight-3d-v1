@@ -54,11 +54,11 @@ function Section({ eyebrow, title, description, children, dark = false }) {
     <section className={`${dark ? 'bg-slate-950 text-white' : 'bg-white text-slate-950'} border-b border-slate-200 px-4 py-16`}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 max-w-3xl">
-          {eyebrow && <div className={`text-xs font-bold uppercase tracking-[0.24em] ${dark ? 'text-cyan-200' : 'text-sky-600'}`}>{eyebrow}</div>}
-          <h2 className={`mt-3 text-2xl font-bold tracking-tight md:text-4xl ${dark ? 'text-white' : 'text-slate-950'}`}>{title}</h2>
-          {description && <p className={`mt-4 text-base leading-8 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>}
+          {eyebrow && <div className={`reveal text-xs font-bold uppercase tracking-[0.24em] ${dark ? 'text-cyan-200' : 'text-sky-600'}`}>{eyebrow}</div>}
+          <h2 className={`reveal mt-3 text-2xl font-bold tracking-tight md:text-4xl ${dark ? 'text-white' : 'text-slate-950'}`}>{title}</h2>
+          {description && <p className={`reveal mt-4 text-base leading-8 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>}
         </div>
-        {children}
+        <div className="reveal">{children}</div>
       </div>
     </section>
   );
@@ -135,20 +135,20 @@ export default function HomePage() {
         <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'linear-gradient(90deg,#ffffff 1px,transparent 1px),linear-gradient(#ffffff 1px,transparent 1px)', backgroundSize: '56px 56px' }} />
         <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-10 py-16 md:grid-cols-[1fr_0.92fr] md:py-20">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+            <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
               <Waves className="h-3.5 w-3.5" />
               AI suggests. Coaches decide.
             </div>
-            <h1 className="mt-6 max-w-4xl text-4xl font-bold tracking-tight text-white md:text-6xl">
+            <h1 className="reveal mt-6 max-w-4xl text-4xl font-bold tracking-tight text-white md:text-6xl">
               AI-assisted swim video review for coaches.
             </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
+            <p className="reveal mt-6 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
               Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers.
             </p>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-              Swim Sight 3D does not replace the coach. It gives coaches a clearer system for reviewing video, organising technical feedback, and sharing improvement plans with swimmers or parents.
+            <p className="reveal mt-4 max-w-2xl text-sm leading-7 text-slate-400">
+              It supports the coach — it doesn't replace them.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition-colors hover:bg-cyan-100">
                 View Sample Report <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -170,7 +170,7 @@ export default function HomePage() {
       <section className="border-b border-slate-200 bg-white px-4 py-6">
         <div className="mx-auto grid max-w-6xl gap-3 md:grid-cols-4">
           {proofPoints.map(([title, description]) => (
-            <div key={title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div key={title} className="reveal rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-bold text-slate-950">{title}</div>
               <div className="mt-1 text-xs leading-5 text-slate-600">{description}</div>
             </div>
@@ -178,7 +178,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Section eyebrow="How it works" title="Turn one video into a clear coaching plan." description="The homepage workflow is deliberately simple: video in, coach review, approved findings, swimmer improvement report out." >
+      <Section eyebrow="How it works" title="Turn one video into a clear coaching plan." description="Video in, coach review, approved findings, swimmer report out." >
         <div id="how-it-works" className="grid gap-4 md:grid-cols-4">
           {workflowSteps.map(([title, description], index) => (
             <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -195,7 +195,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Human trust" title="Built for real coaching conversations." description="Swim Sight 3D is designed around the moment after a coach watches a clip and needs to explain one clear change to a swimmer.">
+      <Section eyebrow="Human trust" title="Built for real coaching conversations." description="Built for the moment after a clip, when a coach needs to explain one clear change.">
         <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">From pool deck to plan</div>
@@ -243,7 +243,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Why it is different" title="Better than loose video comments and scattered notes." description="Normal video feedback often disappears into chat threads, rough notes, or memory. Swim Sight 3D turns review moments into a structured coaching record.">
+      <Section eyebrow="Why it is different" title="Better than loose video comments and scattered notes." description="Loose video comments vanish into chats and notes. This turns each moment into a structured record.">
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard icon={Clock3} title="Moments stay attached to feedback" description="Key timestamps and approximate frames can sit beside the finding, drill, and next focus." />
           <MiniCard icon={FileText} title="Feedback becomes a report" description="The coach output is a readable swimmer improvement plan, not a disconnected video clip." />
@@ -251,7 +251,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section dark eyebrow="Coach Studio" title="The heart of the product is a structured coach review room." description="Coach Studio gives coaches a professional workflow for turning video moments into clear feedback. Manual review is not treated as a failure state; it is a first-class analysis mode.">
+      <Section dark eyebrow="Coach Studio" title="The heart of the product is a structured coach review room." description="A professional workflow for turning video moments into clear feedback. Manual review is first-class, not a fallback.">
         <div className="grid gap-4 md:grid-cols-4">
           <MiniCard dark icon={PlayCircle} title="Fullscreen review" description="Review video in a focused workspace with slow motion and approximate frame stepping." />
           <MiniCard dark icon={Clock3} title="Key stamps" description="Capture timestamped moments for catch, breath, kick setup, line reset, turns, and more." />
@@ -260,7 +260,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Coach-approved AI" title="AI-assisted evidence. Coach-approved report." description="When video quality is suitable, AI can suggest draft findings. Coaches review, edit, approve, or reject every suggestion before it appears in a swimmer report.">
+      <Section eyebrow="Coach-approved AI" title="AI-assisted evidence. Coach-approved report." description="AI suggests draft findings; coaches approve, edit, or reject each one before it reaches a report.">
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard icon={Brain} title="Draft findings only" description="AI output is treated as evidence for review, not automatic truth." />
           <MiniCard icon={ShieldCheck} title="Quality gates" description="Weak pose or unreliable evidence becomes manual review with no fake findings." />
@@ -273,7 +273,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Key moments + Coach Draw" title="Mark the moment. Explain the correction. Share the plan." description="Instead of sending a swimmer a vague video comment, coaches can capture the exact moment, annotate the frame, and turn it into a finding with a drill.">
+      <Section eyebrow="Key moments + Coach Draw" title="Mark the moment. Explain the correction. Share the plan." description="Capture the exact moment, annotate the frame, and turn it into a finding with a drill.">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">Moment workflow</div>
@@ -301,7 +301,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section dark eyebrow="Swimmer improvement reports" title="The report is the product output." description="A good review should become a useful plan. Swim Sight 3D reports are structured so swimmers and parents can understand the correction without seeing internal app complexity.">
+      <Section dark eyebrow="Swimmer improvement reports" title="The report is the product output." description="Reports are built so swimmers and parents understand the correction — without the app complexity.">
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard dark icon={FileText} title="What we saw" description="A clear, coach-approved observation from video." />
           <MiniCard dark icon={Layers3} title="Why it matters" description="A short explanation of how the fault affects stroke quality." />
@@ -312,7 +312,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Club workflow" title="For coaches, squads, and clubs that need consistency." description="Swim Sight 3D helps coaching teams organise swimmers and reports without turning the product into an engineering control panel.">
+      <Section eyebrow="Club workflow" title="For coaches, squads, and clubs that need consistency." description="Organise swimmers and reports across a coaching team — without an engineering control panel.">
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard icon={Users} title="Squads + profiles" description="Keep swimmers, squad assignment, coach notes, and report history organised." />
           <MiniCard icon={Target} title="Shared technical language" description="Use consistent phases, fault tags, cues, drills, and final report structure." />
@@ -320,7 +320,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Stroke coverage" title="Built around the strokes coaches review every week." description="Each public stroke page introduces the phase structure Swim Sight 3D uses for review and reporting.">
+      <Section eyebrow="Stroke coverage" title="Built around the strokes coaches review every week." description="Each stroke page shows the phase structure used for review and reporting.">
         <div className="grid gap-4 md:grid-cols-4">
           {strokeCards.map(([title, href, description]) => (
             <Link key={title} to={href} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
@@ -334,7 +334,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Sample report preview" title="See the improvement plan a swimmer receives." description="This sample uses demo content only. Real shared reports are created from coach-reviewed club data.">
+      <Section eyebrow="Sample report preview" title="See the improvement plan a swimmer receives." description="Demo content only — real reports come from coach-reviewed club data.">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-950/10">
           <div className="bg-slate-950 p-6 text-white">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Demo report</div>
@@ -380,7 +380,7 @@ export default function HomePage() {
 
       <section className="bg-slate-950 px-4 py-16 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/[0.045] p-8 md:p-10">
-          <div className="max-w-3xl">
+          <div className="reveal max-w-3xl">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Built for coaches, squads, and clubs</div>
             <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">Turn video into a clearer coaching plan.</h2>
             <p className="mt-4 text-base leading-8 text-slate-300">

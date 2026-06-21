@@ -25,8 +25,8 @@ const faqGroups = [
   {
     category: 'Privacy',
     items: [
-      ['Are videos private?', 'Uploaded videos are handled inside the authenticated club workflow. Public shared reports should never expose private video paths or signed video URLs. See the privacy and video review page for the public explanation.'],
-      ['What is excluded from shared reports?', 'Shared reports are designed to exclude private video paths, signed URLs, raw AI output, rejected findings, calibration feedback, and internal coach notes not selected for the report.'],
+      ['Are videos private?', 'Videos stay inside the authenticated club workflow. Shared reports never expose private paths or signed URLs — see the privacy page.'],
+      ['What is excluded from shared reports?', 'Shared reports exclude private paths, signed URLs, raw AI output, rejected findings, and internal coach notes.'],
     ],
   },
   {
