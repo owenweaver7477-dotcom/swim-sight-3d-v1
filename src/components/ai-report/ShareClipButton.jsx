@@ -25,7 +25,6 @@ export default function ShareClipButton({ reportId, isCoachApproved, findings = 
   const [clipUrl, setClipUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
-  if (!SHARE_CLIP_ENABLED || !isCoachApproved) return null;
 
   const isPlaceholder = !analysisMode || analysisMode === 'placeholder';
   const pendingCount = findings.filter((f) => f.approval_status === 'pending').length;
@@ -55,6 +54,8 @@ export default function ShareClipButton({ reportId, isCoachApproved, findings = 
       toast.error('Failed to copy');
     }
   };
+
+  if (!SHARE_CLIP_ENABLED || !isCoachApproved) return null;
 
   return (
     <div className="p-4 rounded-xl bg-card border border-border space-y-3">
