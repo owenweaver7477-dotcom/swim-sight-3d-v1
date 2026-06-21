@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
     const { data: upload, error } = await service
       .from('video_uploads')
-      .select('*')
+      .select('id,club_id,swimmer_id,file_bucket,storage_bucket,file_path,storage_path,upload_status,processing_status')
       .eq('id', videoUploadId)
       .maybeSingle();
 
@@ -32,7 +32,13 @@ export default async function handler(req, res) {
       return sendJson(res, 422, { error: 'Video storage path is missing' });
     }
 
-    await requireClubRole(service, upload.club_id, user.id, MEMBER_ROLES);
+    const membership = await requireClubRole(service, upload.club_id, user.id, MEMBER_ROLES);
+    if (['swimmer', 'parent'].includes(membership.role)
+      && (!membership.linked_swimmer_id || membership.linked_swimmer_id !== upload.swimmer_id)) {
+      const accessError = new Error('Forbidden');
+      accessError.status = 403;
+      throw accessError;
+    }
 
     const { data, error: signError } = await service
       .storage

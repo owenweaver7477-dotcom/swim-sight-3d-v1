@@ -3,7 +3,7 @@ import { CheckCircle2, FileVideo, ShieldAlert } from 'lucide-react';
 import PageHeader from '@/components/shared/PageHeader';
 import { useClubContext } from '@/lib/useClubContext';
 
-const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const ADMIN_ROLES = ['owner', 'admin'];
 
 const CAPTURE_RULES = [
   'Two swimmers are enough for the first comparison set.',
@@ -50,7 +50,7 @@ function ChecklistBlock({ title, description, items }) {
 }
 export default function FootageChecklist() {
   const { club } = useClubContext();
-  const canView = COACH_ROLES.includes(club?._memberRole);
+  const canView = ADMIN_ROLES.includes(club?._memberRole);
 
   if (!canView) {
     return (

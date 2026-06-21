@@ -1,5 +1,4 @@
 import React from 'react';
-import { Waves } from 'lucide-react';
 
 const RISK_STYLES = {
   high:    { label: 'High Risk',    cls: 'text-red-700 bg-red-50 border-red-200' },

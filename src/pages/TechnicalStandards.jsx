@@ -5,12 +5,10 @@ import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   BookOpen, Plus, Search, ChevronRight, Copy, Archive, Edit2,
-  Waves, Target, CheckCircle2, Tag, Loader2, X, BookMarked
+  Waves, Tag, Loader2, X, BookMarked
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import StandardFormModal from '@/components/standards/StandardFormModal';
 import StandardDetailModal from '@/components/standards/StandardDetailModal';
 import { DEFAULT_STANDARDS } from '@/components/standards/defaultStandards';

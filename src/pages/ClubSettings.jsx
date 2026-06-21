@@ -5,9 +5,8 @@ import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import PageHeader from '@/components/shared/PageHeader';
-import { Plus, ChevronDown, Settings, Waves, KeyRound, Pencil, Check, X, Map, RotateCcw, FlaskConical, ArrowRight, Activity, Archive } from 'lucide-react';
+import { Plus, Settings, Waves, KeyRound, Pencil, Check, Map, RotateCcw, FlaskConical, ArrowRight, Activity, Archive } from 'lucide-react';
 import ClubInviteManager from '@/components/club/ClubInviteManager';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -183,7 +182,7 @@ function ClubEditCard({ club }) {
 }
 
 export default function ClubSettings() {
-  const { club } = useClubContext();
+  const { club, memberRole } = useClubContext();
   const navigate = useNavigate();
   const [squadForm, setSquadForm] = useState({
     name: '',
@@ -193,7 +192,6 @@ export default function ClubSettings() {
   });
   const queryClient = useQueryClient();
 
-  const memberRole = club?._memberRole || 'coach';
   const canManage = ['owner', 'admin'].includes(memberRole);
 
   const { data: squads = [] } = useQuery({
@@ -429,27 +427,6 @@ export default function ClubSettings() {
           </div>
         )}
 
-        {/* Developer Diagnostics — owner/admin only */}
-        {canManage && (
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <button className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Settings className="w-4 h-4" /> Developer Diagnostics
-                </div>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 p-4 rounded-xl bg-card border border-border">
-              <div className="space-y-2 text-xs font-mono">
-                <div className="flex justify-between"><span className="text-muted-foreground">Backend</span><span className="text-primary">Supabase Connected</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Active Club</span><span className="text-foreground">{club?.name || 'None'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Club ID</span><span className="text-foreground">{club?.id || 'N/A'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Data Source</span><span className="text-foreground">Supabase Tables</span></div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
       </div>
     </div>
   );

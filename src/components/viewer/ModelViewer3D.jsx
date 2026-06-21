@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, ZoomIn, ZoomOut, AlertCircle, Loader2 } from 'lucide-react';
+import { RotateCcw, AlertCircle, Loader2 } from 'lucide-react';
 import * as THREE from 'three';
 
 // Minimal Three.js GLTFLoader inline (avoids import issues)

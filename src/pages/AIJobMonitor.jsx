@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import {
-  Activity, Loader2, RefreshCw, AlertTriangle, CheckCircle2,
-  Clock, XCircle, RotateCcw, ChevronDown, ChevronRight, ShieldAlert, FileText, Film
+  Activity, Loader2, RefreshCw, AlertTriangle,
+  Clock, RotateCcw, ChevronDown, ChevronRight, ShieldAlert, FileText, Film
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -317,7 +317,7 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
 }
 
 export default function AIJobMonitor() {
-  const { club } = useClubContext();
+  const { club, memberRole } = useClubContext();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
   const [retrying, setRetrying] = useState(null);
@@ -326,9 +326,8 @@ export default function AIJobMonitor() {
   const [resetResult, setResetResult] = useState(null);
   const [dispatchResult, setDispatchResult] = useState(null);
 
-  const memberRole = club?._memberRole || 'coach';
   const isAdmin = ['owner', 'admin'].includes(memberRole);
-  const canViewJobs = ['owner', 'admin', 'coach', 'assistant_coach'].includes(memberRole);
+  const canViewJobs = ['owner', 'admin'].includes(memberRole);
 
   const { data: jobs = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['ai-jobs', club?.id],

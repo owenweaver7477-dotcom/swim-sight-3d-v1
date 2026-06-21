@@ -140,10 +140,10 @@ export default function HomePage() {
               AI suggests. Coaches decide.
             </div>
             <h1 className="mt-6 max-w-4xl text-4xl font-bold tracking-tight text-white md:text-6xl">
-              AI-assisted swimming analysis reports for serious coaches.
+              AI-assisted swim video review for coaches.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-              Upload training or race footage, review stroke phases, capture key moments, assign drills, and create coach-approved swimmer improvement reports.
+              Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers.
             </p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">
               Swim Sight 3D does not replace the coach. It gives coaches a clearer system for reviewing video, organising technical feedback, and sharing improvement plans with swimmers or parents.

@@ -1,8 +1,8 @@
 export const publicSeoMetadata = {
   home: {
     path: '/',
-    title: 'Swim Sight 3D | AI-Assisted Swimming Analysis Reports for Coaches',
-    description: 'Swim Sight 3D helps swim coaches upload video, review stroke phases, add coach-approved findings, assign drills, and create swimmer improvement reports.',
+    title: 'Swim Sight 3D | AI-Assisted Swim Video Review for Coaches',
+    description: 'Upload a swim clip, review AI-assisted draft findings, approve the report, and send clear next steps to swimmers.',
   },
   features: {
     path: '/features',

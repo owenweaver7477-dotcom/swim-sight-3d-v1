@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/shared/PageHeader';
 import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, MessageSquare, Bug, BarChart3, FileText, ShieldAlert, Plus } from 'lucide-react';
+import { ClipboardList, MessageSquare, Bug, BarChart3, FileText, ShieldAlert } from 'lucide-react';
 import ChecklistTab from '@/components/coach-testing/ChecklistTab';
 import FeedbackTab from '@/components/coach-testing/FeedbackTab';
 import ReadinessTab from '@/components/coach-testing/ReadinessTab';

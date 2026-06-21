@@ -67,6 +67,7 @@ const REVIEW_STATUS_CONFIG = {
 };
 
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const PILOT_ROLES = ['owner', 'admin', 'coach'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 const COACH_STUDIO_PHASES = {
   breaststroke: ['streamline', 'pull', 'breath', 'recovery', 'kick_setup', 'kick_drive', 'line_reset'],
@@ -328,7 +329,7 @@ function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coach
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { club } = useClubContext();
+  const { club, memberRole } = useClubContext();
   const { user } = useAuth();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -361,8 +362,7 @@ export default function AIReportPage() {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Determine coach role
-  const memberRole = club?._memberRole || 'coach';
-  const canEdit = COACH_ROLES.includes(memberRole);
+  const canEdit = COACH_ROLES.includes(memberRole) || user?.role === 'admin';
 
   const { data: reportArr = [], isLoading: loadingReport } = useQuery({
     queryKey: ['ai-report', reportId],
@@ -937,6 +937,27 @@ export default function AIReportPage() {
             findings={findings}
             isReportFinalised={isReportFinalised}
           />
+
+          {(PILOT_ROLES.includes(club?._memberRole) || user?.role === 'admin') && (
+            <details className="rounded-xl border border-cyan-200 bg-cyan-50/60">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-cyan-900">
+                <ClipboardCheck className="h-4 w-4" />
+                <span className="flex-1">Internal pilot tools</span>
+                <span className="text-[10px] font-medium text-cyan-700">Private coach test</span>
+              </summary>
+              <div className="flex flex-col gap-2 border-t border-cyan-200 p-3 sm:flex-row sm:flex-wrap">
+                <Button size="sm" variant="outline" className="min-h-10 text-xs" onClick={() => navigate(`/pilot-launch?report_id=${reportId}`)}>
+                  Open Pilot Checklist
+                </Button>
+                <Button size="sm" variant="outline" className="min-h-10 text-xs" onClick={() => navigate(`/pilot-launch?report_id=${reportId}#feedback`)}>
+                  Record Coach Feedback
+                </Button>
+                <Button size="sm" variant="outline" className="min-h-10 text-xs" onClick={() => navigate(`/pilot-launch?report_id=${reportId}#report-safety`)}>
+                  Check Public Report Safety
+                </Button>
+              </div>
+            </details>
+          )}
 
           <div id="section-coach-studio">
             <CoachStudioGuidedNav

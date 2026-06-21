@@ -96,6 +96,21 @@ export default function EliteLabRoadmap() {
         <strong>Coach review required.</strong> The preview is a 3D reference visualisation, not a live measurement tool. Calibrated comparison requires measured hardware and validation before use.
       </div>
 
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <div className="text-xs font-bold text-emerald-800">Current pilot</div>
+          <p className="mt-1 text-xs leading-5 text-emerald-950">Private coach review, coach-approved draft findings, and public-safe reports.</p>
+        </div>
+        <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+          <div className="text-xs font-bold text-sky-800">In validation</div>
+          <p className="mt-1 text-xs leading-5 text-sky-950">Pose reliability, stroke-phase context, coach feedback evaluation, and known-distance calibration.</p>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="text-xs font-bold text-slate-700">Not claimed</div>
+          <p className="mt-1 text-xs leading-5 text-slate-700">Automated coaching, medical diagnosis, validated 3D biomechanics, or measured hydrodynamics.</p>
+        </div>
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-2">
         {ROADMAP_ITEMS.map((item) => <FeatureReadinessCard key={item.title} {...item} />)}
       </div>

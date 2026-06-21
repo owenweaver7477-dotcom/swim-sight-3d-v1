@@ -1,16 +1,15 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getReviewSession, setReviewSession, setCoachModeFinding, SEVERITY_LEVELS } from '@/lib/swimState';
+import { getReviewSession, setCoachModeFinding, SEVERITY_LEVELS } from '@/lib/swimState';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/shared/EmptyState';
 import FindingCard from '@/components/analysis/FindingCard';
-import { Play, Pause, Target, Plus, Eye, FileText, Bookmark, ZoomIn, ZoomOut, SkipBack, SkipForward, Camera, Minus } from 'lucide-react';
+import { Play, Pause, Plus, FileText, Bookmark, SkipBack, SkipForward } from 'lucide-react';
 
 const STROKE_PHASES = {
   Breaststroke: ['Streamline', 'Outsweep', 'Catch', 'Insweep', 'Recovery', 'Heels Up', 'Foot Turn', 'Kick Snap', 'Finish', 'Glide'],

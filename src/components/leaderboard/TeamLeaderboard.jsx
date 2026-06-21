@@ -14,7 +14,7 @@ import {
   scoreTrendForSwimmer,
   swimmerName,
 } from '@/components/analytics/analyticsHelpers';
-import { AlertCircle, BarChart2, CheckCircle2, Loader2, Shield, Target, Trophy, Users, Waves } from 'lucide-react';
+import { AlertCircle, BarChart2, CheckCircle2, Loader2, Shield, Target, Trophy, Waves } from 'lucide-react';
 
 const MIN_IMPROVEMENT_REPORTS = 3;
 

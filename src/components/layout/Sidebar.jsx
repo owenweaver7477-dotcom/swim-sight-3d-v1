@@ -31,6 +31,9 @@ const NAV_CLUB = [
 
 // Admin-only — all advanced/debug tools collapsed under single section
 const NAV_ADMIN = [
+  { to: '/pilot-launch', label: 'Private Coach Pilot', icon: ClipboardCheck },
+  { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
+  { to: '/footage-checklist', label: 'Footage Checklist', icon: ClipboardCheck },
   { to: '/biomechanics-hud', label: 'Elite Lab Preview', icon: Cpu },
   { to: '/elite-lab-roadmap', label: 'Elite Lab Roadmap', icon: Map },
   { to: '/ai-infrastructure-status', label: 'AI Infrastructure', icon: Server },
@@ -41,11 +44,7 @@ const NAV_ADMIN = [
 ];
 
 const ADMIN_ROLES = ['owner', 'admin'];
-const CALIBRATION_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
-const NAV_CALIBRATION = [
-  { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
-  { to: '/footage-checklist', label: 'Footage Checklist', icon: ClipboardCheck },
-];
+const COACH_APP_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 
 export default function Sidebar() {
   const { club, clubs, switchClub } = useClubContext();
@@ -68,7 +67,7 @@ export default function Sidebar() {
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + '/');
   const memberRole = club?._memberRole || getActiveRole();
   const isAdmin = ADMIN_ROLES.includes(memberRole) || user?.role === 'admin';
-  const canViewCalibration = CALIBRATION_ROLES.includes(memberRole) || user?.role === 'admin';
+  const canUseCoachApp = COACH_APP_ROLES.includes(memberRole) || user?.role === 'admin';
 
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
@@ -188,7 +187,7 @@ export default function Sidebar() {
       <ClubWorkspaceCard />
 
       {/* New Analysis CTA */}
-      <div className="px-3 py-2">
+      {canUseCoachApp && <div className="px-3 py-2">
         <Button
           size="sm"
           className="w-full h-9 text-xs font-semibold text-white"
@@ -199,31 +198,35 @@ export default function Sidebar() {
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" /> New Analysis
         </Button>
-      </div>
+      </div>}
 
       {/* Navigation */}
       <nav className="flex-1 px-3 overflow-y-auto pb-4">
 
         {/* — Main — */}
-        <SectionLabel label="Main" />
-        <div className="space-y-0.5">
-          {NAV_MAIN.map(item => <NavItem key={item.to} item={item} />)}
-        </div>
+        {canUseCoachApp && (
+          <>
+            <SectionLabel label="Main" />
+            <div className="space-y-0.5">
+              {NAV_MAIN.map(item => <NavItem key={item.to} item={item} />)}
+            </div>
 
-        {/* — Tools — */}
-        <SectionLabel label="Tools" />
-        <div className="space-y-0.5">
-          {NAV_TOOLS.map(item => <NavItem key={item.to} item={item} />)}
-        </div>
+            {/* — Tools — */}
+            <SectionLabel label="Tools" />
+            <div className="space-y-0.5">
+              {NAV_TOOLS.map(item => <NavItem key={item.to} item={item} />)}
+            </div>
 
-        {/* — Club — */}
-        <SectionLabel label="Club" />
-        <div className="space-y-0.5">
-          {NAV_CLUB.map(item => <NavItem key={item.to} item={item} />)}
-        </div>
+            {/* — Club — */}
+            <SectionLabel label="Club" />
+            <div className="space-y-0.5">
+              {NAV_CLUB.map(item => <NavItem key={item.to} item={item} />)}
+            </div>
+          </>
+        )}
 
-        {/* — Internal tools — coach calibration plus owner/admin debug tools — */}
-        {(isAdmin || canViewCalibration) && (
+        {/* Internal operational tools are owner/admin only. */}
+        {isAdmin && (
           <div className="mt-2">
             <button
               onClick={() => setAdminOpen(!adminOpen)}
@@ -235,8 +238,7 @@ export default function Sidebar() {
             </button>
             {adminOpen && (
               <div className="ml-2 pl-3 border-l border-[#1E4A6A] mt-0.5 space-y-0.5">
-                {canViewCalibration && NAV_CALIBRATION.map(item => <NavItem key={item.to} item={item} />)}
-                {isAdmin && NAV_ADMIN.map(item => <NavItem key={item.to} item={item} />)}
+                {NAV_ADMIN.map(item => <NavItem key={item.to} item={item} />)}
               </div>
             )}
           </div>

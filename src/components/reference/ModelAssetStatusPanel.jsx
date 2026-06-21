@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Film, AlertTriangle, Upload, Info } from 'lucide-react';
+import { AlertTriangle, Upload, Info } from 'lucide-react';
 
 function StatPill({ label, value, highlight }) {
   return (

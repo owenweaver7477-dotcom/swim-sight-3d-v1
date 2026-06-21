@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PageHeader from '@/components/shared/PageHeader';
-import { Dumbbell, ChevronRight, X, Target, Tag, Waves, Zap } from 'lucide-react';
+import { ChevronRight, X, Target, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 

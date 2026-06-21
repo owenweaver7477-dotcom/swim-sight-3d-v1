@@ -12,7 +12,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Search, X, Dumbbell, Tag, ChevronRight, Loader2,
+  Search, X, Dumbbell, Tag, ChevronRight,
   BookOpen, Filter, Package, List, Building2
 } from 'lucide-react';
 import DrillDetailModal from '@/components/drills/DrillDetailModal';

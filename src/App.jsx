@@ -9,6 +9,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 import InstallAppPrompt from '@/components/shared/InstallAppPrompt';
 
 import AppLayout from './components/layout/AppLayout';
@@ -52,6 +53,10 @@ import BiomechanicsHUD from './pages/BiomechanicsHUD';
 import AIInfrastructureStatus from './pages/AIInfrastructureStatus';
 import EliteLabRoadmap from './pages/EliteLabRoadmap';
 import FootageChecklist from './pages/FootageChecklist';
+import PilotLaunchPage from './pages/PilotLaunchPage';
+
+const COACH_APP_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const OWNER_ADMIN_ROLES = ['owner', 'admin'];
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -144,6 +149,9 @@ const AuthenticatedApp = () => {
           <Route path="/club-onboarding" element={<ClubOnboarding />} />
 
         <Route element={<AppLayout />}>
+          <Route path="/settings" element={<SettingsPage />} />
+
+          <Route element={<RoleProtectedRoute allowedRoles={COACH_APP_ROLES} />}>
           {/* Primary coach routes */}
           <Route path="/dashboard" element={<TeamDashboard />} />
           <Route path="/analyse" element={<Analyse />} />
@@ -155,7 +163,6 @@ const AuthenticatedApp = () => {
           <Route path="/swimmer-trends" element={<SwimmerTrends />} />
           <Route path="/technical-standards" element={<TechnicalStandards />} />
           <Route path="/performance" element={<PerformanceHub />} />
-          <Route path="/settings" element={<SettingsPage />} />
           {/* Club management */}
           <Route path="/club-settings" element={<ClubSettings />} />
           {/* Legacy migration-era routes — keep old links alive without loading stale pages */}
@@ -163,14 +170,6 @@ const AuthenticatedApp = () => {
           <Route path="/coach-mode" element={<Navigate to="/ai-reviews" replace />} />
           <Route path="/drills" element={<Navigate to="/drill-library" replace />} />
           <Route path="/drill-library" element={<DrillLibrary />} />
-          <Route path="/ai-jobs" element={<AIJobMonitor />} />
-          <Route path="/ai-calibration" element={<AICalibration />} />
-          <Route path="/biomechanics-hud" element={<BiomechanicsHUD />} />
-          <Route path="/ai-infrastructure-status" element={<AIInfrastructureStatus />} />
-          <Route path="/elite-lab-roadmap" element={<EliteLabRoadmap />} />
-          <Route path="/footage-checklist" element={<FootageChecklist />} />
-          <Route path="/coach-testing" element={<Navigate to="/roadmap" replace />} />
-          <Route path="/roadmap" element={<Roadmap />} />
           {/* Legacy redirects — keep old links working */}
           <Route path="/team-dashboard" element={<Navigate to="/dashboard" replace />} />
           <Route path="/ai-reports" element={<Navigate to="/ai-reviews" replace />} />
@@ -179,6 +178,18 @@ const AuthenticatedApp = () => {
           <Route path="/setup" element={<Navigate to="/analyse" replace />} />
           <Route path="/branded-report" element={<Navigate to="/report" replace />} />
           <Route path="/model" element={<Navigate to="/reference-library" replace />} />
+          </Route>
+          <Route element={<RoleProtectedRoute allowedRoles={OWNER_ADMIN_ROLES} />}>
+            <Route path="/ai-jobs" element={<AIJobMonitor />} />
+            <Route path="/ai-calibration" element={<AICalibration />} />
+            <Route path="/biomechanics-hud" element={<BiomechanicsHUD />} />
+            <Route path="/ai-infrastructure-status" element={<AIInfrastructureStatus />} />
+            <Route path="/elite-lab-roadmap" element={<EliteLabRoadmap />} />
+            <Route path="/footage-checklist" element={<FootageChecklist />} />
+            <Route path="/pilot-launch" element={<PilotLaunchPage />} />
+            <Route path="/coach-testing" element={<Navigate to="/roadmap" replace />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+          </Route>
           <Route path="/sign-in" element={<Navigate to="/login" replace />} />
         </Route>
       </Route>

@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { getActiveRole, signOut } from '@/lib/swimState';
+import { signOut } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import PageHeader from '@/components/shared/PageHeader';
-import { ChevronDown, Lock, User, Settings, ExternalLink } from 'lucide-react';
+import { Lock, User, Settings, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function SettingsPage() {
   const { user, logout, updateProfile } = useAuth();
-  const { club } = useClubContext();
-  const role = getActiveRole();
-  const navigate = useNavigate();
+  const { club, memberRole } = useClubContext();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState('');
+  const canUseCoachApp = ['owner', 'admin', 'coach', 'assistant_coach'].includes(memberRole) || user?.role === 'admin';
+  const isAdmin = ['owner', 'admin'].includes(memberRole) || user?.role === 'admin';
+  const quickLinks = [
+    ...(canUseCoachApp ? [
+      { label: 'Club Settings', to: '/club-settings' },
+      { label: 'Club Progress', to: '/club-progress' },
+      { label: 'Reference Library', to: '/reference-library' },
+    ] : []),
+    ...(isAdmin ? [{ label: 'Product Status', to: '/roadmap' }] : []),
+  ];
 
   useEffect(() => {
     if (user?.full_name) setName(user.full_name);
@@ -104,7 +111,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <div className="text-muted-foreground mb-0.5">Your Role</div>
-                <div className="font-medium text-foreground capitalize">{role || '—'}</div>
+                  <div className="font-medium text-foreground capitalize">{memberRole || '—'}</div>
               </div>
               {club.location && (
                 <div>
@@ -117,15 +124,10 @@ export default function SettingsPage() {
         )}
 
         {/* Navigation shortcuts */}
-        <div className="p-5 rounded-xl bg-card border border-border">
+        {quickLinks.length > 0 && <div className="p-5 rounded-xl bg-card border border-border">
           <h3 className="text-sm font-semibold text-foreground mb-3">Quick Links</h3>
           <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'Club Settings', to: '/club-settings' },
-              { label: 'Club Progress', to: '/club-progress' },
-              { label: 'Reference Library', to: '/reference-library' },
-              { label: 'Roadmap', to: '/roadmap' },
-            ].map(l => (
+            {quickLinks.map(l => (
               <Link key={l.to} to={l.to}>
                 <div className="p-2.5 rounded-lg bg-secondary border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
                   {l.label} →
@@ -133,7 +135,7 @@ export default function SettingsPage() {
               </Link>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* Sign out */}
         <div className="p-5 rounded-xl bg-card border border-border">
@@ -143,32 +145,6 @@ export default function SettingsPage() {
           </Button>
         </div>
 
-        {/* Developer diagnostics */}
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <button className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border text-sm">
-              <span className="text-muted-foreground text-xs">Developer Info</span>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 p-4 rounded-xl bg-card border border-border">
-            <div className="space-y-1.5 text-[10px] font-mono">
-              {[
-                ['User ID', user?.id || 'N/A'],
-                ['Email', user?.email || 'N/A'],
-                ['Role', user?.role || role || 'N/A'],
-                ['Club ID', club?.id || 'N/A'],
-                ['Club Name', club?.name || 'N/A'],
-                ['Backend', 'Supabase + Vercel + Render'],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between">
-                  <span className="text-muted-foreground">{k}</span>
-                  <span className="text-foreground">{v}</span>
-                </div>
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
       </div>
     </div>
   );

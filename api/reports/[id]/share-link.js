@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
     if (findingsError) throw findingsError;
 
-    const pendingCount = (findings || []).filter((finding) => finding.approval_status === 'pending').length;
+    const pendingCount = (findings || []).filter((finding) => !['approved', 'rejected'].includes(finding.approval_status)).length;
     const shareableStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
 
     if (!shareableStatuses.includes(report.status)) {

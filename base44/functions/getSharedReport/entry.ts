@@ -37,8 +37,9 @@ Deno.serve(async (req) => {
     // Load linked report
     const reports = await base44.asServiceRole.entities.Report.filter({ id: shareLink.report_id });
     const report = reports[0];
-    if (!report || report.is_deleted) {
-      return Response.json({ error: 'Report not found or link expired' }, { status: 404 });
+    const shareableStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
+    if (!report || report.is_deleted || !shareableStatuses.includes(report.status)) {
+      return Response.json({ error: 'Report not found or not ready to share' }, { status: 404 });
     }
 
     // Load swimmer — prefer shareLink.swimmer_id, fall back to report.swimmer_id
@@ -86,34 +87,10 @@ Deno.serve(async (req) => {
         next_focus: f.next_focus,
       }));
 
-    // Load approved drag items included in report — public-safe fields only
-    let dragItems = [];
-    if (report.video_upload_id) {
-      const allDrag = await base44.asServiceRole.entities.DragAnalysis.filter({ video_upload_id: report.video_upload_id });
-      dragItems = allDrag
-        .filter(d => d.approval_status === 'approved' && d.included_in_report)
-        .map(d => ({
-          // Public-safe display fields only.
-          // Intentionally excluded: id, approval_status, included_in_report,
-          // coordinates_json, analysis_mode, evidence_type, risk_score,
-          // source, created_by, report_id, video_upload_id, swimmer_id, club_id,
-          // analysis_session_id, finding_id, timestamp_end, pose data, file URIs.
-          overlay_type: d.overlay_type,
-          drag_risk_level: d.drag_risk_level,
-          drag_zone: d.drag_zone,
-          stroke_phase: d.stroke_phase,
-          timestamp_start: typeof d.timestamp_start === 'number' ? d.timestamp_start : undefined,
-          measurement_summary: d.measurement_summary || undefined,
-          coach_notes: d.coach_notes || undefined,
-        }));
-    }
-
     // Strip report to only public-safe fields — no internal IDs, file URIs, pose data, or signed URLs
     const publicReport = {
-      id: report.id,
       title: report.title,
       status: report.status,
-      source: report.source,
       overall_score: report.overall_score,
       technical_summary: report.technical_summary,
       ai_completed_at: report.ai_completed_at,
@@ -140,9 +117,8 @@ Deno.serve(async (req) => {
       club: publicClub,
       video_meta,
       findings,
-      drag_items: dragItems,
+      drag_items: [],
       share_link: {
-        id: shareLink.id,
         created_date: shareLink.created_date,
         expires_at: shareLink.expires_at,
       }

@@ -5,14 +5,13 @@ import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 import {
-  Users, Waves, FileText, Video, Plus, ChevronRight,
+  Users, Waves, Video, Plus, ChevronRight,
   AlertCircle, Loader2, Brain, Upload, CheckCircle2,
   Dumbbell, ArrowRight
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { activeCompletedReports } from '@/components/analytics/analyticsHelpers';
-import { format, subDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 
 // ── Small stat chip ────────────────────────────────────────────────────────────

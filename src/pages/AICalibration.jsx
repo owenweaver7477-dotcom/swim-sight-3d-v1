@@ -1,11 +1,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, BarChart3, Brain, CheckCircle2, Edit3, Plus, ShieldAlert, ThumbsDown } from 'lucide-react';
+import { Activity, Brain, CheckCircle2, Edit3, Plus, ShieldAlert, ThumbsDown } from 'lucide-react';
 import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 
-const CALIBRATION_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const CALIBRATION_ROLES = ['owner', 'admin'];
 const REVIEW_ACTIONS = ['approved', 'edited', 'rejected'];
 
 function percent(part, total) {
@@ -102,8 +102,7 @@ function RateList({ title, groups }) {
 }
 
 export default function AICalibration() {
-  const { club } = useClubContext();
-  const memberRole = club?._memberRole || 'coach';
+  const { club, memberRole } = useClubContext();
   const canView = CALIBRATION_ROLES.includes(memberRole);
 
   const { data: feedback = [], isLoading } = useQuery({

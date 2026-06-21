@@ -7,8 +7,8 @@ import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/shared/PageHeader';
 import {
-  Brain, Clock, CheckCircle2, FileText, ArrowRight,
-  Loader2, Activity, Film, Upload, AlertCircle, Trash2, X, AlertTriangle
+  Brain, ArrowRight,
+  Loader2, Upload, Trash2, X
 } from 'lucide-react';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import { format } from 'date-fns';

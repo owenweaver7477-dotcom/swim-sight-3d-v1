@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { getActiveClub, getActiveRole, signOut } from '@/lib/swimState';
 import { useAuth } from '@/lib/AuthContext';
 import {
-  LayoutDashboard, Users, Upload, FlaskConical, Eye, FileText, Dumbbell,
+  LayoutDashboard, Users, FlaskConical, Eye, FileText, Dumbbell,
   BookOpen, BarChart3, Map, Settings, Menu, X, ChevronDown, Lock
 } from 'lucide-react';
 import {

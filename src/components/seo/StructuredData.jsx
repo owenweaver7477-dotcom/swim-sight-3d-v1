@@ -6,6 +6,7 @@ export default function StructuredData({ data }) {
   }
 
   const items = Array.isArray(data) ? data : [data];
+  const serialize = (item) => JSON.stringify(item).replace(/</g, '\\u003c');
 
   return (
     <>
@@ -14,7 +15,7 @@ export default function StructuredData({ data }) {
           // eslint-disable-next-line react/no-array-index-key
           key={`${item['@type'] || 'schema'}-${index}`}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
+          dangerouslySetInnerHTML={{ __html: serialize(item) }}
         />
       ))}
     </>

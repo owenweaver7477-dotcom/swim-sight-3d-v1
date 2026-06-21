@@ -57,4 +57,11 @@ export default [
       "react-hooks/rules-of-hooks": "error",
     },
   },
+  {
+    files: ["src/components/hud/**/*.{js,mjs,cjs,jsx}"],
+    rules: {
+      // React Three Fiber JSX uses Three.js object properties, not DOM attributes.
+      "react/no-unknown-property": "off",
+    },
+  },
 ];

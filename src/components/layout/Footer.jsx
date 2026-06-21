@@ -13,10 +13,7 @@ export default function Footer() {
           <span>Coach-Led Swim Review</span>
         </div>
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-            <span>Supabase + Render connected</span>
-          </div>
+          <span>AI-assisted drafts. Coach-approved reports.</span>
         </div>
       </div>
     </footer>

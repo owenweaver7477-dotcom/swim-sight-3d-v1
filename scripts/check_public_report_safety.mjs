@@ -24,6 +24,8 @@ function assertSanitized(payload, label) {
 
 const safeFixture = await readFixture('safe.example.json');
 const unsafeFixture = await readFixture('unsafe.example.json');
+const supabaseRoute = await readFile(path.join(root, 'api', 'shared-reports', '[token].js'), 'utf8');
+const base44Route = await readFile(path.join(root, 'base44', 'functions', 'getSharedReport', 'entry.ts'), 'utf8');
 
 assert.deepEqual(findUnsafePublicReportPaths(safeFixture), [], 'Safe fixture should start clean');
 assert.ok(findUnsafePublicReportPaths(unsafeFixture).length > 0, 'Unsafe fixture should exercise the detector');
@@ -39,6 +41,12 @@ assert.ok(clientResanitizedOutput.annotations[0]?.rendered_svg?.startsWith('<svg
 assert.equal(cleanedUnsafeOutput.findings.length, 1, 'Rejected findings must be removed');
 assert.equal(cleanedUnsafeOutput.annotations.length, 0, 'Private annotations must be removed');
 assert.equal(JSON.stringify(cleanedUnsafeOutput).includes('synthetic-secret'), false, 'Signed tokens must be removed');
+assert.match(supabaseRoute, /link\.status !== 'active'/);
+assert.match(base44Route, /!shareLink\.is_active/);
+assert.match(supabaseRoute, /\['coach_approved', 'finalised', 'published', 'shared'\]\.includes\(report\.status\)/);
+assert.match(base44Route, /shareableStatuses\.includes\(report\.status\)/);
+assert.match(base44Route, /drag_items: \[\]/);
+assert.doesNotMatch(base44Route, /coach_notes: d\.coach_notes/);
 
 console.log('Public report safety check passed.');
 console.log(`Safe findings: ${safeOutput.findings.length}; cleaned unsafe findings: ${cleanedUnsafeOutput.findings.length}.`);

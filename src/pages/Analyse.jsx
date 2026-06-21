@@ -4,19 +4,18 @@
  * Replaces the old Upload → Setup → Analysis 3-page chain.
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
 import { uploadPrivateVideo, fileSizeMb } from '@/lib/data/videoUploads';
 import { getReviewSession, setReviewSession, setCoachModeFinding,
-  SWIM_STROKES_FULL, CAMERA_ANGLES, SESSION_TYPES, SEVERITY_LEVELS, FAULT_SUGGESTIONS } from '@/lib/swimState';
+  SWIM_STROKES_FULL, CAMERA_ANGLES, SEVERITY_LEVELS, FAULT_SUGGESTIONS } from '@/lib/swimState';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import FindingCard from '@/components/analysis/FindingCard';
 import VideoLibrary from '@/components/analysis/VideoLibrary';
 import SessionModeSelector from '@/components/analysis/SessionModeSelector';
@@ -25,7 +24,7 @@ import CameraGuidancePanel from '@/components/analysis/CameraGuidancePanel';
 import {
   Play, Pause, SkipBack, SkipForward, Bookmark, FileText,
   Upload, CheckCircle2, AlertCircle, Loader2, Film, X,
-  Plus, Target, Dumbbell, User, ChevronRight, ArrowLeft, Zap, Activity
+  Plus, User, ChevronRight, ArrowLeft, Zap, Activity
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
@@ -191,7 +190,6 @@ export default function Analyse() {
   // Clear any stale localStorage session on mount — coach must always start fresh
   useEffect(() => {
     setReviewSession(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const session = getReviewSession();

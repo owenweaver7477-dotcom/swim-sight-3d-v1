@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     const { data: link, error: linkError } = await service
       .from('shared_report_links')
-      .select('*')
+      .select('id,report_id,status,expires_at')
       .eq('token', token)
       .maybeSingle();
 
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
     const { data: report, error: reportError } = await service
       .from('reports')
-      .select('*')
+      .select('id,club_id,swimmer_id,status,is_deleted,stroke_type,analysis_type,overall_score,technical_summary,coach_summary,next_focus,finalised_at,created_at,updated_at')
       .eq('id', link.report_id)
       .eq('is_deleted', false)
       .maybeSingle();

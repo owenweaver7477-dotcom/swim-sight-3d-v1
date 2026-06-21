@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tag, Target, Dumbbell, ChevronRight, AlertTriangle, Check, Plus, ArrowRight } from 'lucide-react';
+import { Tag, Dumbbell, ChevronRight, Plus, ArrowRight } from 'lucide-react';
 
 const STROKE_COLORS = {
   Freestyle:    'bg-blue-100 text-blue-700 border-blue-200',

@@ -100,3 +100,24 @@ test('both AI trigger paths apply consent before creating a job', async () => {
   assert.match(supabaseTrigger, /process\.env\.REQUIRE_CONSENT/);
   assert.match(base44Trigger, /Deno\.env\.get\('REQUIRE_CONSENT'\)/);
 });
+
+test('private playback restricts swimmer and parent roles to their linked swimmer', async () => {
+  const signedUrlRoute = await readFile(
+    new URL('../api/video-uploads/[id]/signed-url.js', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(signedUrlRoute, /\['swimmer', 'parent'\]\.includes\(membership\.role\)/);
+  assert.match(signedUrlRoute, /membership\.linked_swimmer_id !== upload\.swimmer_id/);
+  assert.doesNotMatch(signedUrlRoute, /\.select\('\*'\)/);
+});
+
+test('share links require every finding to have a final coach decision', async () => {
+  const shareLinkRoute = await readFile(
+    new URL('../api/reports/[id]/share-link.js', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(shareLinkRoute, /\['approved', 'rejected'\]\.includes\(finding\.approval_status\)/);
+  assert.match(shareLinkRoute, /finding.*still pending review/);
+});

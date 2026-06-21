@@ -1,7 +1,6 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle, ChevronRight, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 const STEPS = [
   {

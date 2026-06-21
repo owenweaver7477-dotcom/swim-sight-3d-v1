@@ -26,7 +26,7 @@ function deriveInitials(name = '') {
 
 export function normaliseClub(club, membership) {
   if (!club) return null;
-  const role = membership?.role || club._memberRole || 'coach';
+  const role = membership?.role || club._memberRole || null;
   return {
     ...club,
     initials: club.initials || deriveInitials(club.name),
@@ -62,7 +62,7 @@ function setGlobalSelection(nextClub, nextClubs = _globalClubs) {
 
   if (_globalClub) {
     setActiveClub(_globalClub);
-    setActiveRole(_globalClub._memberRole || 'coach');
+    setActiveRole(_globalClub._memberRole || null);
   } else {
     clearSwimState();
   }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Clock, FileText, ExternalLink, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
 import { format } from 'date-fns';
-import { activeCompletedReports, reportSourceLabel, PENDING_STATUSES } from './analyticsHelpers';
+import { activeCompletedReports, PENDING_STATUSES } from './analyticsHelpers';
 
 const SEVERITY_STYLE = {
   low:      'text-green-700 bg-green-100',

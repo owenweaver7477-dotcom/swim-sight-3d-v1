@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { getCoachModeFinding, setCoachModeFinding } from '@/lib/swimState';
+import { getCoachModeFinding } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';

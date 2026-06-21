@@ -4,9 +4,7 @@ import { Activity, ClipboardCheck, Server, ShieldAlert } from 'lucide-react';
 import { FeatureReadinessCard } from '@/components/admin/FeatureReadinessCard';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
-import { useClubContext } from '@/lib/useClubContext';
-
-const ADMIN_ROLES = ['owner', 'admin'];
+import useDiagnosticsVisible from '@/lib/useDiagnosticsVisible';
 
 const SECTIONS = [
   {
@@ -181,9 +179,7 @@ function ReadinessSection({ title, description, items }) {
   );
 }
 export default function AIInfrastructureStatus() {
-  const { club } = useClubContext();
-  const memberRole = club?._memberRole;
-  const canView = ADMIN_ROLES.includes(memberRole);
+  const canView = useDiagnosticsVisible();
 
   if (!canView) {
     return (
