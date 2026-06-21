@@ -1,0 +1,55 @@
+{
+  "report": {
+    "title": "Synthetic unsafe fixture",
+    "status": "finalised",
+    "debug": {
+      "callback_url": "https://example.invalid/callback?token=synthetic-secret"
+    },
+    "calibration_config": {
+      "known_distance_m": 25
+    },
+    "estimated_drag": {
+      "value": 0.42
+    }
+  },
+  "swimmer": {
+    "name": "Synthetic Swimmer",
+    "height_cm": 170,
+    "mass_kg": 65,
+    "guardian_email": "guardian@example.invalid"
+  },
+  "video_meta": {
+    "signed_video_url": "https://storage.example.invalid/object/sign/private.mov?token=synthetic-secret",
+    "file_path": "/Users/example/private.mov"
+  },
+  "findings": [
+    {
+      "id": "finding-approved-with-unsafe-internals",
+      "approval_status": "approved",
+      "included_in_report": true,
+      "finding_name": "Coach-safe title",
+      "raw_ai_payload": {
+        "pose_results": [],
+        "landmarks": []
+      },
+      "coach_notes": "Synthetic private note"
+    },
+    {
+      "id": "finding-rejected",
+      "approval_status": "rejected",
+      "included_in_report": true,
+      "finding_name": "Rejected item must not be public"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "annotation-private",
+      "annotation_type": "coach_draw",
+      "drawing_data": {
+        "shapes": []
+      },
+      "include_in_report": false,
+      "is_public": false
+    }
+  ]
+}

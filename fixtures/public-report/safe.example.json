@@ -1,0 +1,61 @@
+{
+  "report": {
+    "title": "Breaststroke Technique Review",
+    "status": "finalised",
+    "stroke_type": "Breaststroke",
+    "coach_summary": "Keep the line long after each kick.",
+    "next_focus": "Repeat a patient line reset."
+  },
+  "swimmer": {
+    "name": "Sample Swimmer"
+  },
+  "club": {
+    "name": "Sample Swim Club"
+  },
+  "video_meta": {
+    "stroke_type": "Breaststroke",
+    "camera_angle": "Side"
+  },
+  "findings": [
+    {
+      "id": "finding-safe-1",
+      "approval_status": "approved",
+      "included_in_report": true,
+      "finding_name": "Line reset becomes rushed",
+      "observation": "The swimmer starts the next pull before the line is re-established.",
+      "why_it_matters": "A patient reset helps preserve rhythm.",
+      "correction_cue": "Finish the line before starting the hands.",
+      "drill": "Two-count glide breaststroke"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "annotation-safe-1",
+      "annotation_type": "key_frame",
+      "timestamp_seconds": 3.42,
+      "frame_label": "0:03.42",
+      "title": "Line reset",
+      "note": "Coach-selected moment for the report.",
+      "canvas_width": 480,
+      "canvas_height": 270,
+      "drawing_data": {
+        "canvas_width": 480,
+        "canvas_height": 270,
+        "phase": "line_reset",
+        "shapes": [
+          {
+            "tool": "arrow",
+            "color": "#22d3ee",
+            "size": 4,
+            "points": [
+              { "x": 90, "y": 150 },
+              { "x": 320, "y": 120 }
+            ]
+          }
+        ]
+      },
+      "include_in_report": true,
+      "is_public": true
+    }
+  ]
+}

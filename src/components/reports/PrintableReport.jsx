@@ -3,7 +3,8 @@ import { format } from 'date-fns';
 import { CheckCircle2, Star, Target, Dumbbell, Waves, Download, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DragRiskReportSection from '@/components/drag/DragRiskReportSection';
-import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
+import { formatTimestamp } from '@/lib/annotationRender';
+import { sanitizePublicAnnotations, sanitizePublicFindings } from '@/lib/sanitizeAIReport';
 
 const SEVERITY_STYLES = {
   low:      { label: 'Low',      cls: 'text-sky-700 bg-sky-50 border-sky-200' },
@@ -49,10 +50,7 @@ function AnnotationPrintCard({ annotation, linkedFinding }) {
           className="bg-slate-950"
           style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
           dangerouslySetInnerHTML={{
-            __html: drawingToSvg(annotation.drawing_data, {
-              width: annotation.canvas_width,
-              height: annotation.canvas_height,
-            }),
+            __html: annotation.rendered_svg || '',
           }}
         />
       )}
@@ -69,24 +67,27 @@ function AnnotationPrintCard({ annotation, linkedFinding }) {
             Linked finding: <span className="font-semibold text-slate-700">{linkedFinding.finding_name || linkedFinding.observation}</span>
           </div>
         )}
-        {annotation.coach_note && <p className="text-sm text-slate-600 mt-1 leading-relaxed">{annotation.coach_note}</p>}
+        {annotation.note && <p className="text-sm text-slate-600 mt-1 leading-relaxed">{annotation.note}</p>}
       </div>
     </div>
   );
 }
 
-export default function PrintableReport({ report, swimmer, club, video_meta, findings, annotations = [], dragItems = [], share_link, showPrintButton = false }) {
+export default function PrintableReport({ report, swimmer, club, video_meta, findings: inputFindings = [], annotations: inputAnnotations = [], share_link, showPrintButton = false }) {
+  const findings = sanitizePublicFindings(inputFindings);
+  const annotations = sanitizePublicAnnotations(inputAnnotations);
+  const dragItems = [];
   const reportDate = report.ai_completed_at || report.created_date;
-  const weeklyPlan = buildPrintablePlan(report, findings || []);
-  const findingIds = new Set((findings || []).map(finding => finding.id));
+  const weeklyPlan = buildPrintablePlan(report, findings);
+  const findingIds = new Set(findings.map(finding => finding.id));
   const annotationsByFinding = new Map();
-  (annotations || []).forEach(annotation => {
+  annotations.forEach(annotation => {
     if (!annotation.finding_id || !findingIds.has(annotation.finding_id)) return;
     const group = annotationsByFinding.get(annotation.finding_id) || [];
     group.push(annotation);
     annotationsByFinding.set(annotation.finding_id, group);
   });
-  const unlinkedAnnotations = (annotations || []).filter(annotation => !annotation.finding_id || !findingIds.has(annotation.finding_id));
+  const unlinkedAnnotations = annotations.filter(annotation => !annotation.finding_id || !findingIds.has(annotation.finding_id));
 
   const handlePrint = () => {
     window.scrollTo(0, 0);
@@ -373,7 +374,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
 
         <div className="mx-8 mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
           <p className="text-center text-[10px] leading-relaxed text-slate-500">
-            AI suggests. Coaches decide. This report only includes coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not shown.
+            This report was reviewed and approved by a coach. AI-assisted suggestions may have been edited or rejected before sharing.
           </p>
         </div>
 

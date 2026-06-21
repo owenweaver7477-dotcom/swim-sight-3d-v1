@@ -6,6 +6,7 @@ import { Loader2, AlertTriangle, CheckCircle2, Waves, Target, Dumbbell, Download
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
+import { sanitizePublicReportPayload } from '@/lib/sanitizeAIReport';
 
 const SEVERITY_STYLES = {
   low:      { label: 'Low',      cls: 'text-sky-700 bg-sky-50 border-sky-200' },
@@ -97,7 +98,7 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
             Linked technical finding: <span className="font-semibold text-slate-700">{linkedFindingTitle}</span>
           </div>
         )}
-        {annotation.coach_note && <p className="text-sm text-slate-600 mt-2 leading-relaxed">{annotation.coach_note}</p>}
+        {annotation.note && <p className="text-sm text-slate-600 mt-2 leading-relaxed">{annotation.note}</p>}
       </div>
     </div>
   );
@@ -432,7 +433,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       {/* Disclaimer */}
       <div className="mx-4 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200 sm:mx-8">
         <p className="text-[10px] text-slate-500 leading-relaxed text-center">
-          AI suggests. Coaches decide. This shared report only includes coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not shown.
+          This report was reviewed and approved by a coach. AI-assisted suggestions may have been edited or rejected before sharing.
         </p>
       </div>
 
@@ -468,7 +469,11 @@ export default function SharedReportPage() {
   useEffect(() => {
     if (!token) { setError('Invalid link.'); setLoading(false); return; }
     functions.getSharedReport(token)
-      .then(res => { setData(res.data); })
+      .then(res => {
+        const safeReport = sanitizePublicReportPayload(res.data);
+        if (!safeReport.report) throw new Error('Report not found or not ready to share.');
+        setData(safeReport);
+      })
       .catch(err => {
         setError(err?.message || 'Report not found or link expired.');
       })

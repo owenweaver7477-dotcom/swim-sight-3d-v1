@@ -1,7 +1,8 @@
 import React from 'react';
 import { SeverityBadge } from './AIFindingCard';
 import { CheckCircle2, Star, Activity, Target, PencilLine, Dumbbell } from 'lucide-react';
-import { drawingToSvg, formatTimestamp } from '@/lib/annotationRender';
+import { formatTimestamp } from '@/lib/annotationRender';
+import { sanitizePublicAnnotations, sanitizePublicFindings } from '@/lib/sanitizeAIReport';
 
 function AnnotationCard({ annotation, linkedFinding }) {
   const safeThumbnail = typeof annotation.thumbnail_data_url === 'string' && annotation.thumbnail_data_url.startsWith('data:image/')
@@ -17,10 +18,7 @@ function AnnotationCard({ annotation, linkedFinding }) {
           className="bg-slate-950"
           style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
           dangerouslySetInnerHTML={{
-            __html: drawingToSvg(annotation.drawing_data, {
-              width: annotation.canvas_width,
-              height: annotation.canvas_height,
-            }),
+            __html: annotation.rendered_svg || '',
           }}
         />
       )}
@@ -35,13 +33,15 @@ function AnnotationCard({ annotation, linkedFinding }) {
             Linked finding: <span className="font-semibold text-foreground">{linkedFinding.finding_name || linkedFinding.observation}</span>
           </div>
         )}
-        {annotation.coach_note && <p className="text-[10px] text-muted-foreground mt-1">{annotation.coach_note}</p>}
+        {annotation.note && <p className="text-[10px] text-muted-foreground mt-1">{annotation.note}</p>}
       </div>
     </div>
   );
 }
 
-export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings, annotations = [] }) {
+export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings: inputFindings = [], annotations: inputAnnotations = [] }) {
+  const approvedFindings = sanitizePublicFindings(inputFindings);
+  const annotations = sanitizePublicAnnotations(inputAnnotations);
   const approvedFindingIds = new Set(approvedFindings.map(finding => finding.id));
   const annotationsByFinding = new Map();
   annotations.forEach(annotation => {

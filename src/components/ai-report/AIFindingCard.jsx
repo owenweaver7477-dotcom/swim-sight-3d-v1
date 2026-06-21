@@ -8,6 +8,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import StandardLinker from '@/components/standards/StandardLinker';
 import { suggestDrillsForFinding } from '@/lib/drillMatching';
+import AITrustBadge from '@/components/ai/AITrustBadge';
+import FindingEvidencePanel from '@/components/ai/FindingEvidencePanel';
+import { getFindingReviewState, isAIFinding } from '@/lib/aiTrust';
 
 const SEVERITY_CONFIG = {
   low:      { bg: 'bg-green-900/30',  text: 'text-green-400',  label: 'Low' },
@@ -31,14 +34,12 @@ export function SeverityBadge({ severity }) {
   return <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${c.bg} ${c.text}`}>{c.label}</span>;
 }
 
-function confidenceMeta(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return null;
-  const score = numeric > 1 ? numeric / 100 : numeric;
-  if (score >= 0.8) return { label: 'High evidence', cls: 'text-green-700 bg-green-50 border-green-200' };
-  if (score >= 0.65) return { label: 'Moderate evidence', cls: 'text-amber-700 bg-amber-50 border-amber-200' };
-  return { label: 'Low evidence', cls: 'text-orange-700 bg-orange-50 border-orange-200' };
-}
+const REVIEW_STATE_STYLES = {
+  draft: 'border-amber-200 bg-amber-50 text-amber-800',
+  edited: 'border-blue-200 bg-blue-50 text-blue-700',
+  approved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  rejected: 'border-slate-200 bg-slate-100 text-slate-600',
+};
 
 export default function AIFindingCard({
   finding,
@@ -69,8 +70,8 @@ export default function AIFindingCard({
   const isPending = finding.approval_status === 'pending';
   const isApproved = finding.approval_status === 'approved';
   const isRejected = finding.approval_status === 'rejected';
-  const isAiFinding = finding.source === 'ai';
-  const evidence = confidenceMeta(finding.confidence_score);
+  const isAiFinding = isAIFinding(finding);
+  const reviewState = getFindingReviewState(finding);
   const suggestedDrills = suggestDrillsForFinding(drillOptions, finding, strokeType, 4);
   const assignedDrillTitle = finding.linked_drill_title || finding.drill;
 
@@ -112,28 +113,11 @@ export default function AIFindingCard({
           {finding.phase && (
             <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">{finding.phase}</span>
           )}
-          {isPending && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-900/20 text-yellow-400 border border-yellow-700/30">
-              Pending Review
-            </span>
-          )}
-          {isApproved && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-green-900/20 text-green-400 border border-green-700/30">
-              ✓ Coach Approved
-            </span>
-          )}
-          {isRejected && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-              Dismissed
-            </span>
-          )}
+          <span className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${REVIEW_STATE_STYLES[reviewState]}`}>
+            {reviewState.charAt(0).toUpperCase() + reviewState.slice(1)}
+          </span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-          {finding.confidence_score != null && (
-            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border hidden sm:block ${evidence?.cls || 'text-muted-foreground border-border'}`}>
-              {Math.round((finding.confidence_score > 1 ? finding.confidence_score / 100 : finding.confidence_score) * 100)}% · {evidence?.label || 'AI evidence'}
-            </span>
-          )}
           {expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
         </div>
       </button>
@@ -152,12 +136,9 @@ export default function AIFindingCard({
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Brain className="w-3 h-3 text-primary" /> {isAiFinding ? 'AI draft — verify on video' : 'Coach finding'}
             </span>
-            {finding.confidence_score != null && (
-              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border sm:hidden ${evidence?.cls || 'text-muted-foreground border-border'}`}>
-                {Math.round((finding.confidence_score > 1 ? finding.confidence_score / 100 : finding.confidence_score) * 100)}% · {evidence?.label || 'AI evidence'}
-              </span>
-            )}
           </div>
+
+          {isAiFinding && <AITrustBadge confidence={finding.confidence_score} />}
 
           {isAiFinding && isPending && (
             <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
@@ -330,33 +311,7 @@ export default function AIFindingCard({
             </div>
           )}
 
-          {/* Pose evidence — coach-internal, only for real_pose findings */}
-          {(finding.evidence_type || finding.measurement_summary) && (
-            <div className="p-2.5 rounded-lg bg-secondary/60 border border-border space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pose Evidence (Coach Only)</div>
-              {finding.evidence_type && (
-                <div className="text-[10px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Evidence type:</span>{' '}
-                  <span className="font-mono">{finding.evidence_type}</span>
-                </div>
-              )}
-              {finding.measurement_summary && (
-                <div className="text-[10px] text-muted-foreground font-mono leading-relaxed break-words">
-                  {finding.measurement_summary}
-                </div>
-              )}
-              {finding.frame_reference && (
-                <a
-                  href={finding.frame_reference}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-primary underline"
-                >
-                  View annotated frame →
-                </a>
-              )}
-            </div>
-          )}
+          {isAiFinding && <FindingEvidencePanel finding={finding} />}
 
           {/* Linked Technical Standard */}
           {canEdit && !isRejected && onUpdateStandard && (
@@ -416,7 +371,7 @@ export default function AIFindingCard({
               {showRejectReason && (
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
-                    Why dismiss this AI draft?
+                    Why reject this AI draft?
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {REJECTION_REASONS.map(reason => (
@@ -442,7 +397,7 @@ export default function AIFindingCard({
                   />
                   <div className="flex gap-1.5">
                     <Button size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-800" onClick={handleReject}>
-                      <ThumbsDown className="w-3 h-3 mr-1" /> Confirm Dismiss
+                      <ThumbsDown className="w-3 h-3 mr-1" /> Confirm Reject
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowRejectReason(false)}>
                       Cancel
@@ -466,7 +421,7 @@ export default function AIFindingCard({
                     className="h-7 text-xs text-muted-foreground flex-1"
                     onClick={() => setShowRejectReason(true)}
                   >
-                    <ThumbsDown className="w-3 h-3 mr-1" /> Dismiss
+                    <ThumbsDown className="w-3 h-3 mr-1" /> Reject
                   </Button>
                 </>
               )}

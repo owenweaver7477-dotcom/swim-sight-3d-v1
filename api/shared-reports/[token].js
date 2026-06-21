@@ -1,56 +1,5 @@
 import { createServiceClient, handleApiError, sendJson } from '../_lib/server.js';
-import { drawingToSvg } from '../../src/lib/annotationRender.js';
-
-function sanitizeFinding(finding) {
-  const observation = finding.observation || '';
-  const cue = finding.correction_cue || '';
-  return {
-    severity: finding.severity,
-    phase: finding.stroke_phase,
-    timestamp_seconds: finding.timestamp_seconds,
-    finding_name: observation,
-    observation,
-    coach_sees: observation,
-    why_it_matters: finding.why_it_matters,
-    correction_cue: cue,
-    cue,
-    drill: finding.linked_drill_title || finding.drill,
-    linked_drill_title: finding.linked_drill_title || finding.drill || null,
-    linked_drill_summary: finding.linked_drill_summary || null,
-    next_focus: finding.next_focus,
-  };
-}
-
-function sanitizeAnnotation(annotation, findingTitlesById) {
-  const thumbnail = typeof annotation.thumbnail_data_url === 'string'
-    && annotation.thumbnail_data_url.startsWith('data:image/')
-    ? annotation.thumbnail_data_url
-    : null;
-  const drawingData = annotation.drawing_data && typeof annotation.drawing_data === 'object'
-    ? annotation.drawing_data
-    : {};
-  const renderedSvg = thumbnail
-    ? null
-    : drawingToSvg(drawingData, {
-      width: annotation.canvas_width,
-      height: annotation.canvas_height,
-    });
-
-  return {
-    annotation_type: annotation.annotation_type,
-    timestamp_seconds: annotation.timestamp_seconds,
-    frame_label: annotation.frame_label || annotation.video_frame_time_label,
-    video_frame_time_label: annotation.video_frame_time_label || annotation.frame_label,
-    phase: typeof drawingData.phase === 'string' ? drawingData.phase : null,
-    canvas_width: annotation.canvas_width,
-    canvas_height: annotation.canvas_height,
-    rendered_svg: renderedSvg,
-    thumbnail_data_url: thumbnail,
-    title: annotation.title,
-    coach_note: annotation.coach_note,
-    linked_finding_title: annotation.finding_id ? findingTitlesById.get(annotation.finding_id) || null : null,
-  };
-}
+import { sanitizePublicReportPayload } from '../../src/lib/sanitizeAIReport.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -88,7 +37,7 @@ export default async function handler(req, res) {
       return sendJson(res, 404, { error: 'Report not found or not ready to share' });
     }
 
-    const [{ data: swimmer }, { data: club }, { data: findings }, { data: keyFrames }, annotations] = await Promise.all([
+    const [{ data: swimmer }, { data: club }, { data: findings }, annotations] = await Promise.all([
       service.from('swimmers').select('first_name,last_name').eq('id', report.swimmer_id).maybeSingle(),
       service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
       service
@@ -97,11 +46,6 @@ export default async function handler(req, res) {
         .eq('report_id', report.id)
         .eq('approval_status', 'approved')
         .order('created_at', { ascending: true }),
-      service
-        .from('key_frames')
-        .select('timestamp_seconds,label,note')
-        .eq('report_id', report.id)
-        .order('timestamp_seconds', { ascending: true }),
       service
         .from('video_annotations')
         .select('annotation_type,timestamp_seconds,frame_label,video_frame_time_label,canvas_width,canvas_height,drawing_data,thumbnail_data_url,title,coach_note,finding_id,include_in_report,is_public')
@@ -119,7 +63,7 @@ export default async function handler(req, res) {
       finding.observation || finding.stroke_phase || 'Technical finding',
     ]));
 
-    return sendJson(res, 200, {
+    const publicPayload = sanitizePublicReportPayload({
       report: {
         title: `${report.stroke_type || 'Technique'} Review`,
         status: report.status,
@@ -141,16 +85,22 @@ export default async function handler(req, res) {
         ? { name: [swimmer.first_name, swimmer.last_name].filter(Boolean).join(' ') }
         : null,
       club: club ? { name: club.name } : null,
-      findings: (findings || []).map(sanitizeFinding),
-      key_frames: (keyFrames || []).map((frame) => ({
-        timestamp_seconds: frame.timestamp_seconds,
-        label: frame.label,
-        note: frame.note,
+      findings: (findings || []).map((finding) => ({
+        ...finding,
+        phase: finding.stroke_phase,
+        finding_name: finding.observation,
+        coach_sees: finding.observation,
+        cue: finding.correction_cue,
+        included_in_report: true,
       })),
-      annotations: (annotations || []).map((annotation) => sanitizeAnnotation(annotation, findingTitlesById)),
+      annotations: (annotations || []).map((annotation) => ({
+        ...annotation,
+        linked_finding_title: annotation.finding_id ? findingTitlesById.get(annotation.finding_id) || null : null,
+      })),
       drag_items: [],
-      disclaimer: 'AI-assisted evidence supports coach review. Final report content is coach-approved.',
     });
+
+    return sendJson(res, 200, publicPayload);
   } catch (error) {
     return handleApiError(res, error);
   }

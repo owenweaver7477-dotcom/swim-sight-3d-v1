@@ -32,6 +32,7 @@ import CoachDrawStudio from '@/components/annotations/CoachDrawStudio';
 import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
 import KeyStampGallery from '@/components/annotations/KeyStampGallery';
 import { formatTimestamp } from '@/lib/annotationRender';
+import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -786,7 +787,7 @@ export default function AIReportPage() {
   const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
   const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
   const approvedFindings = findings.filter(f => f.approval_status === 'approved');
-  const includedAnnotations = videoAnnotations.filter(annotation => annotation.include_in_report);
+  const includedAnnotations = videoAnnotations.filter(annotation => annotation.include_in_report && annotation.is_public);
   const keyStampCount = videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame').length;
   const coachDrawCount = videoAnnotations.filter(annotation => ['coach_draw', 'body_line'].includes(annotation.annotation_type)).length;
   const activeSharedLinks = sharedLinks.filter(link => link.status === 'active');
@@ -929,6 +930,11 @@ export default function AIReportPage() {
             approvedCount={approvedCount}
             keyStampCount={keyStampCount}
             coachDrawCount={coachDrawCount}
+            isReportFinalised={isReportFinalised}
+          />
+
+          <AIReviewTrustSummary
+            findings={findings}
             isReportFinalised={isReportFinalised}
           />
 
