@@ -37,7 +37,7 @@ const featureGroups = [
   {
     title: 'Club Workflow',
     icon: Users,
-    description: 'Organise swimmers, squads, reports, and shared technical language without exposing private video publicly.',
+    description: 'Organise swimmers, squads, and reports without exposing private video.',
     points: ['Squads and profiles', 'Role-based workspace', 'Club progress direction'],
   },
 ];
@@ -51,7 +51,7 @@ export default function FeaturesPage() {
       <PublicHero
         eyebrow="Features"
         title="Video review, coach findings, and swimmer reports in one workflow."
-        description="Swim Sight 3D connects private video review, Coach Studio, AI-assisted evidence, drill-linked findings, and swimmer improvement reports."
+        description="Private video review, Coach Studio, AI-assisted evidence, and swimmer reports — one workflow."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
@@ -60,7 +60,7 @@ export default function FeaturesPage() {
           </>
         }
       />
-      <PublicSection title="One review line from footage to plan" description="The feature set is designed to keep coaches moving through one connected flow instead of jumping between disconnected tools.">
+      <PublicSection title="One review line from footage to plan" description="One connected flow, not a dozen disconnected tools.">
         <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-5 text-white shadow-xl shadow-slate-950/10 sm:p-6">
           <div className="grid gap-3 md:grid-cols-5">
             {workflow.map((step, index) => (
@@ -83,7 +83,7 @@ export default function FeaturesPage() {
             </div>
             <h2 className="mt-4 text-2xl font-bold text-slate-950">Built around coach decisions.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Video, AI, manual findings, drills, and reports all support the same principle: evidence is reviewed by the coach before it is shared.
+              Video, AI, findings, drills, and reports follow one rule: the coach reviews evidence before it's shared.
             </p>
             <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-800">
               AI suggests. Coaches decide. <Link to="/coach-approved-ai" className="text-sky-700 hover:text-sky-900">Read the trust explanation.</Link>
@@ -109,7 +109,7 @@ export default function FeaturesPage() {
           </div>
         </div>
       </PublicSection>
-      <PublicSection title="Privacy and approval stay built in" description="The public report is not raw software output. It is coach-approved, swimmer-friendly feedback.">
+      <PublicSection title="Privacy and approval stay built in" description="Not raw software output — coach-approved, swimmer-friendly feedback.">
         <div className="grid gap-4 md:grid-cols-3">
           {[
             [Lock, 'Private video handling', 'Shared reports do not expose private video paths or signed playback links.'],

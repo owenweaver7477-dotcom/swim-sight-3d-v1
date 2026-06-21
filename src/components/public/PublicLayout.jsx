@@ -1,10 +1,43 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import PublicFooter from './PublicFooter';
 import PublicNav from './PublicNav';
 
 export default function PublicLayout({ children }) {
+  const rootRef = useRef(null);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const els = Array.from(root.querySelectorAll('.reveal'));
+    if (typeof IntersectionObserver === 'undefined') {
+      els.forEach((el) => el.classList.add('is-visible'));
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+    );
+    els.forEach((el) => {
+      const sibs = el.parentElement
+        ? Array.from(el.parentElement.children).filter((c) => c.classList.contains('reveal'))
+        : [];
+      el.style.transitionDelay = `${Math.min(Math.max(0, sibs.indexOf(el)) * 70, 350)}ms`;
+      io.observe(el);
+    });
+    return () => io.disconnect();
+  }, [pathname]);
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white text-slate-950">
+    <div ref={rootRef} className="min-h-screen overflow-x-hidden bg-white text-slate-950">
       <PublicNav />
       <main>{children}</main>
       <PublicFooter />
@@ -17,10 +50,10 @@ export function PublicHero({ eyebrow, title, description, actions, children }) {
     <section className="border-b border-slate-200 bg-[radial-gradient(circle_at_20%_0%,rgba(14,165,233,0.12),transparent_34%),linear-gradient(180deg,#ffffff,#f8fafc)]">
       <div className={`mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:py-16 md:py-20 ${children ? 'md:grid-cols-[1.1fr_0.9fr]' : ''}`}>
         <div>
-          {eyebrow && <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">{eyebrow}</div>}
-          <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl md:text-6xl">{title}</h1>
-          <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">{description}</p>
-          {actions && <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">{actions}</div>}
+          {eyebrow && <div className="reveal text-xs font-bold uppercase tracking-[0.24em] text-sky-600">{eyebrow}</div>}
+          <h1 className="reveal mt-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl md:text-6xl">{title}</h1>
+          <p className="reveal mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">{description}</p>
+          {actions && <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">{actions}</div>}
         </div>
         {children && <div className="md:pt-4">{children}</div>}
       </div>
@@ -34,12 +67,12 @@ export function PublicSection({ eyebrow, title, description, children, subtle = 
       <div className="mx-auto max-w-6xl">
         {(eyebrow || title || description) && (
           <div className="mb-8 max-w-3xl">
-            {eyebrow && <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">{eyebrow}</div>}
-            {title && <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{title}</h2>}
-            {description && <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">{description}</p>}
+            {eyebrow && <div className="reveal text-xs font-bold uppercase tracking-[0.24em] text-sky-600">{eyebrow}</div>}
+            {title && <h2 className="reveal mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{title}</h2>}
+            {description && <p className="reveal mt-3 text-sm leading-7 text-slate-600 md:text-base">{description}</p>}
           </div>
         )}
-        {children}
+        <div className="reveal">{children}</div>
       </div>
     </section>
   );

@@ -17,7 +17,7 @@ export default function StrokeAnalysisPage() {
       <PublicHero
         eyebrow="Stroke analysis"
         title="Swimming stroke analysis for coach-approved reports."
-        description="Swim Sight 3D organises swimming stroke analysis around video review, stroke phases, key moments, common faults, coach cues, drills, and report-ready findings. AI can assist, but coaches approve the final content."
+        description="Video review, stroke phases, key moments, faults, cues, drills, and report-ready findings — coaches approve the final content."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
@@ -25,13 +25,13 @@ export default function StrokeAnalysisPage() {
           </>
         }
       />
-      <PublicSection title="What swimming stroke analysis means in Swim Sight 3D" description="Stroke analysis is not an automatic verdict. It is a coach-led video review workflow that turns a technical moment into a clear swimmer improvement plan.">
+      <PublicSection title="What swimming stroke analysis means in Swim Sight 3D" description="Not an automatic verdict — a coach-led workflow that turns a technical moment into a clear plan.">
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">Coach workflow</div>
             <h2 className="mt-3 text-2xl font-bold text-slate-950">Tag the phase. Mark the moment. Share the plan.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Coaches can use Swim Sight 3D to review footage, save key timestamps, document technique faults, attach cues and drills, and create coach-approved swimmer reports.
+              Review footage, save key moments, document faults, attach cues and drills, and create coach-approved reports.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -49,7 +49,7 @@ export default function StrokeAnalysisPage() {
           </div>
         </div>
       </PublicSection>
-      <PublicSection title="Choose a stroke" description="Each stroke page introduces the review phases and common faults coaches can document inside Coach Studio.">
+      <PublicSection title="Choose a stroke" description="Each stroke page shows the review phases and common faults to document in Coach Studio.">
         <div className="grid gap-4 md:grid-cols-2">
           {Object.entries(strokePages).map(([slug, page]) => (
             <Link key={slug} to={`/stroke-analysis/${slug}`} className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-200 hover:shadow-md">

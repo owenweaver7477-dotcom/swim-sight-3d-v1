@@ -18,7 +18,7 @@ export default function ForClubsPage() {
       <PublicHero
         eyebrow="For clubs"
         title="Swimming analysis workflows for clubs and squads."
-        description="Create shared coaching language, organise swimmers by squad, and keep reports consistent across coaches without exposing private video publicly."
+        description="Shared coaching language, squad organisation, and consistent reports — without exposing private video."
         actions={
           <>
             <Link to="/pricing" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">See pilot options</Link>
@@ -27,7 +27,7 @@ export default function ForClubsPage() {
           </>
         }
       />
-      <PublicSection title="A club system, not just another video folder" description="Clubs need repeatable coaching language across squads, coaches, and swimmer reports. Swim Sight 3D keeps that workflow organised around private club workspaces.">
+      <PublicSection title="A club system, not just another video folder" description="Repeatable coaching language across squads and coaches, in a private club workspace.">
         <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-5 text-white shadow-xl shadow-slate-950/10 sm:p-6">
           <div className="grid gap-3 md:grid-cols-5">
             {clubFlow.map((step, index) => (
@@ -43,7 +43,7 @@ export default function ForClubsPage() {
         <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              [Users, 'Squad organisation', 'Group swimmers by squad and make it easier for coaches to find the right athlete before review.'],
+              [Users, 'Squad organisation', 'Group swimmers by squad so coaches find the right athlete fast.'],
               [Target, 'Shared technical language', 'Use consistent stroke phases, fault tags, drills, and report language across the club.'],
               [ShieldCheck, 'Role-based access', 'Separate owner, admin, coach, assistant coach, swimmer, and parent access inside the workspace.'],
               [Lock, 'Private workspace', 'Video handling is designed around private storage and short-lived signed access inside the app.'],
@@ -59,7 +59,7 @@ export default function ForClubsPage() {
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">Consistent coaching language</div>
             <h2 className="mt-3 text-2xl font-bold text-slate-950">One structure from coach to coach.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Reports follow a repeatable format: what we saw, why it matters, what to feel, recommended drill, and next focus. That makes feedback easier for swimmers to understand and easier for clubs to review over time.
+              Every report follows one format: what we saw, why it matters, what to feel, drill, and next focus.
             </p>
             <div className="mt-5 grid gap-2">
               {['Stroke phase', 'Fault tag', 'Coach cue', 'Drill', 'Next focus'].map(item => (
@@ -75,7 +75,7 @@ export default function ForClubsPage() {
           </div>
         </div>
       </PublicSection>
-      <PublicSection subtle title="No enterprise overpromise" description="Swim Sight 3D is being prepared for serious pilot clubs. Advanced enterprise operations should be scoped directly with the club." />
+      <PublicSection subtle title="No enterprise overpromise" description="Being prepared for serious pilot clubs. Enterprise operations are scoped directly with the club." />
     </PublicLayout>
   );
 }
