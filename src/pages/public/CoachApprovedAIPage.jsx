@@ -89,7 +89,7 @@ export default function CoachApprovedAIPage() {
         </div>
       </PublicSection>
 
-      <PublicSection subtle title="Manual review vs AI-assisted review" description="Both paths reach the same coach-approved report. AI assists; it doesn't replace the coach.">
+      <PublicSection subtle title="Manual review vs AI-assisted review" description="Both paths reach the same coach-approved report. AI assists; it does not replace the coach.">
         <div className="grid gap-5 lg:grid-cols-2">
           {reviewModes.map((mode) => (
             <article key={mode.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

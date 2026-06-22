@@ -146,7 +146,7 @@ export default function HomePage() {
               Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers.
             </p>
             <p className="reveal mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-              It supports the coach — it doesn't replace them.
+              It supports the coach — it does not replace the coach.
             </p>
             <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition-colors hover:bg-cyan-100">
