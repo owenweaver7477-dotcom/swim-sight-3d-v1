@@ -25,8 +25,9 @@ const FOCUS_OPTIONS = [
   { value: 'pull', label: 'Pull / catch' },
   { value: 'breathing', label: 'Breathing' },
   { value: 'timing', label: 'Timing' },
-  { value: 'starts_turns', label: 'Starts & turns' },
-  { value: 'drag_risk', label: 'Drag risk' },
+  { value: 'starts', label: 'Starts — manual focus' },
+  { value: 'turns', label: 'Turns — manual focus' },
+  { value: 'race_skills', label: 'Race skills — manual focus' },
   { value: 'general', label: 'General review' },
 ];
 

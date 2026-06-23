@@ -22,11 +22,11 @@ export default function PlaceholderWarningBanner({ analysisMode, aiErrorMessage,
       <div className="print:hidden flex items-start gap-3 p-4 rounded-xl border border-red-300 bg-red-50">
         <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <div className="text-xs font-bold text-red-800">AI Processing Failed — No Analysis Available</div>
+          <div className="text-xs font-bold text-red-800">AI processing did not complete</div>
           <p className="text-[11px] text-red-700 leading-relaxed">
-            The AI server was unable to process this video successfully.
+            The AI worker was unable to return a usable draft from this video.
             {aiErrorMessage && <> Reason: <strong>{aiErrorMessage}</strong>.</>}
-            {' '}No findings have been generated. You can build this report manually by adding coach findings below.
+            {' '}The private video remains available. Continue with manual coach review now, or retry AI Review later when the worker is available.
           </p>
         </div>
       </div>
@@ -39,11 +39,11 @@ export default function PlaceholderWarningBanner({ analysisMode, aiErrorMessage,
       <div className="print:hidden flex items-start gap-3 p-4 rounded-xl border border-orange-300 bg-orange-50">
         <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <div className="text-xs font-bold text-orange-800">AI Quality Gate Failed — Manual Coach Review Required</div>
+          <div className="text-xs font-bold text-orange-800">AI evidence was not reliable enough for draft findings</div>
           <p className="text-[11px] text-orange-700 leading-relaxed">
-            The AI server processed this video, but the evidence did not meet Swim Sight's coach-grade threshold for draft findings.
+            The system could not confidently extract enough reliable body landmarks from this video for AI-assisted draft findings.
             {aiErrorMessage && <> <em>{aiErrorMessage}</em></>}
-            {' '}No AI findings were generated. Complete a <strong>manual coach review</strong>, or upload clearer footage and retry AI analysis.
+            {' '}Continue with <strong>manual coach review</strong>, or upload clearer footage with one swimmer in view and retry AI Review.
           </p>
         </div>
       </div>

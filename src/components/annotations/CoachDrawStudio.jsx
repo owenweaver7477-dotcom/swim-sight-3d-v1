@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AnnotationCanvas from './AnnotationCanvas';
 import { formatTimestamp } from '@/lib/annotationRender';
+import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 import {
   BookmarkPlus,
   FastForward,
@@ -13,6 +14,7 @@ import {
   Plus,
   Rewind,
   Save,
+  SlidersHorizontal,
   SkipBack,
   SkipForward,
   X,
@@ -79,6 +81,7 @@ export default function CoachDrawStudio({
   const [markerLabel, setMarkerLabel] = useState('Key frame');
   const [markerNote, setMarkerNote] = useState('');
   const [markerIncludeInReport, setMarkerIncludeInReport] = useState(false);
+  const [controlsExpanded, setControlsExpanded] = useState(false);
   const fps = estimateFps(video);
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
   const quickLabels = QUICK_LABELS_BY_STROKE[String(video?.stroke_type || '').toLowerCase()] || ['Key frame', 'Catch', 'Breath', 'Body line', 'Turn', 'Breakout'];
@@ -325,6 +328,13 @@ export default function CoachDrawStudio({
 
   return (
     <div className="space-y-3">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] leading-5 text-amber-900">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-bold">Drawing tools are in pilot refinement.</span>
+          <FeatureStatusBadge status="partial" />
+        </div>
+        <p className="mt-1">Use timestamp notes if annotation tools are not suitable for this review.</p>
+      </div>
       {renderVideoSurface(inlineVideoRef)}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -357,10 +367,13 @@ export default function CoachDrawStudio({
             <div className="text-xs font-mono text-muted-foreground bg-background border border-border rounded-lg px-2.5 py-1">
               Approx frame ~{approxFrame}
             </div>
+            <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => setControlsExpanded(current => !current)}>
+              <SlidersHorizontal className="mr-1 h-3.5 w-3.5" /> {controlsExpanded ? 'Hide controls' : 'More controls'}
+            </Button>
           </div>
         </div>
 
-        {controlButtons()}
+        {controlsExpanded && controlButtons()}
       </div>
 
       {actionButtons}

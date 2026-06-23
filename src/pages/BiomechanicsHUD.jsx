@@ -250,7 +250,7 @@ function EliteLabAccessPanel({ gate }) {
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100">Future Premium</div>
           <h1 className="mt-1 text-lg font-semibold text-white">Elite Lab Preview</h1>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Prototype 3D reference visualisation for future calibrated, coach-reviewed movement comparison.
+            Elite Studio is a preview module. Full movement model, 3D phase viewer, and advanced reference comparison are not pilot-ready yet.
           </p>
         </div>
       </div>

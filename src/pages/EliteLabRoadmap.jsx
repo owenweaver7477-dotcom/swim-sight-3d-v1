@@ -5,6 +5,8 @@ import { FeatureReadinessCard } from '@/components/admin/FeatureReadinessCard';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useClubContext } from '@/lib/useClubContext';
+import FeatureReadinessPanel from '@/components/status/FeatureReadinessPanel';
+import { getFeatureReadiness } from '@/lib/featureReadiness';
 
 const ADMIN_ROLES = ['owner', 'admin'];
 
@@ -91,6 +93,7 @@ export default function EliteLabRoadmap() {
           </div>
         }
       />
+      <FeatureReadinessPanel feature={getFeatureReadiness('eliteStudio')} />
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
         <strong>Coach review required.</strong> The preview is a 3D reference visualisation, not a live measurement tool. Calibrated comparison requires measured hardware and validation before use.

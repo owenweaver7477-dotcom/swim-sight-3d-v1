@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MessageSquareText, Save, Trash2 } from 'lucide-react';
+import { Check, Copy, Mail, MessageSquareText, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -23,6 +23,7 @@ const EMPTY_FEEDBACK = {
   recommend: '',
   pricingReaction: '',
 };
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'swimsight3dsupport@gmail.com';
 
 function RatingRow({ label, value, onChange }) {
   return (
@@ -62,6 +63,7 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
   const [feedback, setFeedback] = useState(EMPTY_FEEDBACK);
   const [savedAt, setSavedAt] = useState('');
   const [storageError, setStorageError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const stored = readLocalRecord(storageKey);
@@ -93,6 +95,28 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
       setStorageError('This browser could not clear the locally saved feedback.');
     }
   };
+  const feedbackSummary = [
+    'Swim Sight 3D coach pilot feedback',
+    `Overall usefulness: ${feedback.overallUsefulness || 'Not rated'}/5`,
+    `Report clarity: ${feedback.reportClarity || 'Not rated'}/5`,
+    `AI draft usefulness: ${feedback.aiDraftUsefulness || 'Not rated'}/5`,
+    `Approval workflow clarity: ${feedback.approvalWorkflowClarity || 'Not rated'}/5`,
+    `Report readiness: ${feedback.reportReadiness || 'Not rated'}/5`,
+    `Would use again: ${feedback.useAgain || 'Not answered'}`,
+    `Would recommend: ${feedback.recommend || 'Not answered'}`,
+    `Pricing reaction: ${feedback.pricingReaction || 'Not answered'}`,
+    `Biggest missing feature: ${feedback.biggestMissingFeature || 'Not answered'}`,
+    `Most confusing part: ${feedback.mostConfusingPart || 'Not answered'}`,
+  ].join('\n');
+  const copyForSupport = async () => {
+    try {
+      await navigator.clipboard.writeText(feedbackSummary);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setStorageError(`Copy was unavailable. Send the saved feedback manually to ${SUPPORT_EMAIL}.`);
+    }
+  };
 
   const labelClass = 'mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500';
 
@@ -112,6 +136,11 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
 
       <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
         Pilot feedback is for product validation only. It does not train the AI automatically and should not include private medical information.
+      </div>
+
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700">
+        <div className="font-semibold">Support route</div>
+        <p className="mt-1">Saving keeps this feedback on this device; it does not send an email. Copy the summary or open your email app to contact <a className="font-semibold text-cyan-800 underline" href={`mailto:${SUPPORT_EMAIL}?subject=Swim%20Sight%203D%20pilot%20feedback`}>{SUPPORT_EMAIL}</a>.</p>
       </div>
 
       {storageError && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{storageError}</p>}
@@ -183,6 +212,15 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
       </div>
 
       <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+        <Button type="button" variant="outline" className="min-h-11 text-xs" onClick={copyForSupport}>
+          {copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+          {copied ? 'Copied for support' : 'Copy for support'}
+        </Button>
+        <Button type="button" variant="outline" className="min-h-11 text-xs" asChild>
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Swim%20Sight%203D%20pilot%20feedback`}>
+            <Mail className="mr-1.5 h-3.5 w-3.5" /> Open email app
+          </a>
+        </Button>
         <Button type="button" variant="outline" className="min-h-11 text-xs" onClick={clear}>
           <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear local feedback
         </Button>

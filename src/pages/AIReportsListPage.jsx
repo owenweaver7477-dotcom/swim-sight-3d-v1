@@ -11,6 +11,7 @@ import {
   Loader2, Upload, Trash2, X
 } from 'lucide-react';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
+import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { format } from 'date-fns';
 
 // ── Reliability label ──────────────────────────────────────────────────────────
@@ -236,6 +237,8 @@ export default function AIReportsListPage() {
           </Link>
         }
       />
+
+      <PilotReadinessWarning className="mb-4" />
 
       <div className="mb-5 text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg px-4 py-2.5">
         AI assists when evidence is strong. Coach Studio remains the main review workspace.

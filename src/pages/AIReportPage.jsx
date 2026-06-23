@@ -33,6 +33,9 @@ import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
 import KeyStampGallery from '@/components/annotations/KeyStampGallery';
 import { formatTimestamp } from '@/lib/annotationRender';
 import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
+import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
+import RecoveryActionCard from '@/components/status/RecoveryActionCard';
+import AICreditIndicator from '@/components/credits/AICreditIndicator';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -323,6 +326,55 @@ function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coach
         </div>
       )}
     </div>
+  );
+}
+
+const COACH_STUDIO_READINESS_STEPS = [
+  { id: 'setup', label: 'Upload and setup' },
+  { id: 'focus', label: 'Select analysis focus' },
+  { id: 'review', label: 'Review video and annotate' },
+  { id: 'approve', label: 'Approve findings' },
+  { id: 'drills', label: 'Assign drills' },
+  { id: 'report', label: 'Build report' },
+  { id: 'share', label: 'Share / export' },
+];
+
+function CoachStudioReadinessOverview({ video, findings, pendingCount, isReportFinalised }) {
+  const hasFinding = findings.length > 0;
+  const hasDrill = findings.some(finding => finding.drill || finding.linked_drill_title);
+  const statusFor = {
+    setup: video ? 'Ready' : 'Blocked',
+    focus: 'Partial',
+    review: video ? 'Partial' : 'Blocked',
+    approve: hasFinding ? (pendingCount === 0 ? 'Ready' : 'Partial') : 'Coming next',
+    drills: hasFinding ? (hasDrill ? 'Ready' : 'Partial') : 'Coming next',
+    report: hasFinding ? 'Ready' : 'Coming next',
+    share: isReportFinalised ? 'Ready' : 'Coming next',
+  };
+  const styleFor = (status) => status === 'Ready'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : status === 'Blocked'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : status === 'Coming next'
+        ? 'border-slate-200 bg-slate-50 text-slate-500'
+        : 'border-amber-200 bg-amber-50 text-amber-700';
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4" aria-label="Coach Studio readiness steps">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Coach Studio workflow readiness</div>
+      <p className="mt-1 text-[11px] leading-5 text-slate-600">A clear view of what is ready now and what still needs coach input.</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {COACH_STUDIO_READINESS_STEPS.map((step, index) => (
+          <div key={step.id} className="rounded-lg border border-slate-200 p-3">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Step {index + 1}</div>
+            <div className="mt-1 text-xs font-semibold text-slate-800">{step.label}</div>
+            <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${styleFor(statusFor[step.id])}`}>
+              {statusFor[step.id]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -796,6 +848,13 @@ export default function AIReportPage() {
     || report?.analysis_mode === 'placeholder'
     || report?.analysis_mode === 'manual_review'
     || report?.real_pose_detected === false;
+  const activeAIJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
+  const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing'].includes(aiJob?.queue_status);
+  const aiJobStartedAt = aiJob?.started_at || aiJob?.accepted_at || aiJob?.queued_at || aiJob?.created_date;
+  const isAIJobSlow = Boolean(isAIJobActive && aiJobStartedAt && Date.now() - new Date(aiJobStartedAt).getTime() >= 10 * 60 * 1000);
+  const isAIJobUnavailable = ['error', 'timed_out', 'retry_available'].includes(aiJob?.status)
+    || ['failed', 'timed_out', 'retry_available'].includes(aiJob?.queue_status)
+    || report?.analysis_mode === 'error';
   const coachStudioStepIndex = COACH_STUDIO_GUIDED_STEPS.findIndex(step => step.id === coachStudioStep);
   const currentStudioStepIndex = coachStudioStepIndex >= 0 ? coachStudioStepIndex : 0;
   const studioCompletion = {
@@ -925,6 +984,21 @@ export default function AIReportPage() {
             </div>
           </PageHeader>
 
+          <PilotReadinessWarning />
+
+          <CoachStudioReadinessOverview
+            video={video}
+            findings={findings}
+            pendingCount={pendingCount}
+            isReportFinalised={isReportFinalised}
+          />
+
+          <AICreditIndicator
+            selectedFocusCount={report?.review_context?.analysis_focus_areas?.length || 0}
+            mode={isManualReviewReport ? 'manual' : 'ai'}
+            compact
+          />
+
           <CoachStudioSnapshot
             pendingCount={pendingCount}
             approvedCount={approvedCount}
@@ -1012,6 +1086,24 @@ export default function AIReportPage() {
                   <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
                     {qualityMeta.detail}
                   </div>
+                  {(isAIJobActive || isAIJobUnavailable) && (
+                    <RecoveryActionCard
+                      title={isAIJobUnavailable
+                        ? 'AI Review is unavailable for this attempt'
+                        : isAIJobSlow
+                          ? 'AI processing is taking longer than expected'
+                          : 'AI Review is still processing'}
+                      message={isAIJobUnavailable
+                        ? 'The private video and report remain available. Continue manual coach review now, or return to Analyse and retry later.'
+                        : 'You can continue manual coach review now. Any later AI-assisted draft will still require coach approval.'}
+                      primaryLabel="Continue manual coach review"
+                      onPrimary={() => goToStudioStep('video')}
+                      secondaryLabel={isAIJobUnavailable ? 'Return to Analyse' : 'Cancel AI review'}
+                      onSecondary={isAIJobUnavailable ? () => navigate('/analyse') : undefined}
+                      secondaryDisabled={!isAIJobUnavailable}
+                      secondaryHint={!isAIJobUnavailable ? 'True server cancellation is not available yet. Leaving this status panel does not delete the job.' : undefined}
+                    />
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
                     <div>
                       <span className="text-muted-foreground">Stage</span>
