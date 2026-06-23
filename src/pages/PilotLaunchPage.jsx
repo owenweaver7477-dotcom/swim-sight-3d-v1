@@ -20,6 +20,9 @@ import PilotSessionNotes from '@/components/pilot/PilotSessionNotes';
 import CoachPilotFeedbackForm from '@/components/pilot/CoachPilotFeedbackForm';
 import PilotReportSafetySummary from '@/components/pilot/PilotReportSafetySummary';
 import { isAIFinding } from '@/lib/aiTrust';
+import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
+import FeatureReadinessPanel from '@/components/status/FeatureReadinessPanel';
+import { getFeatureReadiness } from '@/lib/featureReadiness';
 
 const OWNER_ADMIN_ROLES = ['owner', 'admin'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
@@ -153,7 +156,8 @@ export default function PilotLaunchPage() {
     const swimmers = swimmersQuery.data || [];
     const videos = videosQuery.data || [];
     const links = linksQuery.data || [];
-    const consentComplete = (consentQuery.data || []).some(record => record.consent_status === 'granted');
+    const consentUnavailable = consentQuery.isError;
+    const consentComplete = !consentUnavailable && (consentQuery.data || []).some(record => record.consent_status === 'granted');
     const readyVideo = videos.find(video => video.upload_status === 'uploaded' || READY_VIDEO_STATUSES.includes(video.processing_status));
     const aiFindings = findings.filter(isAIFinding);
     const unresolved = aiFindings.filter(finding => !['approved', 'rejected'].includes(finding.approval_status));
@@ -166,7 +170,11 @@ export default function PilotLaunchPage() {
       {
         title: 'Confirm swimmer consent recorded',
         status: consentComplete ? 'Complete' : swimmers.length ? 'Needs attention' : 'Not started',
-        detail: consentComplete ? 'A consent record is available for this controlled test.' : 'Record consent before processing footage, especially for a minor.',
+        detail: consentComplete
+          ? 'A consent record is available for this controlled test.'
+          : consentUnavailable
+            ? 'Consent records are currently unavailable. Do not process footage for a minor until migration 018 is confirmed.'
+            : 'Record consent before processing footage, especially for a minor.',
         action: 'Open swimmers',
         to: '/swimmers',
       },
@@ -215,7 +223,7 @@ export default function PilotLaunchPage() {
         to: '#feedback',
       },
     ];
-  }, [activeReport, consentQuery.data, feedbackSaved, findings, linksQuery.data, notesSaved, swimmersQuery.data, videosQuery.data]);
+  }, [activeReport, consentQuery.data, consentQuery.isError, feedbackSaved, findings, linksQuery.data, notesSaved, swimmersQuery.data, videosQuery.data]);
 
   if (loading) return null;
 
@@ -249,6 +257,14 @@ export default function PilotLaunchPage() {
         title="Private Coach Pilot"
         subtitle="A controlled workflow check for 1–2 swimmers and a small number of short clips. AI-assisted drafts remain coach-reviewed."
       />
+
+      <PilotReadinessWarning className="mb-5" />
+
+      <div className="mb-5 grid gap-3 lg:grid-cols-3">
+        <FeatureReadinessPanel feature={getFeatureReadiness('aiReview')} compact />
+        <FeatureReadinessPanel feature={getFeatureReadiness('consentRecords')} compact />
+        <FeatureReadinessPanel feature={getFeatureReadiness('coachStudio')} compact />
+      </div>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 sm:col-span-2">

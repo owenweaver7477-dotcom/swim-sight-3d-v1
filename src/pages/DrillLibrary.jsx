@@ -18,6 +18,7 @@ import {
 import DrillDetailModal from '@/components/drills/DrillDetailModal';
 import DrillPackModal from '@/components/drills/DrillPackModal';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
+import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,16 @@ const QUICK_FILTERS = [
   { label: 'Starts & Turns',    stroke: 'All',          phase: 'Start' },
   { label: 'Underwater',        stroke: 'All',          phase: 'Underwater' },
   { label: 'No Equipment',      stroke: 'All',          phase: 'All',  equipment: 'none' },
+];
+
+const DRILL_CATEGORIES = [
+  { label: 'Starts', phase: 'Start' },
+  { label: 'Turns', phase: 'Turn' },
+  { label: 'Underwater / breakout', phase: 'Underwater' },
+  { label: 'Breaststroke', stroke: 'Breaststroke' },
+  { label: 'Freestyle', stroke: 'Freestyle' },
+  { label: 'Backstroke', stroke: 'Backstroke' },
+  { label: 'Butterfly', stroke: 'Butterfly' },
 ];
 
 const STROKE_COLORS = {
@@ -332,6 +343,12 @@ export default function DrillLibrary({
     setActiveTab('drills');
   };
 
+  const applyCategory = (category) => {
+    setStrokeFilter(category.stroke || 'All');
+    setPhaseFilter(category.phase || 'All');
+    setActiveTab('drills');
+  };
+
   const contextLabel = urlContext || assignedDrillTitle || (urlReportId ? 'Report' : null);
 
   const tabs = [
@@ -350,6 +367,34 @@ export default function DrillLibrary({
           title="Corrective Drill Library"
           subtitle="Stroke-specific drills, cue progressions, and corrective packs linked to common technical faults."
         />
+      )}
+
+      {!assignMode && (
+        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4" aria-labelledby="drill-category-title">
+          <div className="flex flex-wrap items-center gap-2">
+            <div id="drill-category-title" className="text-xs font-bold text-slate-900">Drill categories</div>
+            <FeatureStatusBadge status="partial" />
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-slate-600">Choose a top-level coaching area. Categories still being expanded remain visible instead of appearing broken.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {DRILL_CATEGORIES.map(category => {
+              const count = drills.filter(drill => category.stroke ? drill.stroke === category.stroke : drill.phase === category.phase || (category.phase === 'Underwater' && drill.phase === 'Breakout')).length;
+              return (
+                <button
+                  key={category.label}
+                  type="button"
+                  onClick={() => applyCategory(category)}
+                  className="min-h-16 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:border-cyan-300 hover:bg-cyan-50"
+                >
+                  <span className="block text-xs font-semibold text-slate-800">{category.label}</span>
+                  <span className="mt-1 block text-[9px] leading-4 text-slate-500">
+                    {count > 0 ? `${count} drill${count === 1 ? '' : 's'} available` : 'Drill set coming in drill rebuild phase'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {/* ── Context banner (assign mode / URL context) ── */}

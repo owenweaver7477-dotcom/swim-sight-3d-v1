@@ -12,6 +12,7 @@ import {
 import { format, differenceInMinutes } from 'date-fns';
 import AIJobStatusBadge from './AIJobStatusBadge';
 import { AI_CREDIT_COPY } from '@/lib/plans/featureGates';
+import RecoveryActionCard from '@/components/status/RecoveryActionCard';
 
 const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'finalising_upload'];
@@ -385,12 +386,17 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
               </span>
             </div>
           )}
-          {isStuck && (
-            <div className="flex items-center gap-1.5 text-[10px] text-yellow-500">
-              <AlertCircle className="w-3 h-3 flex-shrink-0" />
-              Still processing after 10+ minutes. An owner/admin can reset timed-out jobs in AI Job Monitor.
-            </div>
-          )}
+          <RecoveryActionCard
+            title={isStuck ? 'AI processing is taking longer than expected' : 'Manual review remains available'}
+            message={isStuck
+              ? 'You can continue manual coach review now. The AI draft can be retried later when the worker is available.'
+              : 'You do not need to wait here. Continue in Coach Studio while the AI-assisted draft is queued or processing.'}
+            primaryLabel="Stop waiting and open Coach Studio"
+            onPrimary={() => onStartReview(upload)}
+            secondaryLabel="Cancel AI review"
+            secondaryDisabled
+            secondaryHint="True server cancellation is not available yet. Opening Coach Studio does not delete the job or the private video."
+          />
         </div>
       );
     }
@@ -398,9 +404,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     if (canTriggerAI && hasPrivateObject) {
       return (
         <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
-          onClick={handleTriggerAI} disabled={aiLoading}>
-          {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Brain className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Sending...' : 'Send for AI Review'}
+          onClick={() => onStartReview(upload)}>
+          <Brain className="w-3 h-3 mr-1.5" /> Configure AI Review
         </Button>
       );
     }
@@ -565,7 +570,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
       {renderPrimaryAction()}
 
-      {status !== 'completed' && !isUploading && !isUploadFailed && (
+      {status !== 'completed' && !isUploading && !isUploadFailed && !isAiActive && (
         <Button size="sm" variant="ghost"
           className="w-full h-7 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => onStartReview(upload)}>
