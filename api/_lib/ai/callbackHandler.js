@@ -1,5 +1,5 @@
-import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../_lib/server.js';
-import { dispatchNextQueuedAIJob, markJobQueueComplete } from '../_lib/aiQueue.js';
+import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../server.js';
+import { dispatchNextQueuedAIJob, markJobQueueComplete } from '../aiQueue.js';
 
 const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.55;
 const MIN_KEYPOINTS_FOR_AI_FINDINGS = 12;
@@ -167,7 +167,22 @@ function safeCallbackSummary(payload, quality) {
     processed_height: payload.processed_height ?? null,
     processing_window_seconds: payload.processing_window_seconds ?? null,
     error_message: payload.error_message || null,
+    requested_outputs: normaliseArray(payload.requested_outputs),
+    completed_outputs: normaliseArray(payload.completed_outputs),
+    skipped_outputs: Array.isArray(payload.skipped_outputs)
+      ? payload.skipped_outputs.slice(0, 50).map((item) => ({ id: item?.id || null, reason: item?.reason || null }))
+      : [],
+    estimate_only_outputs: normaliseArray(payload.estimate_only_outputs),
   };
+}
+
+function reportSafeReviewContext(value = {}) {
+  const {
+    athlete_profile_inputs: _athleteProfileInputs,
+    athlete_profile_readiness: _athleteProfileReadiness,
+    ...safeContext
+  } = value || {};
+  return safeContext;
 }
 
 function isCoachLockedReport(status) {
@@ -270,13 +285,73 @@ export default async function handler(req, res) {
 
     const now = new Date().toISOString();
     const callbackStatus = String(payload.status || 'completed').toLowerCase();
-    const callbackError = callbackStatus === 'error';
-    const progressOnly = PROGRESS_STATUSES.includes(callbackStatus) && callbackStatus !== 'completed' && callbackStatus !== 'error';
+    const protectedStatus = job?.queue_status || job?.status;
+    const callbackIsCancellation = callbackStatus === 'cancelled';
+
+    if (job && ['cancelled', 'timed_out'].includes(protectedStatus) && callbackStatus !== protectedStatus) {
+      return sendJson(res, 200, {
+        success: true,
+        ignored: true,
+        reason: `late_callback_after_${protectedStatus}`,
+        job_id: job.id,
+      });
+    }
+
+    if (job?.queue_status === 'cancel_requested' && !callbackIsCancellation) {
+      return sendJson(res, 200, {
+        success: true,
+        ignored: true,
+        reason: 'late_callback_after_cancel_requested',
+        job_id: job.id,
+      });
+    }
+
+    if (job && callbackIsCancellation) {
+      await service.from('ai_processing_jobs').update({
+        status: 'cancelled',
+        queue_status: 'cancelled',
+        stage: 'cancelled',
+        progress_percent: 100,
+        callback_received: true,
+        callback_received_at: now,
+        callback_status: 'cancelled',
+        completed_at: now,
+        retryable: false,
+        error_code: 'cancelled_by_user',
+        error_message: 'AI processing was cancelled. Continue with manual coach review.',
+        recommended_next_action: 'manual_review_recommended',
+        active_slot_claimed_at: null,
+        lease_owner: null,
+        lease_expires_at: null,
+        stage_history: appendStageHistory(job.stage_history, callbackStageEntry(payload, 'cancelled')),
+      }).eq('id', job.id);
+      await service.from('video_uploads').update({
+        processing_status: 'manual_review',
+        ai_error_message: 'AI processing was cancelled. Continue with manual coach review.',
+      }).eq('id', upload.id);
+      await markJobQueueComplete(service, job, 'cancelled');
+      try {
+        await dispatchNextQueuedAIJob({ service, req, dispatcher: `callback-cancel:${job.id}` });
+      } catch {
+        // The cancellation remains final even if the next queued job waits.
+      }
+      return sendJson(res, 200, {
+        success: true,
+        cancelled: true,
+        job_id: job.id,
+        manual_review_required: true,
+      });
+    }
+
+    const callbackError = ['error', 'failed', 'timed_out'].includes(callbackStatus);
+    const progressOnly = PROGRESS_STATUSES.includes(callbackStatus) && !callbackError;
     const quality = assessCallbackQuality(payload);
     const qualityPass = quality.passed;
     const realPose = qualityPass;
     const qualityFlags = buildQualityFlags(payload, callbackError, quality);
-    const jobStatus = callbackError
+    const jobStatus = callbackStatus === 'timed_out'
+      ? 'timed_out'
+      : callbackError
       ? 'error'
       : qualityPass
       ? 'completed'
@@ -331,7 +406,9 @@ export default async function handler(req, res) {
     }).eq('id', upload.id);
 
     if (job) {
-      const finalCallbackStatus = callbackError
+      const finalCallbackStatus = callbackStatus === 'timed_out'
+        ? 'timed_out'
+        : callbackError
         ? 'error'
         : qualityPass
         ? 'completed'
@@ -339,7 +416,9 @@ export default async function handler(req, res) {
       const attemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
       const maxAttempts = Number(job.max_attempts || 3) || 3;
       const retryable = !qualityPass && attemptCount < maxAttempts;
-      const finalQueueStatus = callbackError
+      const finalQueueStatus = callbackStatus === 'timed_out'
+        ? 'timed_out'
+        : callbackError
         ? (retryable ? 'retry_available' : 'failed')
         : qualityPass
         ? 'completed'
@@ -347,7 +426,9 @@ export default async function handler(req, res) {
       await service.from('ai_processing_jobs').update({
         status: jobStatus,
         queue_status: finalQueueStatus,
-        stage: callbackError
+        stage: callbackStatus === 'timed_out'
+          ? 'timed_out'
+          : callbackError
           ? 'error'
           : qualityPass
           ? 'completed'
@@ -373,6 +454,7 @@ export default async function handler(req, res) {
         callback_status: finalCallbackStatus,
         completed_at: now,
         failed_at: callbackError ? now : null,
+        timed_out_at: callbackStatus === 'timed_out' ? now : null,
         processing_duration_seconds: payload.processing_duration_seconds ?? null,
         analysis_mode: analysisMode,
         video_duration_seconds: payload.video_duration_seconds ?? null,
@@ -398,7 +480,7 @@ export default async function handler(req, res) {
       phase_breakdown: qualityPass && payload.phase_breakdown ? payload.phase_breakdown : {},
       technical_summary: qualityPass ? payload.technical_summary || null : unreliableMessage,
       next_focus: qualityPass ? payload.next_focus || null : payload.recommended_next_action || fallbackNextAction,
-      review_context: upload.review_context || {},
+      review_context: reportSafeReviewContext(upload.review_context || {}),
       created_by: upload.created_by,
     };
 
@@ -566,7 +648,9 @@ export default async function handler(req, res) {
       try {
         const finalAttemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
         const finalMaxAttempts = Number(job.max_attempts || 3) || 3;
-        const queueStatus = callbackError
+        const queueStatus = callbackStatus === 'timed_out'
+          ? 'timed_out'
+          : callbackError
           ? (finalAttemptCount < finalMaxAttempts ? 'retry_available' : 'failed')
           : qualityPass
           ? 'completed'

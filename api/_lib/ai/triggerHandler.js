@@ -6,7 +6,7 @@ import {
   requireClubRole,
   requireUser,
   sendJson,
-} from '../_lib/server.js';
+} from '../server.js';
 import {
   DUPLICATE_BLOCKING_JOB_STATUSES,
   RETRYABLE_JOB_STATUSES,
@@ -14,13 +14,14 @@ import {
   dispatchNextQueuedAIJob,
   getAIQueueSummary,
   stageEntry,
-} from '../_lib/aiQueue.js';
+} from '../aiQueue.js';
 import {
   consumeAIReviewCredit,
   getClubAIEntitlement,
   publicEntitlementResponse,
-} from '../_lib/entitlements.js';
-import { consentGate, envFlagEnabled } from '../_lib/safeguarding.js';
+} from '../entitlements.js';
+import { consentGate, envFlagEnabled } from '../safeguarding.js';
+import { publicOutputSelection, validateAIReportOutputRequest } from '../aiReportOutputSelection.js';
 
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
@@ -63,7 +64,8 @@ export default async function handler(req, res) {
 
   try {
     const { user } = await requireUser(req);
-    const { video_upload_id } = await readJsonBody(req);
+    const requestBody = await readJsonBody(req);
+    const { video_upload_id } = requestBody;
     if (!video_upload_id) return sendJson(res, 400, { error: 'video_upload_id is required' });
 
     const service = createServiceClient();
@@ -106,6 +108,28 @@ export default async function handler(req, res) {
         ...safeVideoState(upload, Boolean((upload.file_bucket || upload.storage_bucket) && (upload.file_path || upload.storage_path))),
       });
     }
+
+    const outputSelection = validateAIReportOutputRequest({ requestBody, upload });
+    if (!outputSelection.valid) {
+      return sendJson(res, outputSelection.status || 422, {
+        error: outputSelection.error,
+        locked_outputs: outputSelection.locked_outputs || [],
+        ...safeVideoState(upload, Boolean((upload.file_bucket || upload.storage_bucket) && (upload.file_path || upload.storage_path))),
+      });
+    }
+
+    const nextReviewContext = {
+      ...(upload.review_context || {}),
+      ...outputSelection,
+    };
+    const { data: configuredUpload, error: configurationError } = await service
+      .from('video_uploads')
+      .update({ review_context: nextReviewContext })
+      .eq('id', upload.id)
+      .select('*')
+      .single();
+    if (configurationError) throw configurationError;
+    upload = configuredUpload;
 
     const uploadStatus = upload.upload_status || (upload.processing_status === 'uploaded' ? 'uploaded' : null);
     if (INCOMPLETE_UPLOAD_STATUSES.includes(upload.processing_status) || INCOMPLETE_UPLOAD_STATUSES.includes(uploadStatus)) {
@@ -161,6 +185,7 @@ export default async function handler(req, res) {
         queue_position: activeJob.queue_position ?? null,
         retry_count: activeJob.retry_count || 0,
         attempt_count: activeJob.attempt_count ?? ((activeJob.retry_count || 0) + 1),
+        output_selection: publicOutputSelection(outputSelection),
       });
     }
 
@@ -307,6 +332,7 @@ export default async function handler(req, res) {
       global_queued_jobs: summary.global_queued_jobs,
       entitlement: publicEntitlementResponse(entitlement),
       credit_usage: creditUsage,
+      output_selection: publicOutputSelection(outputSelection),
     });
   } catch (error) {
     if (error.entitlement) {

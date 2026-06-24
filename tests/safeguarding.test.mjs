@@ -81,7 +81,7 @@ test('public report routes whitelist swimmer fields and omit guardian contact', 
 });
 
 test('both AI trigger paths apply consent before creating a job', async () => {
-  const supabaseTrigger = await readFile(new URL('../api/ai/trigger.js', import.meta.url), 'utf8');
+  const supabaseTrigger = await readFile(new URL('../api/_lib/ai/triggerHandler.js', import.meta.url), 'utf8');
   const base44Trigger = await readFile(
     new URL('../base44/functions/triggerPoseAnalysis/entry.ts', import.meta.url),
     'utf8'

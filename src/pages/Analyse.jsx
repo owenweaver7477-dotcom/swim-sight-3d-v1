@@ -3,7 +3,7 @@
  * Steps: Select Swimmer → Upload Video → Configure Review → Analyse
  * Replaces the old Upload → Setup → Analysis 3-page chain.
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
@@ -31,10 +31,12 @@ import { useClubContext } from '@/lib/useClubContext';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import ReviewSetupPanel from '@/components/analysis/ReviewSetupPanel';
 import AnalysisFocusChecklist from '@/components/analysis/AnalysisFocusChecklist';
+import AIReportOutputSelector from '@/components/analysis/AIReportOutputSelector';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
 import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { AI_CREDIT_COPY, getFeatureGateState, getPlanKey } from '@/lib/plans/featureGates';
 import { getConsentActionState } from '@/lib/consentReadiness';
+import { buildAthleteProfileReadiness, buildReportOutputPlan } from '@/lib/aiReportOutputs';
 
 // ─── Stroke phase sets ────────────────────────────────────────────────────────
 const STROKE_PHASES = {
@@ -73,6 +75,23 @@ const CAPTURE_SOURCES = [
   { value: 'swimpro_export', label: 'SwimPro export' },
   { value: 'other', label: 'Other' },
 ];
+const REPORT_OUTPUT_FEATURES = Object.freeze({
+  timing_metrics_enabled: import.meta.env.VITE_ENABLE_TIMING_METRICS === 'true',
+  distance_metrics_enabled: import.meta.env.VITE_ENABLE_DISTANCE_METRICS === 'true',
+  advanced_metrics_enabled: import.meta.env.VITE_ENABLE_ADVANCED_AI_METRICS === 'true',
+  estimated_drag_enabled: import.meta.env.VITE_ENABLE_ESTIMATED_DRAG === 'true',
+  skills_analysis_enabled: import.meta.env.VITE_ENABLE_SKILLS_AI_ANALYSIS === 'true',
+});
+const EMPTY_ATHLETE_PROFILE = Object.freeze({
+  body_mass_kg: '',
+  approximate_height_cm: '',
+  age_group: '',
+  pool_length_m: '',
+  calibration_available: false,
+  wingspan_cm: '',
+  skill_level: '',
+  race_context: '',
+});
 function formatBytes(b) { return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`; }
 function getFileSizeWarning(f) {
   const mb = fileSizeMb(f);
@@ -159,6 +178,10 @@ export default function Analyse() {
   const [sessionType, setSessionType] = useState('Technique Review');
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewNotes, setReviewNotes] = useState('');
+  const [selectedReportOutputs, setSelectedReportOutputs] = useState([]);
+  const [selectedOutputPreset, setSelectedOutputPreset] = useState('');
+  const [coachConfirmedDraftAI, setCoachConfirmedDraftAI] = useState(false);
+  const [athleteProfile, setAthleteProfile] = useState({ ...EMPTY_ATHLETE_PROFILE });
   const [reviewContext, setReviewContext] = useState({
     review_goal: '',
     stroke_focus: '',
@@ -226,6 +249,17 @@ export default function Analyse() {
       : null
   );
   const consentState = getConsentActionState({ record: consentRecord, unavailable: consentQuery.isError });
+  const athleteProfileReadiness = useMemo(() => buildAthleteProfileReadiness({
+    athleteProfile,
+    stroke,
+    cameraAngle: angle,
+    videoDurationSeconds,
+    features: REPORT_OUTPUT_FEATURES,
+  }), [athleteProfile, stroke, angle, videoDurationSeconds]);
+  const reportOutputPlan = useMemo(() => buildReportOutputPlan({
+    selectedOutputIds: selectedReportOutputs,
+    readiness: athleteProfileReadiness,
+  }), [selectedReportOutputs, athleteProfileReadiness]);
 
   const { data: keyFrames = [] } = useQuery({
     queryKey: ['keyframes', reviewId],
@@ -506,12 +540,48 @@ export default function Analyse() {
       setStartAiError(consentState.message);
       return;
     }
+    if (!reportOutputPlan.valid) {
+      setStartAiError('Choose at least one available AI report output before starting analysis. Locked or preview-only outputs cannot be sent.');
+      return;
+    }
+    if (!coachConfirmedDraftAI) {
+      setStartAiError('Confirm that AI output is a draft requiring coach review before starting analysis.');
+      return;
+    }
 
     setStartAiLoading(true);
     setStartAiMessage('');
     setStartAiError('');
 
     try {
+      const privateAthleteProfileInputs = {
+        body_mass_kg: athleteProfile.body_mass_kg || null,
+        approximate_height_cm: athleteProfile.approximate_height_cm || null,
+        age_group: athleteProfile.age_group || null,
+        pool_length_m: athleteProfile.pool_length_m || null,
+        calibration_available: athleteProfile.calibration_available === true,
+        wingspan_cm: athleteProfile.wingspan_cm || null,
+        skill_level: athleteProfile.skill_level || null,
+        race_context: athleteProfile.race_context || null,
+      };
+      const outputRequest = {
+        analysis_mode: selectedOutputPreset || 'custom_report',
+        selected_report_outputs: reportOutputPlan.selected,
+        athlete_profile_readiness: {
+          body_mass_available: athleteProfileReadiness.body_mass,
+          height_available: athleteProfileReadiness.height,
+          pool_scale_available: athleteProfileReadiness.calibration,
+          calibration_available: athleteProfileReadiness.calibration,
+          side_view_available: athleteProfileReadiness.side_view,
+          video_timing_available: athleteProfileReadiness.video_timing,
+        },
+        athlete_profile_inputs: privateAthleteProfileInputs,
+        locked_outputs: reportOutputPlan.locked.map((item) => item.id),
+        estimate_only_outputs: reportOutputPlan.estimateOnly,
+        estimated_credit_cost: reportOutputPlan.estimatedCredits,
+        coach_confirmed_draft_ai: true,
+      };
+
       await entities.VideoUpload.update(videoUploadId, {
         stroke_type: stroke,
         camera_angle: angle,
@@ -522,10 +592,11 @@ export default function Analyse() {
           stroke_focus: reviewContext.stroke_focus || stroke,
           camera_angle_context: reviewContext.camera_angle_context || angle,
           pre_session_notes: reviewNotes || null,
+          ...outputRequest,
         },
       });
 
-      const res = await functions.triggerPoseAnalysis(videoUploadId);
+      const res = await functions.triggerPoseAnalysis({ video_upload_id: videoUploadId, ...outputRequest });
       setUploadStatus(res.data?.processing_status || 'processing_ai');
       setStartAiMessage(res.data?.queued && !res.data?.dispatched
         ? `Queued for AI Review${res.data?.queue_position ? ` — position ${res.data.queue_position}` : ''}. Open AI Jobs to watch the queue.`
@@ -551,8 +622,20 @@ export default function Analyse() {
     setAngle(upload.camera_angle || 'Side');
     setSessionType(upload.analysis_type || 'Technique Review');
     setCaptureSource(upload.capture_source || 'standard_camera');
+    setVideoDurationSeconds(upload.duration_seconds ?? null);
     if (upload.review_context) {
       setReviewContext(prev => ({ ...prev, ...upload.review_context }));
+      setSelectedReportOutputs(Array.isArray(upload.review_context.selected_report_outputs) ? upload.review_context.selected_report_outputs : []);
+      setSelectedOutputPreset(upload.review_context.analysis_mode || '');
+      setCoachConfirmedDraftAI(upload.review_context.coach_confirmed_draft_ai === true);
+      if (upload.review_context.athlete_profile_inputs) {
+        setAthleteProfile(current => ({ ...current, ...upload.review_context.athlete_profile_inputs }));
+      }
+    } else {
+      setSelectedReportOutputs([]);
+      setSelectedOutputPreset('');
+      setCoachConfirmedDraftAI(false);
+      setAthleteProfile({ ...EMPTY_ATHLETE_PROFILE });
     }
     // Fetch signed URL so Step 3 has video ready
     try {
@@ -1267,6 +1350,22 @@ export default function Analyse() {
                 </SelectContent>
               </Select>
             </div>
+            <AIReportOutputSelector
+              stroke={stroke}
+              cameraAngle={angle}
+              videoDurationSeconds={videoDurationSeconds}
+              selectedOutputIds={selectedReportOutputs}
+              onSelectedOutputIdsChange={setSelectedReportOutputs}
+              athleteProfile={athleteProfile}
+              onAthleteProfileChange={setAthleteProfile}
+              selectedPreset={selectedOutputPreset}
+              onSelectedPresetChange={setSelectedOutputPreset}
+              coachConfirmedDraftAI={coachConfirmedDraftAI}
+              onCoachConfirmedDraftAIChange={setCoachConfirmedDraftAI}
+              features={REPORT_OUTPUT_FEATURES}
+              onManualReview={() => createReview.mutate()}
+              manualReviewPending={createReview.isPending}
+            />
             <div>
               <Label className="text-xs text-muted-foreground">Session Title (optional)</Label>
               <Input value={reviewTitle} onChange={e => setReviewTitle(e.target.value)} placeholder="e.g. Adam — Breaststroke Kick — Jun 2026" className="bg-card border-border mt-1" />
@@ -1304,7 +1403,12 @@ export default function Analyse() {
                 {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport} {AI_CREDIT_COPY.pilotUnknown}
               </p>
             </div>
-            <AICreditIndicator selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0} mode="ai" />
+            <AICreditIndicator
+              selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0}
+              selectedOutputCount={reportOutputPlan.selected.length}
+              estimatedCredits={reportOutputPlan.estimatedCredits}
+              mode="ai"
+            />
             <AICreditIndicator selectedFocusCount={0} mode="manual" compact />
             {!consentState.canStartAI && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
@@ -1315,7 +1419,7 @@ export default function Analyse() {
               <Button
                 className="w-full bg-primary text-primary-foreground"
                 onClick={handleSendForAIReview}
-                disabled={startAiLoading || !stroke || !angle || !videoUploadId || !consentState.canStartAI || consentQuery.isLoading}
+                disabled={startAiLoading || !stroke || !angle || !videoUploadId || !consentState.canStartAI || consentQuery.isLoading || !reportOutputPlan.valid || !coachConfirmedDraftAI}
               >
                 {startAiLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending to AI Review...</> : <><Zap className="w-4 h-4 mr-2" />Send for AI Review</>}
               </Button>

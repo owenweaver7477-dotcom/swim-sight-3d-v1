@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import functions from '@/lib/data/functions';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Layers, Film, Loader2, Play, RotateCcw, Info, Pencil
@@ -67,7 +67,7 @@ function AngleCard({ upload, isPrimary, onRetryAI, canRetry, annotationCount = 0
     setRetryMessage('');
     try {
       await onRetryAI(upload.id);
-      setRetryMessage('Sent to AI. Check AI Reviews for results.');
+      setRetryMessage('Opening Analyse to choose report outputs for this angle.');
     } catch (err) {
       setRetryMessage(err?.response?.data?.error || 'Failed to send to AI.');
     }
@@ -136,7 +136,7 @@ function AngleCard({ upload, isPrimary, onRetryAI, canRetry, annotationCount = 0
             disabled={retrying}
           >
             {retrying ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCcw className="w-3 h-3 mr-1.5" />}
-            {retrying ? 'Sending…' : 'Retry AI with this angle'}
+            {retrying ? 'Opening…' : 'Configure AI for this angle'}
           </Button>
           {retryMessage && (
             <div className={`text-[10px] ${retryMessage.includes('Failed') ? 'text-destructive' : 'text-green-600'}`}>
@@ -150,7 +150,7 @@ function AngleCard({ upload, isPrimary, onRetryAI, canRetry, annotationCount = 0
 }
 
 export default function SupportingAnglesPanel({ report, video, canEdit }) {
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch all videos in the same session (if the primary video belongs to a session)
   const sessionId = video?.analysis_session_id;
@@ -174,9 +174,7 @@ export default function SupportingAnglesPanel({ report, video, canEdit }) {
   }, {});
 
   const handleRetryAI = async (videoUploadId) => {
-    const res = await functions.triggerPoseAnalysis(videoUploadId);
-    if (!res.data?.success) throw new Error(res.data?.error || 'Unexpected error');
-    queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
+    navigate('/analyse', { state: { videoUploadId, configureAI: true } });
   };
 
   // If no session, or only one video, don't render (no supporting angles)
@@ -205,8 +203,8 @@ export default function SupportingAnglesPanel({ report, video, canEdit }) {
         <Info className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           Multi-angle footage available for coach review. AI processed the primary angle only.
-          Supporting angles below are for manual coach reference. Use "Retry AI with this angle"
-          to re-process using a different video — this preserves the current session.
+          Supporting angles below are for manual coach reference. Use "Configure AI for this angle"
+          to choose report outputs before starting another AI-assisted draft.
         </p>
       </div>
 

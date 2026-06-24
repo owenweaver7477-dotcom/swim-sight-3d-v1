@@ -362,6 +362,8 @@ export default function AIReportPage() {
   const [pendingKeyStampLinkId, setPendingKeyStampLinkId] = useState(null);
   const [studioSeekRequest, setStudioSeekRequest] = useState(null);
   const [studioDrawRequest, setStudioDrawRequest] = useState(null);
+  const [cancellingAI, setCancellingAI] = useState(false);
+  const [cancelAIMessage, setCancelAIMessage] = useState('');
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -801,6 +803,22 @@ export default function AIReportPage() {
     navigate('/ai-reviews');
   };
 
+  const handleCancelAI = async () => {
+    if (!aiJob?.id) return;
+    setCancellingAI(true);
+    setCancelAIMessage('');
+    try {
+      const response = await functions.cancelAIReview(aiJob.id);
+      setCancelAIMessage(response.data?.message || 'AI cancellation requested. Continue with manual coach review.');
+      queryClient.invalidateQueries({ queryKey: ['ai-job-for-report', report?.ai_processing_job_id] });
+      queryClient.invalidateQueries({ queryKey: ['video-for-report', report?.video_upload_id] });
+    } catch (error) {
+      setCancelAIMessage(`${error?.message || 'Cancellation could not be confirmed.'} Continue manual review; no AI result is published without coach approval.`);
+    } finally {
+      setCancellingAI(false);
+    }
+  };
+
   const pendingCount = findings.filter(f => f.approval_status === 'pending').length;
   const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
   const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
@@ -815,11 +833,11 @@ export default function AIReportPage() {
     || report?.analysis_mode === 'manual_review'
     || report?.real_pose_detected === false;
   const activeAIJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
-  const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing'].includes(aiJob?.queue_status);
+  const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing', 'cancel_requested'].includes(aiJob?.queue_status);
   const aiJobStartedAt = aiJob?.started_at || aiJob?.accepted_at || aiJob?.queued_at || aiJob?.created_date;
-  const isAIJobSlow = Boolean(isAIJobActive && aiJobStartedAt && Date.now() - new Date(aiJobStartedAt).getTime() >= 10 * 60 * 1000);
-  const isAIJobUnavailable = ['error', 'timed_out', 'retry_available'].includes(aiJob?.status)
-    || ['failed', 'timed_out', 'retry_available'].includes(aiJob?.queue_status)
+  const isAIJobSlow = Boolean(isAIJobActive && aiJobStartedAt && Date.now() - new Date(aiJobStartedAt).getTime() >= 30 * 1000);
+  const isAIJobUnavailable = ['error', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.status)
+    || ['failed', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.queue_status)
     || report?.analysis_mode === 'error';
   const coachStudioStepIndex = COACH_STUDIO_GUIDED_STEPS.findIndex(step => step.id === coachStudioStep);
   const currentStudioStepIndex = coachStudioStepIndex >= 0 ? coachStudioStepIndex : 0;
@@ -964,6 +982,8 @@ export default function AIReportPage() {
 
           <AICreditIndicator
             selectedFocusCount={report?.review_context?.analysis_focus_areas?.length || 0}
+            selectedOutputCount={report?.review_context?.selected_report_outputs?.length || 0}
+            estimatedCredits={report?.review_context?.estimated_credit_cost}
             mode={isManualReviewReport ? 'manual' : 'ai'}
             compact
           />
@@ -1067,12 +1087,13 @@ export default function AIReportPage() {
                         : 'You can continue manual coach review now. Any later AI-assisted draft will still require coach approval.'}
                       primaryLabel="Continue manual coach review"
                       onPrimary={() => goToStudioStep('video')}
-                      secondaryLabel={isAIJobUnavailable ? 'Return to Analyse' : 'Cancel AI review'}
-                      onSecondary={isAIJobUnavailable ? () => navigate('/analyse') : undefined}
-                      secondaryDisabled={!isAIJobUnavailable}
-                      secondaryHint={!isAIJobUnavailable ? 'True server cancellation is not available yet. Leaving this status panel does not delete the job.' : undefined}
+                      secondaryLabel={isAIJobUnavailable ? 'Return to Analyse' : cancellingAI ? 'Requesting cancellation…' : 'Cancel AI review'}
+                      onSecondary={isAIJobUnavailable ? () => navigate('/analyse') : handleCancelAI}
+                      secondaryDisabled={!isAIJobUnavailable && (!aiJob?.id || cancellingAI)}
+                      secondaryHint={!isAIJobUnavailable && !aiJob?.id ? 'The active job could not be identified. Manual coach review remains available.' : undefined}
                     />
                   )}
+                  {cancelAIMessage && <p className="text-[10px] leading-4 text-amber-700" role="status">{cancelAIMessage}</p>}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
                     <div>
                       <span className="text-muted-foreground">Stage</span>

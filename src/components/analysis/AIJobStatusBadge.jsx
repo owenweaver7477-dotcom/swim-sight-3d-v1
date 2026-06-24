@@ -33,6 +33,7 @@ export const JOB_STATUS_CONFIG = {
   retry_available:       { label: 'Retry available',                      color: 'text-orange-600 bg-orange-50 border-orange-200', icon: RotateCw,      spin: false },
   failed:                { label: 'Dispatch failed',                      color: 'text-red-600 bg-red-50 border-red-200',          icon: XCircle,      spin: false },
   timed_out:              { label: 'Timed out — retry available',         color: 'text-red-600 bg-red-50 border-red-200',          icon: Clock,        spin: false },
+  cancel_requested:       { label: 'Cancellation requested',              color: 'text-slate-600 bg-slate-50 border-slate-200',    icon: Clock,        spin: false },
   cancelled:              { label: 'Cancelled',                          color: 'text-slate-600 bg-slate-50 border-slate-200',    icon: XCircle,      spin: false },
 };
 
