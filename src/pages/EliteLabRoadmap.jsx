@@ -62,6 +62,14 @@ const ROADMAP_ITEMS = [
   },
 ];
 
+const PREVIEW_MODULES = [
+  { title: '3D reference model', status: 'Preview-only', available: 'Shared base reference scene and camera controls.', missing: 'No swimmer-specific model or calibrated movement reconstruction.', why: 'A clear reference could eventually support coach explanation without pretending to measure the swimmer.' },
+  { title: 'Stroke phase comparison', status: 'Future Elite Lab', available: 'Written stroke phases and coach-approved standards.', missing: 'No validated synchronized phase comparison engine.', why: 'Coaches need consistent phase language before any comparison is useful.' },
+  { title: 'Body-line overlay', status: 'Prototype', available: 'Coach Draw lines and timestamped annotations.', missing: 'No calibrated automatic overlay or absolute position measurement.', why: 'Coach-controlled marks are safer until camera and pose assumptions are validated.' },
+  { title: 'Drill demonstration model', status: 'Planned', available: 'Written setup, execution, cues, and volume in the Drill Library.', missing: 'No production 3D drill animation set.', why: 'A future visual reference may help swimmers understand the intended movement.' },
+  { title: 'Elite timing library', status: 'Planned', available: 'Coach standards for timing and phase review.', missing: 'No validated elite benchmark or automatic timing verdict.', why: 'Reference timing must be tested against permissioned footage and coach judgement.' },
+];
+
 export default function EliteLabRoadmap() {
   const { club } = useClubContext();
   const canView = ADMIN_ROLES.includes(club?._memberRole);
@@ -94,6 +102,22 @@ export default function EliteLabRoadmap() {
         }
       />
       <FeatureReadinessPanel feature={getFeatureReadiness('eliteStudio')} />
+
+      <section className="rounded-lg border border-slate-200 bg-white p-4" aria-labelledby="elite-preview-modules">
+        <div id="elite-preview-modules" className="text-xs font-bold text-slate-900">Elite Studio module readiness</div>
+        <p className="mt-1 text-xs leading-5 text-slate-600">Reference model and movement system under development. Use this area for future comparison assets, not final AI judgement.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {PREVIEW_MODULES.map(module => (
+            <article key={module.title} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[9px] font-bold text-violet-700">{module.status}</span>
+              <h2 className="mt-2 text-xs font-bold text-slate-900">{module.title}</h2>
+              <p className="mt-2 text-[10px] leading-4 text-slate-600"><strong>Available now:</strong> {module.available}</p>
+              <p className="mt-2 text-[10px] leading-4 text-slate-600"><strong>Not available:</strong> {module.missing}</p>
+              <p className="mt-2 text-[10px] leading-4 text-slate-500"><strong>Coach value:</strong> {module.why}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
         <strong>Coach review required.</strong> The preview is a 3D reference visualisation, not a live measurement tool. Calibrated comparison requires measured hardware and validation before use.

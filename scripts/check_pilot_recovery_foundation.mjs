@@ -92,7 +92,7 @@ assert.match(elitePreview, /not pilot-ready yet/i);
 assert.match(elitePreview, /preview module/i);
 
 const drillLibrary = await read('src/pages/DrillLibrary.jsx');
-for (const category of ['Starts', 'Turns', 'Underwater / breakout', 'Breaststroke', 'Freestyle', 'Backstroke', 'Butterfly']) {
+for (const category of ['Starts', 'Turns', 'Underwater', 'General body line', 'Breaststroke', 'Freestyle', 'Backstroke', 'Butterfly']) {
   assert.ok(drillLibrary.includes(category), `Missing drill category: ${category}`);
 }
 

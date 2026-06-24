@@ -62,9 +62,10 @@ const clubContextSource = await readFile(path.join(root, 'src', 'lib', 'useClubC
 assert.doesNotMatch(clubContextSource, /_memberRole \|\| 'coach'/);
 
 const pageSource = await readFile(path.join(root, 'src', 'pages', 'PilotLaunchPage.jsx'), 'utf8');
-assert.match(pageSource, /OWNER_ADMIN_ROLES/);
+assert.match(pageSource, /PILOT_ROLES/);
 assert.match(pageSource, /owner/);
 assert.match(pageSource, /admin/);
+assert.match(pageSource, /coach/);
 assert.match(pageSource, /functions\.getSwimmerConsent/);
 assert.doesNotMatch(pageSource, /swimmer\.consent_status/);
 

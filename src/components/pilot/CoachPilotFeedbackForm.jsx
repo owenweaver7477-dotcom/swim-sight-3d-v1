@@ -2,6 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Check, Copy, Mail, MessageSquareText, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  SUPPORT_COPY,
+  SUPPORT_EMAIL,
+  buildFeedbackEmailBody,
+  buildFeedbackMailto,
+  getDeviceSummary,
+} from '@/lib/supportConfig';
 
 const RATINGS = [1, 2, 3, 4, 5];
 const YES_NO_MAYBE = ['Yes', 'No', 'Maybe'];
@@ -22,8 +29,10 @@ const EMPTY_FEEDBACK = {
   useAgain: '',
   recommend: '',
   pricingReaction: '',
+  severity: 'Suggestion',
+  aiJobInvolved: 'Unknown',
+  reportInvolved: 'Yes',
 };
-const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'swimsight3dsupport@gmail.com';
 
 function RatingRow({ label, value, onChange }) {
   return (
@@ -59,7 +68,7 @@ function readLocalRecord(storageKey) {
   }
 }
 
-export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
+export default function CoachPilotFeedbackForm({ storageKey, onSaved, clubName, coachName, coachEmail }) {
   const [feedback, setFeedback] = useState(EMPTY_FEEDBACK);
   const [savedAt, setSavedAt] = useState('');
   const [storageError, setStorageError] = useState('');
@@ -95,19 +104,33 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
       setStorageError('This browser could not clear the locally saved feedback.');
     }
   };
-  const feedbackSummary = [
-    'Swim Sight 3D coach pilot feedback',
-    `Overall usefulness: ${feedback.overallUsefulness || 'Not rated'}/5`,
-    `Report clarity: ${feedback.reportClarity || 'Not rated'}/5`,
-    `AI draft usefulness: ${feedback.aiDraftUsefulness || 'Not rated'}/5`,
-    `Approval workflow clarity: ${feedback.approvalWorkflowClarity || 'Not rated'}/5`,
-    `Report readiness: ${feedback.reportReadiness || 'Not rated'}/5`,
-    `Would use again: ${feedback.useAgain || 'Not answered'}`,
-    `Would recommend: ${feedback.recommend || 'Not answered'}`,
-    `Pricing reaction: ${feedback.pricingReaction || 'Not answered'}`,
-    `Biggest missing feature: ${feedback.biggestMissingFeature || 'Not answered'}`,
-    `Most confusing part: ${feedback.mostConfusingPart || 'Not answered'}`,
-  ].join('\n');
+  const supportDetails = {
+    clubName,
+    coachName,
+    coachEmail,
+    pageArea: 'Private Coach Pilot',
+    severity: feedback.severity,
+    happened: feedback.mostConfusingPart,
+    expected: feedback.biggestMissingFeature,
+    device: getDeviceSummary(),
+    aiJobInvolved: feedback.aiJobInvolved,
+    reportInvolved: feedback.reportInvolved,
+    extraLines: [
+      `Overall usefulness: ${feedback.overallUsefulness || 'Not rated'}/5`,
+      `Report clarity: ${feedback.reportClarity || 'Not rated'}/5`,
+      `AI draft usefulness: ${feedback.aiDraftUsefulness || 'Not rated'}/5`,
+      `Approval workflow clarity: ${feedback.approvalWorkflowClarity || 'Not rated'}/5`,
+      `Report readiness: ${feedback.reportReadiness || 'Not rated'}/5`,
+      `Would use again: ${feedback.useAgain || 'Not answered'}`,
+      `Would recommend: ${feedback.recommend || 'Not answered'}`,
+      `Pricing reaction: ${feedback.pricingReaction || 'Not answered'}`,
+    ],
+  };
+  const feedbackSummary = buildFeedbackEmailBody(supportDetails);
+  const feedbackMailto = buildFeedbackMailto({
+    subject: `Swim Sight 3D pilot feedback - ${feedback.severity}`,
+    ...supportDetails,
+  });
   const copyForSupport = async () => {
     try {
       await navigator.clipboard.writeText(feedbackSummary);
@@ -140,7 +163,7 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
 
       <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700">
         <div className="font-semibold">Support route</div>
-        <p className="mt-1">Saving keeps this feedback on this device; it does not send an email. Copy the summary or open your email app to contact <a className="font-semibold text-cyan-800 underline" href={`mailto:${SUPPORT_EMAIL}?subject=Swim%20Sight%203D%20pilot%20feedback`}>{SUPPORT_EMAIL}</a>.</p>
+        <p className="mt-1">{SUPPORT_COPY.pilot} Saving keeps a local copy on this device; it does not send automatically. Support: <a className="font-semibold text-cyan-800 underline" href={feedbackMailto}>{SUPPORT_EMAIL}</a>.</p>
       </div>
 
       {storageError && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{storageError}</p>}
@@ -162,6 +185,34 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
           <span className={labelClass}>Most confusing part</span>
           <Textarea className="min-h-24 border-slate-200 text-sm" value={feedback.mostConfusingPart} onChange={event => update('mostConfusingPart', event.target.value)} />
         </label>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        {[
+          ['severity', 'Severity', ['Blocker', 'Annoying', 'Suggestion']],
+          ['aiJobInvolved', 'AI job involved', ['Yes', 'No', 'Unknown']],
+          ['reportInvolved', 'Report / share / PDF involved', ['Yes', 'No', 'Unknown']],
+        ].map(([field, label, options]) => (
+          <div key={field}>
+            <span className={labelClass}>{label}</span>
+            <div className="grid grid-cols-1 gap-1.5">
+              {options.map(option => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => update(field, option)}
+                  className={`min-h-10 rounded-md border px-2 text-xs font-semibold ${
+                    feedback[field] === option
+                      ? 'border-cyan-600 bg-cyan-50 text-cyan-800'
+                      : 'border-slate-200 text-slate-600 hover:border-cyan-300'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -217,7 +268,7 @@ export default function CoachPilotFeedbackForm({ storageKey, onSaved }) {
           {copied ? 'Copied for support' : 'Copy for support'}
         </Button>
         <Button type="button" variant="outline" className="min-h-11 text-xs" asChild>
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=Swim%20Sight%203D%20pilot%20feedback`}>
+          <a href={feedbackMailto}>
             <Mail className="mr-1.5 h-3.5 w-3.5" /> Open email app
           </a>
         </Button>

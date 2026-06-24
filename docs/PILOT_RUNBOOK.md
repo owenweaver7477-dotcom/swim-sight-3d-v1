@@ -23,7 +23,7 @@ Explain that Swim Sight 3D provides AI-assisted draft findings. The coach remain
 
 ### 2–5 minutes: show upload and review context
 
-Open the prepared clip, show its status, and explain that short clean footage is preferred. Show where the coach can continue manual review when AI evidence is limited or needs coach review.
+Open the prepared clip, show its status, and explain that short clean footage is preferred. Use the nine-stage Coach Studio workflow: session setup, video and angle, focus, annotation, optional AI drafts, standards, drills, report approval, then secure share/export. Show where the coach can continue manual review when AI evidence is limited or unavailable.
 
 ### 5–10 minutes: coach reviews AI drafts
 
@@ -35,7 +35,7 @@ Show only coach-approved findings, selected key moments, Coach Draw annotations,
 
 ### 13–15 minutes: ask feedback questions
 
-Complete the local pilot notes and structured feedback form. Ask what the coach trusted, rejected, found confusing, and what would need to change before they would pay or use the product with a squad.
+Complete the local pilot notes and structured feedback form. Ask what the coach trusted, rejected, found confusing, and what would need to change before they would pay or use the product with a squad. Saving does not send email automatically: open the prepared message to `swimsight3d.support@gmail.com` so support receives it.
 
 ## Success signals
 
@@ -66,7 +66,15 @@ Complete the local pilot notes and structured feedback form. Ask what the coach 
 ## After the session
 
 1. Save the local session notes and feedback.
-2. Revoke any share link that is no longer needed.
-3. Record workflow bugs separately from opinions about draft finding quality.
-4. Decide whether the signal is strong enough to test another swimmer.
-5. Treat all feedback as product validation only; it does not train the AI automatically.
+2. Open and send the prepared support email to `swimsight3d.support@gmail.com`.
+3. Revoke any share link that is no longer needed.
+4. Record workflow bugs separately from opinions about draft finding quality.
+5. Decide whether the signal is strong enough to test another swimmer.
+6. Treat all feedback as product validation only; it does not train the AI automatically.
+
+## Current pilot boundary
+
+- Manual Coach Studio review is the controlled pilot path.
+- Live AI review must remain optional until the Render worker health and callback lifecycle are production-verified.
+- Elite Studio is preview-only and must not be used for pilot findings or technical judgement.
+- Coach Draw annotations are coach-controlled and are not AI-confirmed.

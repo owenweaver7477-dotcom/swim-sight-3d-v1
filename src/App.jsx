@@ -170,6 +170,7 @@ const AuthenticatedApp = () => {
           <Route path="/coach-mode" element={<Navigate to="/ai-reviews" replace />} />
           <Route path="/drills" element={<Navigate to="/drill-library" replace />} />
           <Route path="/drill-library" element={<DrillLibrary />} />
+          <Route path="/pilot-launch" element={<PilotLaunchPage />} />
           {/* Legacy redirects — keep old links working */}
           <Route path="/team-dashboard" element={<Navigate to="/dashboard" replace />} />
           <Route path="/ai-reports" element={<Navigate to="/ai-reviews" replace />} />
@@ -186,7 +187,6 @@ const AuthenticatedApp = () => {
             <Route path="/ai-infrastructure-status" element={<AIInfrastructureStatus />} />
             <Route path="/elite-lab-roadmap" element={<EliteLabRoadmap />} />
             <Route path="/footage-checklist" element={<FootageChecklist />} />
-            <Route path="/pilot-launch" element={<PilotLaunchPage />} />
             <Route path="/coach-testing" element={<Navigate to="/roadmap" replace />} />
             <Route path="/roadmap" element={<Roadmap />} />
           </Route>

@@ -36,6 +36,7 @@ import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
 import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import RecoveryActionCard from '@/components/status/RecoveryActionCard';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
+import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -329,55 +330,6 @@ function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coach
   );
 }
 
-const COACH_STUDIO_READINESS_STEPS = [
-  { id: 'setup', label: 'Upload and setup' },
-  { id: 'focus', label: 'Select analysis focus' },
-  { id: 'review', label: 'Review video and annotate' },
-  { id: 'approve', label: 'Approve findings' },
-  { id: 'drills', label: 'Assign drills' },
-  { id: 'report', label: 'Build report' },
-  { id: 'share', label: 'Share / export' },
-];
-
-function CoachStudioReadinessOverview({ video, findings, pendingCount, isReportFinalised }) {
-  const hasFinding = findings.length > 0;
-  const hasDrill = findings.some(finding => finding.drill || finding.linked_drill_title);
-  const statusFor = {
-    setup: video ? 'Ready' : 'Blocked',
-    focus: 'Partial',
-    review: video ? 'Partial' : 'Blocked',
-    approve: hasFinding ? (pendingCount === 0 ? 'Ready' : 'Partial') : 'Coming next',
-    drills: hasFinding ? (hasDrill ? 'Ready' : 'Partial') : 'Coming next',
-    report: hasFinding ? 'Ready' : 'Coming next',
-    share: isReportFinalised ? 'Ready' : 'Coming next',
-  };
-  const styleFor = (status) => status === 'Ready'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : status === 'Blocked'
-      ? 'border-red-200 bg-red-50 text-red-700'
-      : status === 'Coming next'
-        ? 'border-slate-200 bg-slate-50 text-slate-500'
-        : 'border-amber-200 bg-amber-50 text-amber-700';
-
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4" aria-label="Coach Studio readiness steps">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Coach Studio workflow readiness</div>
-      <p className="mt-1 text-[11px] leading-5 text-slate-600">A clear view of what is ready now and what still needs coach input.</p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {COACH_STUDIO_READINESS_STEPS.map((step, index) => (
-          <div key={step.id} className="rounded-lg border border-slate-200 p-3">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Step {index + 1}</div>
-            <div className="mt-1 text-xs font-semibold text-slate-800">{step.label}</div>
-            <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${styleFor(statusFor[step.id])}`}>
-              {statusFor[step.id]}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -454,6 +406,20 @@ export default function AIReportPage() {
     staleTime: 10 * 60 * 1000,
   });
   const swimmer = swimmerArr[0];
+  const { data: consentResponse, isError: consentUnavailable } = useQuery({
+    queryKey: ['consent-for-report', report?.swimmer_id],
+    queryFn: () => functions.getSwimmerConsent(report.swimmer_id),
+    enabled: !!report?.swimmer_id,
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+  const consentRecord = consentResponse?.data?.consent_record || null;
+  const consentState = consentUnavailable || !consentRecord
+    ? 'unknown'
+    : consentRecord.is_minor === true && consentRecord.consent_status !== 'granted'
+      ? 'blocked'
+      : 'ready';
+
 
   const { data: videoArr = [] } = useQuery({
     queryKey: ['video-for-report', report?.video_upload_id],
@@ -986,11 +952,14 @@ export default function AIReportPage() {
 
           <PilotReadinessWarning />
 
-          <CoachStudioReadinessOverview
+          <CoachStudioWorkflowPanel
             video={video}
+            report={report}
             findings={findings}
-            pendingCount={pendingCount}
-            isReportFinalised={isReportFinalised}
+            annotations={videoAnnotations}
+            aiJob={aiJob}
+            sharedLinks={sharedLinks}
+            consentState={consentState}
           />
 
           <AICreditIndicator

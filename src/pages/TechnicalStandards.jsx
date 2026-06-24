@@ -13,8 +13,8 @@ import StandardFormModal from '@/components/standards/StandardFormModal';
 import StandardDetailModal from '@/components/standards/StandardDetailModal';
 import { DEFAULT_STANDARDS } from '@/components/standards/defaultStandards';
 
-const STROKE_OPTIONS = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'IM', 'General'];
-const PHASE_OPTIONS = ['All', 'Body Line', 'Catch', 'Pull', 'Recovery', 'Breathing', 'Kick Recovery', 'Kick Drive', 'Glide', 'Timing', 'Rotation', 'Entry', 'Turn', 'Underwater', 'Breakout', 'Start', 'Finish', 'General'];
+const STROKE_OPTIONS = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'Starts', 'Turns', 'IM', 'General'];
+const PHASE_OPTIONS = ['All', 'Body Line', 'Catch', 'Pull', 'Recovery', 'Breathing', 'Kick Recovery', 'Kick Drive', 'Kick Timing', 'Glide', 'Timing', 'Rotation', 'Entry', 'Turn', 'Push-off / Breakout', 'Underwater', 'Breakout', 'Start', 'Streamline', 'Finish', 'General'];
 const DIFFICULTY_OPTIONS = ['All', 'Development', 'Competitive', 'National', 'Elite'];
 const VISIBILITY_OPTIONS = ['All', 'Club Standards', 'Default Reference'];
 
@@ -23,6 +23,8 @@ const STROKE_COLORS = {
   Breaststroke: 'bg-cyan-50 text-cyan-700 border-cyan-200',
   Backstroke:   'bg-emerald-50 text-emerald-700 border-emerald-200',
   Butterfly:    'bg-purple-50 text-purple-700 border-purple-200',
+  Starts:       'bg-amber-50 text-amber-800 border-amber-200',
+  Turns:        'bg-rose-50 text-rose-700 border-rose-200',
   IM:           'bg-amber-50 text-amber-700 border-amber-200',
   General:      'bg-slate-50 text-slate-700 border-slate-200',
 };
@@ -59,6 +61,9 @@ function StandardCard({ standard, isDefault, onEdit, onDuplicate, onArchive, onC
                 Default Reference
               </span>
             )}
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-cyan-50 text-cyan-700 border-cyan-200">
+              {standard.evidence_level || 'Coach standard'}
+            </span>
             {!standard.is_active && (
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
                 Archived
@@ -238,6 +243,16 @@ export default function TechnicalStandards() {
           <Plus className="w-3.5 h-3.5 mr-1" /> New Standard
         </Button>
       </PageHeader>
+
+      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4" aria-labelledby="standard-framework-title">
+        <div id="standard-framework-title" className="text-xs font-bold text-slate-900">Evidence and coaching framework</div>
+        <p className="mt-1 text-[11px] leading-5 text-slate-600">Standards organise what a coach can observe by stroke and phase. They guide review language; they are not automatic technical truth.</p>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"><div className="text-[10px] font-bold text-emerald-800">Coach standard</div><p className="mt-1 text-[10px] leading-4 text-emerald-900">A club or reference cue interpreted and approved by the coach.</p></div>
+          <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3"><div className="text-[10px] font-bold text-cyan-800">AI-assisted estimate</div><p className="mt-1 text-[10px] leading-4 text-cyan-900">Draft evidence only when worker quality checks pass; coach review remains required.</p></div>
+          <div className="rounded-lg border border-violet-200 bg-violet-50 p-3"><div className="text-[10px] font-bold text-violet-800">Preview-only</div><p className="mt-1 text-[10px] leading-4 text-violet-900">A future comparison concept that is not used for pilot decisions.</p></div>
+        </div>
+      </section>
 
       {/* Summary bar */}
       <div className="flex flex-wrap gap-3 mb-6">

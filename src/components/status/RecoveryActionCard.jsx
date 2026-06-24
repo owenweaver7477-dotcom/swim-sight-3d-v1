@@ -1,6 +1,7 @@
 import React from 'react';
-import { ArrowRight, CircleAlert } from 'lucide-react';
+import { ArrowRight, CircleAlert, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SUPPORT_COPY, SUPPORT_EMAIL, buildFeedbackMailto } from '@/lib/supportConfig';
 
 export default function RecoveryActionCard({
   title = 'Continue safely',
@@ -12,6 +13,7 @@ export default function RecoveryActionCard({
   secondaryDisabled = false,
   secondaryHint,
   tone = 'warning',
+  supportContext = 'AI review recovery',
 }) {
   const toneClass = tone === 'critical'
     ? 'border-red-200 bg-red-50 text-red-950'
@@ -37,6 +39,17 @@ export default function RecoveryActionCard({
             )}
           </div>
           {secondaryHint && <p className="mt-2 text-[10px] leading-4 opacity-80">{secondaryHint}</p>}
+          <a
+            href={buildFeedbackMailto({
+              subject: `Swim Sight 3D support - ${supportContext}`,
+              pageArea: supportContext,
+              severity: tone === 'critical' ? 'Blocker' : 'Needs help',
+              happened: message || title,
+            })}
+            className="mt-2 inline-flex min-h-8 items-center gap-1.5 text-[10px] font-semibold underline underline-offset-2 opacity-80 hover:opacity-100"
+          >
+            <Mail className="h-3 w-3" aria-hidden="true" /> {SUPPORT_COPY.recovery} {SUPPORT_EMAIL}
+          </a>
         </div>
       </div>
     </div>

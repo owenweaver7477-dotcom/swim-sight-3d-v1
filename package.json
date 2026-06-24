@@ -13,6 +13,7 @@
     "test:public-report-safety": "node scripts/check_public_report_safety.mjs",
     "test:pilot-readiness": "node scripts/check_pilot_launch_readiness.mjs",
     "test:pilot-recovery": "node scripts/check_pilot_recovery_foundation.mjs",
+    "test:phase3-coach-polish": "node scripts/check_phase3_coach_polish.mjs",
     "test:production-surface": "node scripts/check_production_surface.mjs",
     "preview": "vite preview"
   },

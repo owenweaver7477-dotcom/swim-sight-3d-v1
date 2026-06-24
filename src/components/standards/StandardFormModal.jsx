@@ -129,7 +129,7 @@ export default function StandardFormModal({ standard, onSave, onClose, isSaving 
           </div>
 
           <div>
-            <Label className="text-xs text-slate-500">Key Positions</Label>
+              <Label className="text-xs text-slate-500">Observable Cues</Label>
             <Textarea
               value={form.key_positions}
               onChange={e => set('key_positions', e.target.value)}
@@ -172,7 +172,7 @@ export default function StandardFormModal({ standard, onSave, onClose, isSaving 
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-500">Linked Drag Zones (comma-separated)</Label>
+              <Label className="text-xs text-slate-500">Linked Resistance-Risk Zones (comma-separated)</Label>
               <Input
                 value={form.linked_drag_zones}
                 onChange={e => set('linked_drag_zones', e.target.value)}
@@ -194,7 +194,7 @@ export default function StandardFormModal({ standard, onSave, onClose, isSaving 
           </div>
 
           <div>
-            <Label className="text-xs text-slate-500">Scoring Guidance (coach notes)</Label>
+            <Label className="text-xs text-slate-500">Coach Notes / Review Guidance</Label>
             <Textarea
               value={form.scoring_guidance}
               onChange={e => set('scoring_guidance', e.target.value)}

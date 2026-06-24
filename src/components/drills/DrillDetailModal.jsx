@@ -92,6 +92,14 @@ export default function DrillDetailModal({ drill, onClose, onAssignDrill, assign
           )}
 
           {/* Setup */}
+          {drill.when_to_use && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">When to use</div>
+              <p className="text-xs text-slate-600 leading-relaxed">{drill.when_to_use}</p>
+            </div>
+          )}
+
+          {/* Setup */}
           {drill.setup && (
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Setup</div>
@@ -115,6 +123,15 @@ export default function DrillDetailModal({ drill, onClose, onAssignDrill, assign
               <span className="font-semibold text-slate-800">{drill.duration_or_reps}</span>
             </div>
           )}
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">3D demonstration</div>
+            <p className="mt-1 text-xs text-slate-600">
+              {drill.three_d_demo_status === 'available'
+                ? 'A coach reference demonstration is available.'
+                : '3D demonstration coming later. Use the written setup, steps, and coach cue for this pilot.'}
+            </p>
+          </div>
 
           {/* Common mistakes */}
           {drill.common_mistakes && (
