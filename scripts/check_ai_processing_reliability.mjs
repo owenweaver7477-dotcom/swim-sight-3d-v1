@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => readFile(path.join(root, relativePath), 'utf8');
 
-const cancelRoute = await read('api/ai/cancel.js');
+const cancelRoute = await read('api/_lib/ai/cancelHandler.js');
 const queue = await read('api/_lib/aiQueue.js');
-const callbackRoute = await read('api/ai/callback.js');
+const callbackRoute = await read('api/_lib/ai/callbackHandler.js');
 const videoLibrary = await read('src/components/analysis/VideoLibrary.jsx');
 const reportPage = await read('src/pages/AIReportPage.jsx');
 

@@ -7,8 +7,8 @@ import {
   requireClubRole,
   requireUser,
   sendJson,
-} from '../_lib/server.js';
-import { dispatchNextQueuedAIJob } from '../_lib/aiQueue.js';
+} from '../server.js';
+import { dispatchNextQueuedAIJob } from '../aiQueue.js';
 
 const FINAL_STATUSES = new Set(['completed', 'error', 'timed_out', 'cancelled', 'manual_review', 'manual_review_recommended']);
 const FINAL_QUEUE_STATUSES = new Set(['completed', 'failed', 'timed_out', 'cancelled', 'manual_review']);

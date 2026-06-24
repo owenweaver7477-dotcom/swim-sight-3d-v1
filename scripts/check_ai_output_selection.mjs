@@ -18,10 +18,10 @@ const read = (relativePath) => readFile(path.join(root, relativePath), 'utf8');
 const selector = await read('src/components/analysis/AIReportOutputSelector.jsx');
 const outputCatalog = await read('src/lib/aiReportOutputs.js');
 const analyse = await read('src/pages/Analyse.jsx');
-const trigger = await read('api/ai/trigger.js');
+const trigger = await read('api/_lib/ai/triggerHandler.js');
 const outputValidation = await read('api/_lib/aiReportOutputSelection.js');
 const queue = await read('api/_lib/aiQueue.js');
-const callback = await read('api/ai/callback.js');
+const callback = await read('api/_lib/ai/callbackHandler.js');
 const sharedPage = await read('src/pages/SharedReportPage.jsx');
 const sharedRoute = await read('api/shared-reports/[token].js');
 

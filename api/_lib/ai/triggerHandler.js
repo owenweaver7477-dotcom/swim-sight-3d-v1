@@ -6,7 +6,7 @@ import {
   requireClubRole,
   requireUser,
   sendJson,
-} from '../_lib/server.js';
+} from '../server.js';
 import {
   DUPLICATE_BLOCKING_JOB_STATUSES,
   RETRYABLE_JOB_STATUSES,
@@ -14,14 +14,14 @@ import {
   dispatchNextQueuedAIJob,
   getAIQueueSummary,
   stageEntry,
-} from '../_lib/aiQueue.js';
+} from '../aiQueue.js';
 import {
   consumeAIReviewCredit,
   getClubAIEntitlement,
   publicEntitlementResponse,
-} from '../_lib/entitlements.js';
-import { consentGate, envFlagEnabled } from '../_lib/safeguarding.js';
-import { publicOutputSelection, validateAIReportOutputRequest } from '../_lib/aiReportOutputSelection.js';
+} from '../entitlements.js';
+import { consentGate, envFlagEnabled } from '../safeguarding.js';
+import { publicOutputSelection, validateAIReportOutputRequest } from '../aiReportOutputSelection.js';
 
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];

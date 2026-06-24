@@ -1,5 +1,5 @@
-import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../_lib/server.js';
-import { dispatchNextQueuedAIJob, markJobQueueComplete } from '../_lib/aiQueue.js';
+import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../server.js';
+import { dispatchNextQueuedAIJob, markJobQueueComplete } from '../aiQueue.js';
 
 const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.55;
 const MIN_KEYPOINTS_FOR_AI_FINDINGS = 12;
