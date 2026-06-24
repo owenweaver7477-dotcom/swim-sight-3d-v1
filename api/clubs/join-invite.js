@@ -5,7 +5,7 @@ import {
   requireUser,
   sendJson,
 } from '../_lib/server.js';
-import { isInviteUsable, normalizeInviteCode } from './_utils.js';
+import { isInviteUsable, normalizeInviteCode } from '../_lib/clubsUtils.js';
 
 const INVALID_INVITE_MESSAGE = 'Invite code not found, expired, or no longer active.';
 

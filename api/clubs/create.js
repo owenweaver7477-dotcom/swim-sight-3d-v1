@@ -5,7 +5,7 @@ import {
   requireUser,
   sendJson,
 } from '../_lib/server.js';
-import { createAvailableSlug } from './_utils.js';
+import { createAvailableSlug } from '../_lib/clubsUtils.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
