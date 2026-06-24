@@ -69,7 +69,7 @@ for (const file of publicFiles) {
 const videoLibrary = await read('src/components/analysis/VideoLibrary.jsx');
 assert.match(videoLibrary, /AI processing is taking longer than expected/);
 assert.match(videoLibrary, /Stop waiting and open Coach Studio/);
-assert.match(videoLibrary, /True server cancellation is not available yet/);
+assert.match(videoLibrary, /cancelAIReview/);
 
 const qualityGate = await read('src/components/ai-report/PlaceholderWarningBanner.jsx');
 assert.match(qualityGate, /Continue with manual coach review/i);
@@ -85,7 +85,7 @@ assert.doesNotMatch(focusChecklist, /estimated_drag|ENABLE_ESTIMATED_DRAG|POSE_B
 const credits = await read('src/components/credits/AICreditIndicator.jsx');
 assert.match(credits, /Estimate only/);
 assert.match(credits, /No AI credits are used in manual review/);
-assert.match(credits, /not enforced/);
+assert.match(credits, /Final billing may differ/);
 
 const elitePreview = await read('src/pages/BiomechanicsHUD.jsx');
 assert.match(elitePreview, /not pilot-ready yet/i);

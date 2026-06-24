@@ -5,7 +5,7 @@ import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
 import { Button } from '@/components/ui/button';
 import {
-  Film, Trash2, Play, Calendar, Camera, Activity, Loader2,
+  Film, Trash2, Play, Calendar, Camera, Loader2,
   AlertCircle, Tag, Brain, RotateCw, Clock, FileText, ArrowRight,
   RefreshCw, AlertTriangle, Info
 } from 'lucide-react';
@@ -93,6 +93,14 @@ function getCoachStatusSummary({
       action: 'Retry AI or continue manual review',
     };
   }
+  if (['cancel_requested', 'cancelled'].includes(queueStatus) || jobStatus === 'cancelled') {
+    return {
+      tone: 'warning',
+      label: queueStatus === 'cancel_requested' ? 'AI cancellation requested' : 'AI review cancelled',
+      detail: 'Manual Coach Studio remains available. Any late AI result will not be auto-published.',
+      action: 'Continue manual review',
+    };
+  }
   if (status === 'error' || jobStatus === 'failed' || jobStatus === 'retry_available') {
     return {
       tone: 'warning',
@@ -150,10 +158,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   const [urlError, setUrlError] = useState('');
   const [showPlayer, setShowPlayer] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiMessage, setAiMessage] = useState('');
-  const [aiError, setAiError] = useState('');
-  const [aiStarted, setAiStarted] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState('');
 
   const status = upload.processing_status || 'uploaded';
   const uploadStatus = upload.upload_status || (status === 'uploaded' ? 'uploaded' : null);
@@ -178,33 +184,28 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
   })();
 
   const queueStatus = job?.queue_status;
-  const jobStatus = ['queued', 'dispatching', 'failed', 'retry_available', 'timed_out'].includes(queueStatus)
+  const jobStatus = ['queued', 'dispatching', 'failed', 'retry_available', 'timed_out', 'cancel_requested', 'cancelled'].includes(queueStatus)
     ? queueStatus
     : job?.status;
   const jobStage = job?.stage;
   const jobProgress = job?.progress_percent;
   const qualityFlags = asQualityFlags(job?.quality_flags);
   const nextAction = job?.recommended_next_action;
+  const aiStartedAt = job?.started_at || job?.accepted_at || job?.queued_at || job?.created_date;
+  const isAIWaitingLong = Boolean(aiStartedAt && Date.now() - new Date(aiStartedAt).getTime() >= 30_000);
 
-  const handleTriggerAI = async () => {
-    setAiLoading(true);
-    setAiMessage('');
-    setAiError('');
-    setAiStarted(false);
+  const handleCancelAI = async () => {
+    if (!job?.id) return;
+    setCancelLoading(true);
+    setCancelMessage('');
     try {
-      const res = await functions.triggerPoseAnalysis(upload.id);
-      const nextStatus = res.data?.processing_status || 'processing_ai';
-      onAIStatusChange?.(upload.id, nextStatus);
-      setAiStarted(true);
-      setAiMessage(res.data?.queued && !res.data?.dispatched
-        ? `Queued for AI Review${res.data?.queue_position ? ` — position ${res.data.queue_position}` : ''}. Swim Sight 3D will send it when the AI worker is free.`
-        : 'AI Review started. The report will appear when the secure callback returns.'
-      );
+      const response = await functions.cancelAIReview(job.id);
+      onAIStatusChange?.(upload.id, 'manual_review');
+      setCancelMessage(response.data?.message || 'AI cancellation requested. Continue with manual coach review.');
     } catch (err) {
-      onAIStatusChange?.(upload.id, 'error');
-      setAiError(`${err?.message || 'Could not start AI Review.'} Uploaded video remains saved. Retry AI Review or continue manual review.`);
+      setCancelMessage(`${err?.message || 'Cancellation could not be confirmed.'} You can still continue manual coach review; a late AI result will not be auto-published.`);
     } finally {
-      setAiLoading(false);
+      setCancelLoading(false);
     }
   };
 
@@ -239,7 +240,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     || status === 'manual_review'
     || (status === 'completed' && linkedReport?.analysis_mode === 'placeholder' && !linkedReport?.real_pose_detected)
     || jobStatus === 'unreliable_pose'
-    || jobStatus === 'manual_review_recommended';
+    || jobStatus === 'manual_review_recommended'
+    || ['cancel_requested', 'cancelled'].includes(jobStatus);
   const isTimedOut = jobStatus === 'timed_out' || (jobStatus === 'error' && job?.stage === 'timed_out');
   const isAiActive = ACTIVE_PROCESSING_STATUSES.includes(status)
     || ['queued', 'dispatching', 'dispatched', 'processing'].includes(queueStatus)
@@ -296,9 +298,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           {canTriggerAI && (
             <Button size="sm" variant="outline"
               className="w-full h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
-              onClick={handleTriggerAI} disabled={aiLoading}>
-              {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1" />}
-              {aiLoading ? 'Sending...' : 'Retry AI Review'}
+              onClick={() => onStartReview(upload)}>
+              <RotateCw className="w-3 h-3 mr-1" /> Configure AI retry
             </Button>
           )}
           <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => onStartReview(upload)}>
@@ -312,9 +313,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       return (
         <Button size="sm" variant="outline"
           className="w-full h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
-          onClick={handleTriggerAI} disabled={aiLoading}>
-          {aiLoading ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1.5" />}
-          {aiLoading ? 'Sending...' : 'Retry AI Review'}
+          onClick={() => onStartReview(upload)}>
+          <RotateCw className="w-3 h-3 mr-1.5" /> Configure AI retry
         </Button>
       );
     }
@@ -335,9 +335,8 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           {canTriggerAI && (
             <Button size="sm" variant="outline"
               className="w-full h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
-              onClick={handleTriggerAI} disabled={aiLoading}>
-              {aiLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RotateCw className="w-3 h-3 mr-1" />}
-              {aiLoading ? 'Sending...' : 'Retry AI Review'}
+              onClick={() => onStartReview(upload)}>
+              <RotateCw className="w-3 h-3 mr-1" /> Configure AI retry
             </Button>
           )}
         </div>
@@ -387,16 +386,18 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             </div>
           )}
           <RecoveryActionCard
-            title={isStuck ? 'AI processing is taking longer than expected' : 'Manual review remains available'}
-            message={isStuck
+            title={isAIWaitingLong ? 'AI processing is taking longer than expected' : 'Manual review remains available'}
+            message={isAIWaitingLong
               ? 'You can continue manual coach review now. The AI draft can be retried later when the worker is available.'
               : 'You do not need to wait here. Continue in Coach Studio while the AI-assisted draft is queued or processing.'}
             primaryLabel="Stop waiting and open Coach Studio"
             onPrimary={() => onStartReview(upload)}
             secondaryLabel="Cancel AI review"
-            secondaryDisabled
-            secondaryHint="True server cancellation is not available yet. Opening Coach Studio does not delete the job or the private video."
+            onSecondary={handleCancelAI}
+            secondaryDisabled={!job?.id || cancelLoading}
+            secondaryHint={!job?.id ? 'The current job could not be identified. Manual coach review is still available.' : undefined}
           />
+          {cancelMessage && <p className="text-[10px] leading-4 text-amber-800" role="status">{cancelMessage}</p>}
         </div>
       );
     }
@@ -548,24 +549,6 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           </div>
         )}
 
-        {aiMessage && !aiError && (
-          <div className="space-y-1.5">
-            <div className="text-[10px] text-green-600 leading-relaxed">{aiMessage}</div>
-            {aiStarted && (
-              <div className="flex flex-wrap gap-1.5">
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate('/ai-reviews')}>
-                  <FileText className="w-3 h-3 mr-1" /> Open AI Reviews
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/ai-jobs')}>
-                  <Activity className="w-3 h-3 mr-1" /> AI Jobs
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-        {aiError && (
-          <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">{aiError}</div>
-        )}
       </div>
 
       {renderPrimaryAction()}
