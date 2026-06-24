@@ -38,6 +38,7 @@ const STATUS_CONFIG = {
   failed:              { label: 'Dispatch Failed',      color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   timed_out:           { label: 'Timed Out',         color: 'text-red-400 bg-red-900/20 border-red-700/30' },
   error:               { label: 'Error',             color: 'text-red-400 bg-red-900/20 border-red-700/30' },
+  cancel_requested:    { label: 'Cancelling',        color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
   cancelled:           { label: 'Cancelled',         color: 'text-slate-400 bg-slate-900/20 border-slate-700/30' },
 };
 
@@ -66,7 +67,7 @@ const RUNNING_STATUSES = [
   'analysing_stroke', 'analysing_stroke_phases', 'generating_findings', 'generating_outputs',
   'callback_sending',
 ];
-const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing'];
+const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing', 'cancel_requested'];
 
 function asQualityFlags(value) {
   if (Array.isArray(value)) return value;
@@ -82,7 +83,7 @@ function feedbackCounts(rows = []) {
 }
 
 function displayStatus(job) {
-  if (['queued', 'dispatching', 'dispatched', 'failed', 'retry_available', 'timed_out'].includes(job.queue_status)) {
+  if (['queued', 'dispatching', 'dispatched', 'failed', 'retry_available', 'timed_out', 'cancel_requested', 'cancelled'].includes(job.queue_status)) {
     return job.queue_status;
   }
   return job.status;
@@ -290,7 +291,7 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
               >
                 {retrying === job.id
                   ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Retrying…</>
-                  : <><RotateCcw className="w-3 h-3 mr-1" />Retry AI Review</>
+                  : <><RotateCcw className="w-3 h-3 mr-1" />Configure AI retry</>
                 }
               </Button>
             )}
@@ -319,6 +320,7 @@ function JobRow({ job, swimmers, videos, feedback, onRetry, retrying }) {
 export default function AIJobMonitor() {
   const { club, memberRole } = useClubContext();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [retrying, setRetrying] = useState(null);
   const [resetting, setResetting] = useState(false);
@@ -404,14 +406,9 @@ export default function AIJobMonitor() {
     }
   };
 
-  const handleRetry = async (job) => {
+  const handleRetry = (job) => {
     setRetrying(job.id);
-    try {
-      await functions.triggerPoseAnalysis(job.video_upload_id);
-      queryClient.invalidateQueries({ queryKey: ['ai-jobs', club?.id] });
-    } finally {
-      setRetrying(null);
-    }
+    navigate('/analyse', { state: { videoUploadId: job.video_upload_id, configureAI: true } });
   };
 
   if (!canViewJobs) {

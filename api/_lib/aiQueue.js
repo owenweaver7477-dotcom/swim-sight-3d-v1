@@ -20,7 +20,7 @@ export const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing']
 export const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'];
 
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
-const AI_SERVER_TRIGGER_TIMEOUT_MS = 20 * 1000;
+const DEFAULT_AI_SERVER_ACCEPTANCE_TIMEOUT_MS = 60 * 1000;
 const DEFAULT_MAX_ACTIVE_AI_JOBS = 1;
 
 function nowIso() {
@@ -52,6 +52,12 @@ export function getMaxActiveAIJobs() {
   const parsed = Number.parseInt(process.env.MAX_ACTIVE_AI_JOBS || '', 10);
   if (Number.isFinite(parsed) && parsed > 0) return parsed;
   return DEFAULT_MAX_ACTIVE_AI_JOBS;
+}
+
+export function getAIServerAcceptanceTimeoutMs() {
+  const parsed = Number.parseInt(process.env.AI_SERVER_ACCEPTANCE_TIMEOUT_MS || '', 10);
+  if (Number.isFinite(parsed) && parsed >= 30_000 && parsed <= 120_000) return parsed;
+  return DEFAULT_AI_SERVER_ACCEPTANCE_TIMEOUT_MS;
 }
 
 function publicJob(job) {
@@ -189,7 +195,31 @@ async function fetchJobAndUpload(service, jobId) {
   return { job, upload };
 }
 
+function cancellationProtected(job) {
+  return ['cancel_requested', 'cancelled'].includes(job?.queue_status)
+    || ['cancelled', 'timed_out'].includes(job?.status);
+}
+
+async function currentJob(service, jobId) {
+  const { data, error } = await service
+    .from('ai_processing_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 async function failDispatch(service, job, upload, error, errorCode = 'dispatch_failed') {
+  const latestJob = await currentJob(service, job.id);
+  if (cancellationProtected(latestJob)) {
+    return {
+      dispatched: false,
+      failed: false,
+      reason: 'cancelled_during_dispatch',
+      job: publicJob(latestJob),
+    };
+  }
   const attemptCount = Number(job.attempt_count ?? ((job.retry_count || 0) + 1)) || 1;
   const maxAttempts = Number(job.max_attempts || 3) || 3;
   const retryable = attemptCount < maxAttempts;
@@ -222,9 +252,19 @@ async function failDispatch(service, job, upload, error, errorCode = 'dispatch_f
       })),
     })
     .eq('id', job.id)
+    .eq('queue_status', 'dispatching')
     .select('*')
-    .single();
+    .maybeSingle();
   if (updateError) throw updateError;
+  if (!updatedJob) {
+    const current = await currentJob(service, job.id);
+    return {
+      dispatched: false,
+      failed: false,
+      reason: cancellationProtected(current) ? 'cancelled_during_dispatch' : 'dispatch_state_changed',
+      job: publicJob(current),
+    };
+  }
 
   if (upload?.id) {
     await service.from('video_uploads').update({
@@ -241,6 +281,72 @@ async function failDispatch(service, job, upload, error, errorCode = 'dispatch_f
     job: publicJob(updatedJob),
     error: message,
     retryable,
+  };
+}
+
+async function requeueDelayedAcceptance(service, job, upload) {
+  const latestJob = await currentJob(service, job.id);
+  if (cancellationProtected(latestJob)) {
+    return {
+      queued: false,
+      dispatched: false,
+      failed: false,
+      reason: 'cancelled_during_dispatch',
+      job: publicJob(latestJob),
+    };
+  }
+  const now = nowIso();
+  const message = 'The AI worker did not confirm acceptance yet. The job remains queued; continue manual coach review while it waits.';
+  const { data: updatedJob, error: updateError } = await service
+    .from('ai_processing_jobs')
+    .update({
+      status: 'queued',
+      queue_status: 'queued',
+      stage: 'worker_acceptance_delayed',
+      progress_percent: 0,
+      dispatch_error: message,
+      error_message: null,
+      last_error: message,
+      error_code: 'worker_acceptance_delayed',
+      retryable: true,
+      render_acceptance_status: 'delayed',
+      recommended_next_action: 'manual_review_available_while_queued',
+      quality_flags: ['worker_acceptance_delayed'],
+      active_slot_claimed_at: null,
+      lease_owner: null,
+      lease_expires_at: null,
+      stage_history: appendStageHistory(job.stage_history, stageEntry('worker_acceptance_delayed', {
+        retryable: true,
+      })),
+    })
+    .eq('id', job.id)
+    .eq('queue_status', 'dispatching')
+    .select('*')
+    .maybeSingle();
+  if (updateError) throw updateError;
+  if (!updatedJob) {
+    const latestJob = await currentJob(service, job.id);
+    return {
+      dispatched: false,
+      failed: false,
+      reason: cancellationProtected(latestJob) ? 'cancelled_during_dispatch' : 'dispatch_state_changed',
+      job: publicJob(latestJob),
+    };
+  }
+  if (upload?.id) {
+    await service.from('video_uploads').update({
+      processing_status: 'pending_ai',
+      ai_error_message: message,
+    }).eq('id', upload.id);
+  }
+  await refreshQueuePositions(service);
+  return {
+    queued: true,
+    dispatched: false,
+    failed: false,
+    reason: 'worker_acceptance_delayed',
+    job: publicJob(updatedJob),
+    retryable: true,
   };
 }
 
@@ -297,6 +403,16 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
     ),
     duration_seconds: upload.duration_seconds ?? null,
     review_context: upload.review_context || {},
+    analysis_mode: upload.review_context?.analysis_mode || 'custom_report',
+    selected_report_outputs: upload.review_context?.selected_report_outputs || [],
+    athlete_profile_readiness: upload.review_context?.athlete_profile_readiness || {},
+    estimate_only_outputs: upload.review_context?.estimate_only_outputs || [],
+    estimated_credit_cost: upload.review_context?.estimated_credit_cost ?? null,
+    coach_confirmed_draft_ai: upload.review_context?.coach_confirmed_draft_ai === true,
+    swimmer_height_cm: upload.review_context?.athlete_profile_inputs?.approximate_height_cm ?? null,
+    swimmer_mass_kg: upload.review_context?.athlete_profile_inputs?.body_mass_kg ?? null,
+    calibration_available: upload.review_context?.athlete_profile_readiness?.calibration_available === true,
+    pool_length_m: upload.review_context?.athlete_profile_inputs?.pool_length_m ?? null,
     callback_url: callbackUrl,
     max_sampled_frames: 100,
     downscale_frames: true,
@@ -311,7 +427,7 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
   }).eq('id', job.id);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_SERVER_TRIGGER_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), getAIServerAcceptanceTimeoutMs());
   let aiResponse;
   try {
     aiResponse = await fetch(aiProcessUrl, {
@@ -321,13 +437,10 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
       signal: controller.signal,
     });
   } catch (error) {
-    const errorCode = error?.name === 'AbortError'
-      ? 'render_acceptance_timeout'
-      : 'render_acceptance_failed';
-    const message = error?.name === 'AbortError'
-      ? 'AI server did not accept the job within 20 seconds. The uploaded video is saved; retry AI Review or continue manual review.'
-      : error.message;
-    return failDispatch(service, job, upload, new Error(message), errorCode);
+    if (error?.name === 'AbortError') {
+      return requeueDelayedAcceptance(service, job, upload);
+    }
+    return failDispatch(service, job, upload, error, 'render_acceptance_failed');
   } finally {
     clearTimeout(timeout);
   }
@@ -368,9 +481,19 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
       })),
     })
     .eq('id', job.id)
+    .eq('queue_status', 'dispatching')
     .select('*')
-    .single();
+    .maybeSingle();
   if (updateError) throw updateError;
+  if (!updatedJob) {
+    const latestJob = await currentJob(service, job.id);
+    return {
+      dispatched: false,
+      failed: false,
+      reason: cancellationProtected(latestJob) ? 'cancelled_during_dispatch' : 'dispatch_state_changed',
+      job: publicJob(latestJob),
+    };
+  }
 
   await service
     .from('video_uploads')
