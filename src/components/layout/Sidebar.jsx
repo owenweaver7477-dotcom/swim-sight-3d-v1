@@ -31,7 +31,6 @@ const NAV_CLUB = [
 
 // Admin-only — all advanced/debug tools collapsed under single section
 const NAV_ADMIN = [
-  { to: '/pilot-launch', label: 'Private Coach Pilot', icon: ClipboardCheck },
   { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
   { to: '/footage-checklist', label: 'Footage Checklist', icon: ClipboardCheck },
   { to: '/biomechanics-hud', label: 'Elite Lab Preview', icon: Cpu },
@@ -45,6 +44,8 @@ const NAV_ADMIN = [
 
 const ADMIN_ROLES = ['owner', 'admin'];
 const COACH_APP_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
+const PILOT_ROLES = ['owner', 'admin', 'coach'];
+const PILOT_NAV_ITEM = { to: '/pilot-launch', label: 'Private Coach Pilot', icon: ClipboardCheck };
 
 export default function Sidebar() {
   const { club, clubs, switchClub } = useClubContext();
@@ -68,6 +69,7 @@ export default function Sidebar() {
   const memberRole = club?._memberRole || getActiveRole();
   const isAdmin = ADMIN_ROLES.includes(memberRole) || user?.role === 'admin';
   const canUseCoachApp = COACH_APP_ROLES.includes(memberRole) || user?.role === 'admin';
+  const canUsePilot = PILOT_ROLES.includes(memberRole) || user?.role === 'admin';
 
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
@@ -215,6 +217,7 @@ export default function Sidebar() {
             <SectionLabel label="Tools" />
             <div className="space-y-0.5">
               {NAV_TOOLS.map(item => <NavItem key={item.to} item={item} />)}
+              {canUsePilot && <NavItem item={PILOT_NAV_ITEM} />}
             </div>
 
             {/* — Club — */}

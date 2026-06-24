@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Bug, Loader2 } from 'lucide-react';
+import { X, Bug, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
+import { SUPPORT_COPY, SUPPORT_EMAIL, buildFeedbackMailto, getDeviceSummary } from '@/lib/supportConfig';
 
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const ROUTES = [
@@ -30,32 +31,56 @@ export default function BugReportModal({ onClose, onSaved, defaultRoute }) {
     steps_to_reproduce: '',
     severity: 'medium',
     message: '',
+    ai_job_involved: 'Unknown',
+    report_involved: 'Unknown',
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.what_happened.trim()) return;
     setSubmitting(true);
-    await base44.entities.CoachFeedback.create({
-      club_id: club?.id || '',
-      user_id: user?.id || '',
-      page_route: form.page_route,
-      feedback_type: 'bug',
-      title: form.title || undefined,
-      message: form.message || form.what_happened,
-      what_happened: form.what_happened,
-      what_expected: form.what_expected || undefined,
-      steps_to_reproduce: form.steps_to_reproduce || undefined,
-      severity: form.severity,
-      status: 'new',
-    });
-    setSubmitting(false);
-    setDone(true);
-    if (onSaved) onSaved();
+    setSubmitError('');
+    try {
+      await base44.entities.CoachFeedback.create({
+        club_id: club?.id || '',
+        user_id: user?.id || '',
+        page_route: form.page_route,
+        feedback_type: 'bug',
+        title: form.title || undefined,
+        message: form.message || form.what_happened,
+        what_happened: form.what_happened,
+        what_expected: form.what_expected || undefined,
+        steps_to_reproduce: form.steps_to_reproduce || undefined,
+        severity: form.severity,
+        status: 'new',
+      });
+      setDone(true);
+      if (onSaved) onSaved();
+    } catch {
+      setSubmitError('The issue could not be saved to the pilot log. Open the prepared support email so it is not lost.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const supportMailto = buildFeedbackMailto({
+    subject: `Swim Sight 3D issue - ${form.severity}`,
+    clubName: club?.name,
+    coachName: user?.full_name || user?.name,
+    coachEmail: user?.email,
+    pageArea: form.page_route,
+    severity: form.severity,
+    happened: form.what_happened,
+    expected: form.what_expected,
+    device: getDeviceSummary(),
+    aiJobInvolved: form.ai_job_involved,
+    reportInvolved: form.report_involved,
+    extraLines: [form.title && `Title: ${form.title}`, form.steps_to_reproduce && `Steps to reproduce: ${form.steps_to_reproduce}`, form.message && `Tester notes: ${form.message}`],
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
@@ -71,9 +96,12 @@ export default function BugReportModal({ onClose, onSaved, defaultRoute }) {
         {done ? (
           <div className="py-6 text-center space-y-2">
             <div className="text-2xl">✓</div>
-            <div className="text-sm font-semibold text-slate-800">Issue reported</div>
-            <p className="text-xs text-slate-500">It will appear in the Bugs tab of Coach Testing.</p>
-            <Button size="sm" className="mt-3 bg-primary text-white" onClick={onClose}>Close</Button>
+            <div className="text-sm font-semibold text-slate-800">Issue saved to the pilot log</div>
+            <p className="text-xs text-slate-500">It will appear in Coach Testing. Email delivery is not automatic.</p>
+            <div className="mt-3 flex justify-center gap-2">
+              <Button size="sm" variant="outline" asChild><a href={supportMailto}><Mail className="mr-1 h-3.5 w-3.5" />Email support</a></Button>
+              <Button size="sm" className="bg-primary text-white" onClick={onClose}>Close</Button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -115,6 +143,27 @@ export default function BugReportModal({ onClose, onSaved, defaultRoute }) {
               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Tester notes (optional)</label>
               <textarea className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none" rows={2} placeholder="Any extra context…" value={form.message} onChange={e => set('message', e.target.value)} />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ['ai_job_involved', 'AI job involved'],
+                ['report_involved', 'Report / share / PDF'],
+              ].map(([field, label]) => (
+                <label key={field} className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  {label}
+                  <select className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-xs normal-case tracking-normal" value={form[field]} onChange={event => set(field, event.target.value)}>
+                    <option>Unknown</option><option>Yes</option><option>No</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-2.5 text-[10px] leading-4 text-cyan-900">
+              {SUPPORT_COPY.pilot} Support: {SUPPORT_EMAIL}
+            </div>
+            {submitError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+                {submitError} <a className="font-semibold underline" href={supportMailto}>Open support email</a>
+              </div>
+            )}
             <div className="flex gap-2 justify-end">
               <Button size="sm" type="button" variant="outline" className="h-8 text-xs" onClick={onClose}>Cancel</Button>
               <Button size="sm" type="submit" className="h-8 text-xs bg-red-600 hover:bg-red-500 text-white" disabled={submitting || !form.what_happened.trim()}>

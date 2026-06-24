@@ -1,0 +1,234 @@
+import React from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  Eye,
+  LockKeyhole,
+} from 'lucide-react';
+import CoachWorkflowChecklist from './CoachWorkflowChecklist';
+
+const FINAL_REPORT_STATUSES = new Set(['coach_approved', 'finalised', 'published', 'shared']);
+const ACTIVE_AI_STATUSES = new Set([
+  'queued', 'accepted', 'running', 'downloading_video', 'extracting_frames',
+  'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending',
+]);
+const FAILED_AI_STATUSES = new Set(['error', 'failed', 'timed_out', 'cancelled', 'retry_available']);
+
+const STATUS_STYLES = {
+  'Not started': 'border-slate-200 bg-slate-50 text-slate-600',
+  'In progress': 'border-cyan-200 bg-cyan-50 text-cyan-800',
+  Complete: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  Blocked: 'border-amber-200 bg-amber-50 text-amber-800',
+  'Preview-only': 'border-violet-200 bg-violet-50 text-violet-700',
+};
+
+function statusIcon(status) {
+  if (status === 'Complete') return CheckCircle2;
+  if (status === 'Blocked') return LockKeyhole;
+  if (status === 'Preview-only') return Eye;
+  if (status === 'In progress') return AlertTriangle;
+  return Circle;
+}
+
+function hasCoachDecision(finding) {
+  return ['approved', 'rejected', 'edited'].includes(finding?.approval_status);
+}
+
+export default function CoachStudioWorkflowPanel({
+  video,
+  report,
+  findings = [],
+  annotations = [],
+  aiJob,
+  sharedLinks = [],
+  consentState = 'unknown',
+}) {
+  const focusAreas = report?.review_context?.analysis_focus_areas || [];
+  const aiFindings = findings.filter(finding => finding.source === 'ai');
+  const manualFindings = findings.filter(finding => finding.source !== 'ai');
+  const pendingFindings = findings.filter(finding => !hasCoachDecision(finding));
+  const approvedFindings = findings.filter(finding => finding.approval_status === 'approved');
+  const hasDrill = approvedFindings.some(finding => finding.drill || finding.linked_drill_id || finding.linked_drill_title);
+  const hasStandard = findings.some(finding => finding.technical_standard_id || finding.linked_standard_id || finding.standard_id);
+  const reportFinal = FINAL_REPORT_STATUSES.has(report?.status);
+  const activeShare = sharedLinks.some(link => link.status === 'active');
+  const aiStatus = String(aiJob?.status || aiJob?.queue_status || '').toLowerCase();
+  const aiActive = ACTIVE_AI_STATUSES.has(aiStatus);
+  const aiUnavailable = FAILED_AI_STATUSES.has(aiStatus) || report?.analysis_mode === 'manual_review' || report?.analysis_mode === 'error';
+  const consentReady = consentState === 'ready';
+
+  const sections = [
+    {
+      title: 'Session setup',
+      status: video && report ? 'Complete' : 'Blocked',
+      purpose: 'Confirm the swimmer, stroke, permissions, and review context before analysis.',
+      action: video && report ? 'Check the selected swimmer and stroke.' : 'Select an uploaded video and create a review.',
+      unlocks: 'Video review and focus selection.',
+      checks: [
+        { label: 'Review report created', done: Boolean(report) },
+        { label: 'Private video selected', done: Boolean(video) },
+        { label: 'Consent status checked for this pilot', done: consentReady },
+      ],
+    },
+    {
+      title: 'Video and angle review',
+      status: video ? 'Complete' : 'Blocked',
+      purpose: 'Confirm the clip is playable and the camera angle supports the intended review.',
+      action: 'Play, pause, seek, and confirm the swimmer remains visible.',
+      unlocks: 'Timestamp notes, key moments, and Coach Draw.',
+      checks: [
+        { label: 'Private video is available', done: Boolean(video) },
+        { label: 'Camera angle recorded', done: Boolean(video?.camera_angle || report?.camera_angle) },
+      ],
+    },
+    {
+      title: 'Focus checklist',
+      status: focusAreas.length ? 'Complete' : 'In progress',
+      purpose: 'Set the coaching questions for body line, kick, pull, timing, starts, turns, or race skills.',
+      action: focusAreas.length ? 'Confirm the selected focus still matches the clip.' : 'Choose at least one focus area or continue with manual review.',
+      unlocks: 'A more focused coach review and AI instruction payload.',
+      checks: [
+        { label: 'Focus area selected', done: focusAreas.length > 0 },
+        { label: 'Custom coach focus reviewed', done: Boolean(report?.review_context?.custom_coach_focus) },
+      ],
+    },
+    {
+      title: 'Manual annotation',
+      status: annotations.length || manualFindings.length ? 'Complete' : 'In progress',
+      purpose: 'Capture coach-controlled timestamps, key moments, drawings, and manual observations.',
+      action: 'Add a timestamp note or annotation; drawing is optional.',
+      unlocks: 'Evidence that can be linked to a coach finding.',
+      checks: [
+        { label: 'Manual timestamp or finding started', done: manualFindings.length > 0 },
+        { label: 'Coach annotation saved or intentionally skipped', done: annotations.length > 0 },
+      ],
+    },
+    {
+      title: 'AI-assisted draft review',
+      status: aiActive ? 'In progress' : aiUnavailable && !aiFindings.length ? 'Blocked' : aiFindings.length && aiFindings.every(hasCoachDecision) ? 'Complete' : aiFindings.length ? 'In progress' : 'Not started',
+      purpose: 'Treat AI output as draft evidence that must be approved, edited, or rejected by a coach.',
+      action: aiUnavailable ? 'Continue manual coach review; AI is not required to complete the report.' : 'Record a coach decision for every AI-assisted draft.',
+      unlocks: 'Coach-owned findings for the report.',
+      checks: [
+        { label: 'AI status understood', done: Boolean(aiStatus) || aiUnavailable },
+        { label: 'Every AI draft has a coach decision', done: aiFindings.length > 0 && aiFindings.every(hasCoachDecision) },
+        { label: 'Manual review available if AI is unavailable', done: true },
+      ],
+    },
+    {
+      title: 'Technical standards',
+      status: hasStandard ? 'Complete' : findings.length ? 'In progress' : 'Not started',
+      purpose: 'Connect observations to a consistent stroke-and-phase coaching standard.',
+      action: hasStandard ? 'Check the standard still matches the finding.' : 'Link a standard where it adds useful coaching context.',
+      unlocks: 'Consistent language across coaches and squads.',
+      checks: [
+        { label: 'Finding phase checked', done: findings.some(finding => finding.stroke_phase || finding.phase) },
+        { label: 'Technical standard linked or intentionally skipped', done: hasStandard },
+      ],
+    },
+    {
+      title: 'Drills and next focus',
+      status: hasDrill ? 'Complete' : approvedFindings.length ? 'In progress' : 'Not started',
+      purpose: 'Turn the observation into a practical cue, drill, and next review target.',
+      action: hasDrill ? 'Confirm volume and cue are suitable for this swimmer.' : 'Assign a drill or write a coach-selected alternative.',
+      unlocks: 'A useful swimmer improvement plan.',
+      checks: [
+        { label: 'At least one coach-approved finding', done: approvedFindings.length > 0 },
+        { label: 'Drill assigned or intentionally skipped', done: hasDrill },
+        { label: 'Next focus recorded', done: Boolean(report?.next_focus || approvedFindings.some(finding => finding.next_focus)) },
+      ],
+    },
+    {
+      title: 'Report approval',
+      status: reportFinal ? 'Complete' : findings.length && pendingFindings.length === 0 ? 'In progress' : findings.length ? 'In progress' : 'Not started',
+      purpose: 'Check every included item before the report becomes shareable.',
+      action: reportFinal ? 'Report is coach-approved.' : 'Review findings, severity, privacy, drills, and summary before finalising.',
+      unlocks: 'Secure share and print/export actions.',
+      checks: [
+        { label: 'Findings reviewed', done: findings.length > 0 && pendingFindings.length === 0 },
+        { label: 'Unsafe or private information excluded', done: reportFinal },
+        { label: 'Severity and drill checked', done: approvedFindings.length > 0 && hasDrill },
+        { label: 'Coach decision recorded', done: findings.length > 0 && pendingFindings.length === 0 },
+      ],
+    },
+    {
+      title: 'Share / export',
+      status: activeShare ? 'Complete' : reportFinal ? 'In progress' : 'Blocked',
+      purpose: 'Share only coach-approved, privacy-filtered report content.',
+      action: reportFinal ? 'Create and test the secure shared link, or print the approved report.' : 'Finalise the coach-approved report first.',
+      unlocks: 'A swimmer- and parent-readable improvement plan.',
+      checks: [
+        { label: 'Report coach-approved', done: reportFinal },
+        { label: 'Secure shared link created if needed', done: activeShare },
+        { label: 'Public output checked while logged out', done: false },
+      ],
+    },
+  ];
+
+  const readiness = [
+    ['Video ready', Boolean(video)],
+    ['Consent ready', consentReady],
+    ['Focus selected', focusAreas.length > 0],
+    ['Manual notes started', manualFindings.length > 0 || annotations.length > 0],
+    ['AI status clear', Boolean(aiStatus) || aiUnavailable],
+    ['Coach decisions complete', findings.length > 0 && pendingFindings.length === 0],
+    ['Report approved', reportFinal],
+    ['Share / export checked', activeShare],
+  ];
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4" aria-labelledby="coach-workflow-title">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Coach Studio workflow</div>
+          <h2 id="coach-workflow-title" className="mt-1 text-base font-bold text-slate-900">Nine clear stages from setup to secure sharing</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">AI-assisted review is one optional stage. Manual coach review remains available throughout.</p>
+        </div>
+        <span className="text-[10px] text-slate-500">Local pilot checklist · derived from current report state</span>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside className="rounded-lg border border-slate-200 bg-slate-50 p-3 xl:sticky xl:top-20 xl:self-start" aria-label="Coach Studio compact readiness">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Compact readiness</div>
+          <div className="mt-3 space-y-2">
+            {readiness.map(([label, done]) => (
+              <div key={label} className="flex items-center justify-between gap-3 text-[11px]">
+                <span className="text-slate-600">{label}</span>
+                <span className={done ? 'font-semibold text-emerald-700' : 'font-medium text-slate-400'}>{done ? 'Ready' : 'Check'}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <div className="grid gap-2 md:grid-cols-2">
+          {sections.map((section, index) => {
+            const Icon = statusIcon(section.status);
+            return (
+              <details key={section.title} className="group rounded-lg border border-slate-200 bg-white p-3 open:border-cyan-200 open:bg-cyan-50/30">
+                <summary className="flex min-h-11 cursor-pointer list-none items-start gap-3">
+                  <div className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border ${STATUS_STYLES[section.status]}`}>
+                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Stage {index + 1}</div>
+                    <div className="text-xs font-bold text-slate-900">{section.title}</div>
+                  </div>
+                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${STATUS_STYLES[section.status]}`}>{section.status}</span>
+                </summary>
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <p className="text-[11px] leading-5 text-slate-600">{section.purpose}</p>
+                  <div className="mt-2 grid gap-2 text-[10px] leading-4 sm:grid-cols-2">
+                    <div><span className="font-bold text-slate-700">Coach action:</span> <span className="text-slate-600">{section.action}</span></div>
+                    <div><span className="font-bold text-slate-700">Unlocks:</span> <span className="text-slate-600">{section.unlocks}</span></div>
+                  </div>
+                  <div className="mt-3"><CoachWorkflowChecklist items={section.checks} /></div>
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}

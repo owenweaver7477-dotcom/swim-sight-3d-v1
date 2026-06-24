@@ -33,6 +33,10 @@ import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
 import KeyStampGallery from '@/components/annotations/KeyStampGallery';
 import { formatTimestamp } from '@/lib/annotationRender';
 import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
+import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
+import RecoveryActionCard from '@/components/status/RecoveryActionCard';
+import AICreditIndicator from '@/components/credits/AICreditIndicator';
+import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -402,6 +406,20 @@ export default function AIReportPage() {
     staleTime: 10 * 60 * 1000,
   });
   const swimmer = swimmerArr[0];
+  const { data: consentResponse, isError: consentUnavailable } = useQuery({
+    queryKey: ['consent-for-report', report?.swimmer_id],
+    queryFn: () => functions.getSwimmerConsent(report.swimmer_id),
+    enabled: !!report?.swimmer_id,
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+  const consentRecord = consentResponse?.data?.consent_record || null;
+  const consentState = consentUnavailable || !consentRecord
+    ? 'unknown'
+    : consentRecord.is_minor === true && consentRecord.consent_status !== 'granted'
+      ? 'blocked'
+      : 'ready';
+
 
   const { data: videoArr = [] } = useQuery({
     queryKey: ['video-for-report', report?.video_upload_id],
@@ -796,6 +814,13 @@ export default function AIReportPage() {
     || report?.analysis_mode === 'placeholder'
     || report?.analysis_mode === 'manual_review'
     || report?.real_pose_detected === false;
+  const activeAIJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
+  const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing'].includes(aiJob?.queue_status);
+  const aiJobStartedAt = aiJob?.started_at || aiJob?.accepted_at || aiJob?.queued_at || aiJob?.created_date;
+  const isAIJobSlow = Boolean(isAIJobActive && aiJobStartedAt && Date.now() - new Date(aiJobStartedAt).getTime() >= 10 * 60 * 1000);
+  const isAIJobUnavailable = ['error', 'timed_out', 'retry_available'].includes(aiJob?.status)
+    || ['failed', 'timed_out', 'retry_available'].includes(aiJob?.queue_status)
+    || report?.analysis_mode === 'error';
   const coachStudioStepIndex = COACH_STUDIO_GUIDED_STEPS.findIndex(step => step.id === coachStudioStep);
   const currentStudioStepIndex = coachStudioStepIndex >= 0 ? coachStudioStepIndex : 0;
   const studioCompletion = {
@@ -925,6 +950,24 @@ export default function AIReportPage() {
             </div>
           </PageHeader>
 
+          <PilotReadinessWarning />
+
+          <CoachStudioWorkflowPanel
+            video={video}
+            report={report}
+            findings={findings}
+            annotations={videoAnnotations}
+            aiJob={aiJob}
+            sharedLinks={sharedLinks}
+            consentState={consentState}
+          />
+
+          <AICreditIndicator
+            selectedFocusCount={report?.review_context?.analysis_focus_areas?.length || 0}
+            mode={isManualReviewReport ? 'manual' : 'ai'}
+            compact
+          />
+
           <CoachStudioSnapshot
             pendingCount={pendingCount}
             approvedCount={approvedCount}
@@ -1012,6 +1055,24 @@ export default function AIReportPage() {
                   <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
                     {qualityMeta.detail}
                   </div>
+                  {(isAIJobActive || isAIJobUnavailable) && (
+                    <RecoveryActionCard
+                      title={isAIJobUnavailable
+                        ? 'AI Review is unavailable for this attempt'
+                        : isAIJobSlow
+                          ? 'AI processing is taking longer than expected'
+                          : 'AI Review is still processing'}
+                      message={isAIJobUnavailable
+                        ? 'The private video and report remain available. Continue manual coach review now, or return to Analyse and retry later.'
+                        : 'You can continue manual coach review now. Any later AI-assisted draft will still require coach approval.'}
+                      primaryLabel="Continue manual coach review"
+                      onPrimary={() => goToStudioStep('video')}
+                      secondaryLabel={isAIJobUnavailable ? 'Return to Analyse' : 'Cancel AI review'}
+                      onSecondary={isAIJobUnavailable ? () => navigate('/analyse') : undefined}
+                      secondaryDisabled={!isAIJobUnavailable}
+                      secondaryHint={!isAIJobUnavailable ? 'True server cancellation is not available yet. Leaving this status panel does not delete the job.' : undefined}
+                    />
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
                     <div>
                       <span className="text-muted-foreground">Stage</span>

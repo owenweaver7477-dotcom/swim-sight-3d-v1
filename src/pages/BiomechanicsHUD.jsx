@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { Suspense, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Activity, ChevronLeft, Crosshair, Eye, LocateFixed, Lock, MousePointer2, Move3D, RotateCcw, Waves } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FloatingHUDPanel from '@/components/hud/FloatingHUDPanel';
@@ -18,28 +18,19 @@ const cameraPresets = [
 
 const trialGroups = [
   {
-    athlete: 'Mia Hartley',
-    lane: 'Lane 4',
+    athlete: 'Sample swimmer A',
+    lane: 'Reference profile',
     trials: [
-      { id: 'BR-042', date: 'Today 07:18', stroke: 'Breaststroke', status: 'Coach Review', score: 82 },
-      { id: 'BR-041', date: 'Jun 14', stroke: 'Breaststroke', status: 'Finalised', score: 78 },
-      { id: 'FR-018', date: 'Jun 10', stroke: 'Freestyle', status: 'Shared', score: 84 },
+      { id: 'BR-S01', date: 'Sample clip 01', stroke: 'Breaststroke', status: 'Reference only' },
+      { id: 'FR-S01', date: 'Sample clip 02', stroke: 'Freestyle', status: 'Reference only' },
     ],
   },
   {
-    athlete: 'Noah Vale',
-    lane: 'Lane 2',
+    athlete: 'Sample swimmer B',
+    lane: 'Reference profile',
     trials: [
-      { id: 'BK-022', date: 'Today 06:55', stroke: 'Backstroke', status: 'Processing', score: 74 },
-      { id: 'FR-017', date: 'Jun 12', stroke: 'Freestyle', status: 'Manual Review', score: 71 },
-    ],
-  },
-  {
-    athlete: 'Ava Chen',
-    lane: 'Lane 6',
-    trials: [
-      { id: 'FL-009', date: 'Jun 15', stroke: 'Butterfly', status: 'Coach Review', score: 79 },
-      { id: 'FR-016', date: 'Jun 09', stroke: 'Freestyle', status: 'Finalised', score: 86 },
+      { id: 'BK-S01', date: 'Sample clip 03', stroke: 'Backstroke', status: 'Reference only' },
+      { id: 'FL-S01', date: 'Sample clip 04', stroke: 'Butterfly', status: 'Reference only' },
     ],
   },
 ];
@@ -60,41 +51,6 @@ function MotionRow({ children, delay = 0 }) {
       }}
     >
       {children}
-    </motion.div>
-  );
-}
-
-function RollingMetric({ value, suffix = '', className = '' }) {
-  return (
-    <AnimatePresence mode="popLayout">
-      <motion.span
-        key={`${value}${suffix}`}
-        initial={{ opacity: 0, y: 10, filter: 'blur(3px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, y: -8, filter: 'blur(3px)' }}
-        transition={{ duration: 0.24, ease: 'easeOut' }}
-        className={className}
-      >
-        {value}
-        {suffix}
-      </motion.span>
-    </AnimatePresence>
-  );
-}
-
-function MetricPill({ label, value, suffix, tone = 'cyan' }) {
-  const toneClass = tone === 'emerald' ? 'text-emerald-100 shadow-emerald-500/10' : 'text-cyan-100 shadow-cyan-500/10';
-
-  return (
-    <motion.div
-      whileHover={{ scale: 1.015 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-4 shadow-lg"
-    >
-      <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">[ {label} ]</div>
-      <div className={`mt-3 flex items-end gap-1 text-4xl font-semibold tracking-tight ${toneClass}`}>
-        <RollingMetric value={value} suffix={suffix} />
-      </div>
     </motion.div>
   );
 }
@@ -137,8 +93,7 @@ function TrialRail() {
                         <div className="mt-1 text-[11px] text-slate-500">{trial.date} · {trial.id}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-semibold text-cyan-100">{trial.score}</div>
-                        <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500">{trial.status}</div>
+                        <div className="text-[10px] uppercase tracking-[0.14em] text-cyan-100">{trial.status}</div>
                       </div>
                     </div>
                   </motion.button>
@@ -182,15 +137,12 @@ function AthleteOverview() {
   );
 }
 
-function MetricSummary({ tick }) {
-  const alignmentCue = useMemo(() => Math.round(76 + Math.sin(tick / 2) * 4), [tick]);
-  const resistanceCue = useMemo(() => Math.round(62 + Math.cos(tick / 3) * 5), [tick]);
-
+function MetricSummary() {
   return (
-    <FloatingHUDPanel title="Prototype Cues" label="Preview Only" dock="right">
+    <FloatingHUDPanel title="Module Readiness" label="Preview Only" dock="right">
       <div className="space-y-3">
-        <MetricPill label="Alignment cue" value={alignmentCue} suffix="%" tone="cyan" />
-        <MetricPill label="Resistance cue" value={resistanceCue} suffix="%" tone="emerald" />
+        <MotionRow><div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.055] p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100">Available now</div><p className="mt-1 text-xs leading-5 text-slate-300">Interactive reference scene and camera controls.</p></div></MotionRow>
+        <MotionRow><div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.055] p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-100">Not available yet</div><p className="mt-1 text-xs leading-5 text-slate-300">Swimmer-specific movement, calibrated comparison, and automated technical judgement.</p></div></MotionRow>
         <MotionRow>
           <div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.055] px-3 py-3 text-xs leading-relaxed text-amber-50/80">
             Prototype visualisation only. Coach verification remains required before any report inclusion.
@@ -250,7 +202,7 @@ function EliteLabAccessPanel({ gate }) {
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100">Future Premium</div>
           <h1 className="mt-1 text-lg font-semibold text-white">Elite Lab Preview</h1>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Prototype 3D reference visualisation for future calibrated, coach-reviewed movement comparison.
+            Elite Studio is a preview module. Full movement model, 3D phase viewer, and advanced reference comparison are not pilot-ready yet.
           </p>
         </div>
       </div>
@@ -292,12 +244,6 @@ export default function BiomechanicsHUD() {
   const eliteGate = getFeatureGateState('elite_3d_comparison', planKey);
   const [cameraPreset, setCameraPreset] = useState('side');
   const [viewKey, setViewKey] = useState(0);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((value) => value + 1), 2600);
-    return () => window.clearInterval(id);
-  }, []);
 
   const resetView = () => {
     setCameraPreset('side');
@@ -323,7 +269,7 @@ export default function BiomechanicsHUD() {
         <Suspense
           fallback={
             <div className="flex h-full w-full items-center justify-center bg-[#030712] text-xs uppercase tracking-[0.24em] text-cyan-100">
-              Loading telemetry scene
+              Loading prototype reference scene
             </div>
           }
         >
@@ -360,12 +306,12 @@ export default function BiomechanicsHUD() {
           <FloatingHUDPanel title="Movement Preview" label="Sample Trend" dock="right">
             <TelemetryChart />
           </FloatingHUDPanel>
-          <MetricSummary tick={tick} />
+          <MetricSummary />
         </div>
 
         <div className="fixed left-4 right-4 top-[17rem] z-[82] grid max-h-[28vh] gap-3 overflow-y-auto lg:hidden">
           <AthleteOverview />
-          <MetricSummary tick={tick} />
+          <MetricSummary />
         </div>
 
         <div className="pointer-events-none fixed left-1/2 top-1/2 z-[78] h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-100/10">

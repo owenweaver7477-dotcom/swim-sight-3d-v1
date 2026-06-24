@@ -18,21 +18,36 @@ import {
 import DrillDetailModal from '@/components/drills/DrillDetailModal';
 import DrillPackModal from '@/components/drills/DrillPackModal';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
+import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const STROKES = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'IM', 'General'];
+const STROKES = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'Starts', 'Turns', 'General'];
 const PHASES = ['All', 'Body Line', 'Catch', 'Pull', 'Recovery', 'Breathing', 'Kick Recovery',
-  'Kick Drive', 'Glide', 'Timing', 'Rotation', 'Entry', 'Turn', 'Underwater', 'Breakout', 'Start', 'Finish', 'General'];
+  'Kick Drive', 'Glide', 'Timing', 'Rotation', 'Entry', 'Turn', 'Underwater', 'Breakout', 'Start',
+  'Set Position', 'Reaction and Entry', 'Streamline', 'Underwater Breakout', 'Approach', 'Wall Contact',
+  'Push-off', 'Streamline / Breakout', 'Finish', 'General'];
 const DIFFICULTIES = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Elite'];
 
 const QUICK_FILTERS = [
   { label: 'Breaststroke Kick', stroke: 'Breaststroke', phase: 'Kick Recovery' },
   { label: 'Freestyle Catch',   stroke: 'Freestyle',    phase: 'Catch' },
   { label: 'Body Line',         stroke: 'All',          phase: 'Body Line' },
-  { label: 'Starts & Turns',    stroke: 'All',          phase: 'Start' },
+  { label: 'Starts',            stroke: 'Starts',       phase: 'All' },
+  { label: 'Turns',             stroke: 'Turns',        phase: 'All' },
   { label: 'Underwater',        stroke: 'All',          phase: 'Underwater' },
   { label: 'No Equipment',      stroke: 'All',          phase: 'All',  equipment: 'none' },
+];
+
+const DRILL_CATEGORIES = [
+  { label: 'Starts', stroke: 'Starts', phases: ['Set position', 'Reaction and entry', 'Streamline', 'Underwater breakout'] },
+  { label: 'Turns', stroke: 'Turns', phases: ['Approach', 'Rotation', 'Wall contact', 'Push-off', 'Streamline / breakout'] },
+  { label: 'Underwater', phase: 'Underwater', phases: ['Streamline', 'Kick count', 'Breakout'] },
+  { label: 'Breaststroke', stroke: 'Breaststroke', phases: ['Pull', 'Breathing', 'Kick recovery', 'Kick drive', 'Timing'] },
+  { label: 'Freestyle', stroke: 'Freestyle', phases: ['Body line', 'Entry', 'Catch', 'Pull', 'Breathing', 'Kick timing'] },
+  { label: 'Backstroke', stroke: 'Backstroke', phases: ['Body line', 'Entry', 'Catch', 'Pull', 'Rotation', 'Kick'] },
+  { label: 'Butterfly', stroke: 'Butterfly', phases: ['Body wave', 'Catch', 'Pull', 'Breathing', 'Kick timing'] },
+  { label: 'General body line', stroke: 'General', phase: 'Body Line', phases: ['Posture', 'Alignment', 'Streamline'] },
 ];
 
 const STROKE_COLORS = {
@@ -40,6 +55,9 @@ const STROKE_COLORS = {
   Breaststroke: 'bg-cyan-100 text-cyan-700 border-cyan-200',
   Backstroke:   'bg-emerald-100 text-emerald-700 border-emerald-200',
   Butterfly:    'bg-purple-100 text-purple-700 border-purple-200',
+  Starts:       'bg-amber-100 text-amber-800 border-amber-200',
+  Turns:        'bg-rose-100 text-rose-700 border-rose-200',
+  Underwater:   'bg-teal-100 text-teal-700 border-teal-200',
   IM:           'bg-orange-100 text-orange-700 border-orange-200',
   General:      'bg-slate-100 text-slate-600 border-slate-200',
 };
@@ -332,6 +350,12 @@ export default function DrillLibrary({
     setActiveTab('drills');
   };
 
+  const applyCategory = (category) => {
+    setStrokeFilter(category.stroke || 'All');
+    setPhaseFilter(category.phase || 'All');
+    setActiveTab('drills');
+  };
+
   const contextLabel = urlContext || assignedDrillTitle || (urlReportId ? 'Report' : null);
 
   const tabs = [
@@ -350,6 +374,39 @@ export default function DrillLibrary({
           title="Corrective Drill Library"
           subtitle="Stroke-specific drills, cue progressions, and corrective packs linked to common technical faults."
         />
+      )}
+
+      {!assignMode && (
+        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4" aria-labelledby="drill-category-title">
+          <div className="flex flex-wrap items-center gap-2">
+            <div id="drill-category-title" className="text-xs font-bold text-slate-900">Drill categories</div>
+            <FeatureStatusBadge status="partial" />
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-slate-600">Choose a top-level coaching area. Categories still being expanded remain visible instead of appearing broken.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {DRILL_CATEGORIES.map(category => {
+              const count = drills.filter(drill => {
+                const strokeMatches = category.stroke ? drill.stroke === category.stroke : true;
+                const phaseMatches = category.phase ? drill.phase === category.phase : true;
+                return strokeMatches && phaseMatches;
+              }).length;
+              return (
+                <button
+                  key={category.label}
+                  type="button"
+                  onClick={() => applyCategory(category)}
+                  className="min-h-16 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:border-cyan-300 hover:bg-cyan-50"
+                >
+                  <span className="block text-xs font-semibold text-slate-800">{category.label}</span>
+                  <span className="mt-1 block text-[9px] leading-4 text-slate-500">
+                    {count > 0 ? `${count} drill${count === 1 ? '' : 's'} available` : 'Drill set coming in drill rebuild phase'}
+                  </span>
+                  <span className="mt-1 block text-[9px] leading-4 text-slate-400">{category.phases.join(' · ')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {/* ── Context banner (assign mode / URL context) ── */}

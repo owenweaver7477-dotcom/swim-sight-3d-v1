@@ -1,18 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   PenLine, Slash, MoveRight, Circle, Type, RotateCcw, RotateCw,
-  Trash2, Save, X, Ruler, Activity
+  Trash2, Save, X, Ruler, Activity, MousePointer2, PanelRightClose, SlidersHorizontal
 } from 'lucide-react';
 
 const TOOLS = [
-  { id: 'pen', label: 'Pen', icon: PenLine },
-  { id: 'line', label: 'Line', icon: Slash },
+  { id: 'select', label: 'Select', icon: MousePointer2 },
+  { id: 'pen', label: 'Free draw', icon: PenLine },
+  { id: 'line', label: 'Draw line', icon: Slash },
   { id: 'arrow', label: 'Arrow', icon: MoveRight },
+  { id: 'angle', label: 'Angle marker', icon: Ruler },
+  { id: 'text', label: 'Text note', icon: Type },
+];
+const ADVANCED_TOOLS = [
   { id: 'ellipse', label: 'Circle', icon: Circle },
-  { id: 'angle', label: 'Angle', icon: Ruler },
   { id: 'body_line', label: 'Body line', icon: Activity },
-  { id: 'text', label: 'Text', icon: Type },
 ];
 
 const COLORS = ['#22d3ee', '#facc15', '#fb7185', '#34d399', '#ffffff', '#111827'];
@@ -34,26 +37,36 @@ export default function AnnotationToolbar({
   canRedo,
   canSave = true,
   saving,
+  onHide,
 }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const visibleTools = showAdvanced ? [...TOOLS, ...ADVANCED_TOOLS] : TOOLS;
   return (
-    <div className="rounded-xl bg-slate-950/95 border border-white/10 text-white shadow-xl p-3 space-y-3">
+    <div className="rounded-lg bg-slate-950/95 border border-white/10 text-white shadow-xl p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-bold">Coach Draw</div>
-          <div className="text-[10px] text-slate-300">Pause, mark frame, save annotation</div>
+          <div className="text-xs font-bold">Coach annotation mode</div>
+          <div className="text-[10px] text-slate-300">Coach-controlled marks are not AI-confirmed.</div>
         </div>
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/10" onClick={onCancel}>
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {onHide && (
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/10" onClick={onHide} title="Hide drawing tools" aria-label="Hide drawing tools">
+              <PanelRightClose className="w-4 h-4" />
+            </Button>
+          )}
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/10" onClick={onCancel} title="Exit annotation mode" aria-label="Exit annotation mode">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5 md:grid-cols-2 lg:grid-cols-3">
-        {TOOLS.map(({ id, label, icon: Icon }) => (
+      <div className="grid grid-cols-3 gap-1.5">
+        {visibleTools.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => onToolChange(id)}
-            className={`min-h-12 rounded-lg border px-2 py-1.5 text-[10px] font-semibold flex flex-col items-center justify-center gap-1 ${
+            className={`min-h-11 rounded-md border px-1.5 py-1 text-[9px] font-semibold flex flex-col items-center justify-center gap-1 ${
               tool === id ? 'bg-cyan-500 text-slate-950 border-cyan-300' : 'bg-white/5 text-slate-200 border-white/10'
             }`}
           >
@@ -62,6 +75,10 @@ export default function AnnotationToolbar({
           </button>
         ))}
       </div>
+
+      <button type="button" onClick={() => setShowAdvanced(value => !value)} className="inline-flex min-h-8 items-center gap-1.5 text-[10px] text-slate-300 hover:text-white">
+        <SlidersHorizontal className="h-3.5 w-3.5" /> {showAdvanced ? 'Hide extra tools' : 'Show circle and body-line tools'}
+      </button>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -90,7 +107,7 @@ export default function AnnotationToolbar({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+      <div className="grid grid-cols-2 gap-2">
         <Button size="sm" variant="outline" className="h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10" onClick={onUndo} disabled={!canUndo}>
           <RotateCcw className="w-3.5 h-3.5 mr-1" />Undo
         </Button>
@@ -100,7 +117,7 @@ export default function AnnotationToolbar({
         <Button size="sm" variant="outline" className="h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10" onClick={onClear}>
           <Trash2 className="w-3.5 h-3.5 mr-1" />Clear
         </Button>
-        <Button size="sm" className="h-10 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400 lg:col-span-1" onClick={onSave} disabled={saving || !canSave}>
+        <Button size="sm" className="h-10 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400" onClick={onSave} disabled={saving || !canSave}>
           <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : canSave ? 'Save Annotation' : 'Draw first'}
         </Button>
       </div>

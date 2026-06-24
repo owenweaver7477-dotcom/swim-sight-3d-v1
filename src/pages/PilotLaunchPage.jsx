@@ -20,8 +20,12 @@ import PilotSessionNotes from '@/components/pilot/PilotSessionNotes';
 import CoachPilotFeedbackForm from '@/components/pilot/CoachPilotFeedbackForm';
 import PilotReportSafetySummary from '@/components/pilot/PilotReportSafetySummary';
 import { isAIFinding } from '@/lib/aiTrust';
+import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
+import FeatureReadinessPanel from '@/components/status/FeatureReadinessPanel';
+import { getFeatureReadiness } from '@/lib/featureReadiness';
+import PilotReadinessGate from '@/components/pilot/PilotReadinessGate';
 
-const OWNER_ADMIN_ROLES = ['owner', 'admin'];
+const PILOT_ROLES = ['owner', 'admin', 'coach'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 const READY_VIDEO_STATUSES = ['uploaded', 'pending_ai', 'processing', 'manual_review', 'completed', 'error'];
 const STATUS_STYLES = {
@@ -64,7 +68,7 @@ export default function PilotLaunchPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedReportId = searchParams.get('report_id');
-  const canView = OWNER_ADMIN_ROLES.includes(memberRole || club?._memberRole) || user?.role === 'admin';
+  const canView = PILOT_ROLES.includes(memberRole || club?._memberRole) || user?.role === 'admin';
 
   const queryEnabled = Boolean(club?.id && canView);
   const swimmersQuery = useQuery({
@@ -153,7 +157,8 @@ export default function PilotLaunchPage() {
     const swimmers = swimmersQuery.data || [];
     const videos = videosQuery.data || [];
     const links = linksQuery.data || [];
-    const consentComplete = (consentQuery.data || []).some(record => record.consent_status === 'granted');
+    const consentUnavailable = consentQuery.isError;
+    const consentComplete = !consentUnavailable && (consentQuery.data || []).some(record => record.consent_status === 'granted');
     const readyVideo = videos.find(video => video.upload_status === 'uploaded' || READY_VIDEO_STATUSES.includes(video.processing_status));
     const aiFindings = findings.filter(isAIFinding);
     const unresolved = aiFindings.filter(finding => !['approved', 'rejected'].includes(finding.approval_status));
@@ -166,7 +171,11 @@ export default function PilotLaunchPage() {
       {
         title: 'Confirm swimmer consent recorded',
         status: consentComplete ? 'Complete' : swimmers.length ? 'Needs attention' : 'Not started',
-        detail: consentComplete ? 'A consent record is available for this controlled test.' : 'Record consent before processing footage, especially for a minor.',
+        detail: consentComplete
+          ? 'A consent record is available for this controlled test.'
+          : consentUnavailable
+            ? 'Consent records are currently unavailable. Do not process footage for a minor until migration 018 is confirmed.'
+            : 'Record consent before processing footage, especially for a minor.',
         action: 'Open swimmers',
         to: '/swimmers',
       },
@@ -179,10 +188,12 @@ export default function PilotLaunchPage() {
       },
       {
         title: 'Run AI-assisted review',
-        status: activeReport ? 'Complete' : readyVideo ? 'Ready' : 'Not started',
-        detail: activeReport ? 'A review report exists. Evidence level may still require manual review.' : 'Start AI-assisted review only after upload completes.',
-        action: 'Open analysis',
-        to: '/analyse',
+        status: activeReport ? 'Needs attention' : readyVideo ? 'Needs attention' : 'Not started',
+        detail: activeReport
+          ? 'A review report exists, but the Render worker is not yet production-verified. Treat AI content as draft evidence and keep manual review available.'
+          : 'Live pilot AI use needs backend verification first. Continue with manual Coach Studio review for controlled testing.',
+        action: activeReport ? 'Open Coach Studio' : 'Open manual review',
+        to: activeReport ? `/ai-review?report_id=${activeReport.id}` : '/analyse',
       },
       {
         title: 'Coach reviews every AI draft',
@@ -215,7 +226,7 @@ export default function PilotLaunchPage() {
         to: '#feedback',
       },
     ];
-  }, [activeReport, consentQuery.data, feedbackSaved, findings, linksQuery.data, notesSaved, swimmersQuery.data, videosQuery.data]);
+  }, [activeReport, consentQuery.data, consentQuery.isError, feedbackSaved, findings, linksQuery.data, notesSaved, swimmersQuery.data, videosQuery.data]);
 
   if (loading) return null;
 
@@ -234,7 +245,7 @@ export default function PilotLaunchPage() {
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
         <LockKeyhole className="mx-auto mb-3 h-10 w-10 text-amber-500" />
         <h1 className="text-sm font-bold text-slate-900">Internal pilot access only</h1>
-        <p className="mt-1 text-xs text-slate-600">This internal checklist is available to club owners and admins.</p>
+        <p className="mt-1 text-xs text-slate-600">This internal checklist is available to club owners, admins, and coaches.</p>
         <Button variant="outline" className="mt-4 text-xs" onClick={() => navigate('/dashboard')}>Back to dashboard</Button>
       </div>
     );
@@ -249,6 +260,16 @@ export default function PilotLaunchPage() {
         title="Private Coach Pilot"
         subtitle="A controlled workflow check for 1–2 swimmers and a small number of short clips. AI-assisted drafts remain coach-reviewed."
       />
+
+      <PilotReadinessWarning className="mb-5" />
+
+      <div className="mb-5"><PilotReadinessGate /></div>
+
+      <div className="mb-5 grid gap-3 lg:grid-cols-3">
+        <FeatureReadinessPanel feature={getFeatureReadiness('aiReview')} compact />
+        <FeatureReadinessPanel feature={getFeatureReadiness('consentRecords')} compact />
+        <FeatureReadinessPanel feature={getFeatureReadiness('coachStudio')} compact />
+      </div>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 sm:col-span-2">
@@ -282,7 +303,13 @@ export default function PilotLaunchPage() {
       <div className="mt-6 space-y-6">
         <PilotReportSafetySummary report={activeReport} findings={findings} annotations={annotationsQuery.data || []} />
         <PilotSessionNotes storageKey={notesStorageKey} onSaved={record => setNotesSaved(Boolean(record))} />
-        <CoachPilotFeedbackForm storageKey={feedbackStorageKey} onSaved={record => setFeedbackSaved(Boolean(record))} />
+        <CoachPilotFeedbackForm
+          storageKey={feedbackStorageKey}
+          clubName={club.name}
+          coachName={user?.full_name || user?.name || ''}
+          coachEmail={user?.email || ''}
+          onSaved={record => setFeedbackSaved(Boolean(record))}
+        />
       </div>
     </div>
   );

@@ -48,7 +48,7 @@ assert.ok(ownerGuardEndIndex > ownerGuardIndex, 'Owner/admin route group has no 
 const coachRoutes = [
   '/dashboard', '/analyse', '/ai-reviews', '/ai-review', '/swimmers', '/reference-library',
   '/club-progress', '/swimmer-trends', '/technical-standards', '/performance', '/club-settings',
-  '/drill-library',
+  '/drill-library', '/pilot-launch',
 ];
 for (const route of coachRoutes) {
   const routeIndex = appSource.indexOf(`path="${route}"`);
@@ -57,7 +57,7 @@ for (const route of coachRoutes) {
 
 const ownerRoutes = [
   '/ai-jobs', '/ai-calibration', '/biomechanics-hud', '/ai-infrastructure-status',
-  '/elite-lab-roadmap', '/footage-checklist', '/pilot-launch', '/coach-testing', '/roadmap',
+  '/elite-lab-roadmap', '/footage-checklist', '/coach-testing', '/roadmap',
 ];
 for (const route of ownerRoutes) {
   const routeIndex = appSource.indexOf(`path="${route}"`);

@@ -30,7 +30,11 @@ import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import ReviewSetupPanel from '@/components/analysis/ReviewSetupPanel';
+import AnalysisFocusChecklist from '@/components/analysis/AnalysisFocusChecklist';
+import AICreditIndicator from '@/components/credits/AICreditIndicator';
+import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { AI_CREDIT_COPY, getFeatureGateState, getPlanKey } from '@/lib/plans/featureGates';
+import { getConsentActionState } from '@/lib/consentReadiness';
 
 // ─── Stroke phase sets ────────────────────────────────────────────────────────
 const STROKE_PHASES = {
@@ -170,6 +174,7 @@ export default function Analyse() {
     injury_or_limitations_note: '',
     desired_output: 'swimmer_report',
     review_mode: 'ai_review',
+    analysis_focus_areas: [],
   });
 
   // Step 3 — Analyse
@@ -208,6 +213,19 @@ export default function Analyse() {
     queryFn: () => entities.Squad.filter({ club_id: club.id }, 'name', 100),
     enabled: !!club?.id,
   });
+
+  const consentQuery = useQuery({
+    queryKey: ['analysis-swimmer-consent', selectedSwimmer?.id],
+    queryFn: () => functions.getSwimmerConsent(selectedSwimmer.id),
+    enabled: Boolean(selectedSwimmer?.id),
+    retry: false,
+  });
+  const consentRecord = consentQuery.data?.data?.consent_record || (
+    selectedSwimmer?.is_minor === true
+      ? { is_minor: true, consent_status: selectedSwimmer.consent_status || 'none' }
+      : null
+  );
+  const consentState = getConsentActionState({ record: consentRecord, unavailable: consentQuery.isError });
 
   const { data: keyFrames = [] } = useQuery({
     queryKey: ['keyframes', reviewId],
@@ -392,6 +410,10 @@ export default function Analyse() {
 
   const handleUpload = async () => {
     if (!file) return;
+    if (!consentState.canUpload) {
+      setFileError(consentState.message);
+      return;
+    }
     setUploadStatus('preparing_upload');
     setUploadStatusMessage('Creating private video record...');
     setFileError('');
@@ -478,6 +500,10 @@ export default function Analyse() {
   const handleSendForAIReview = async () => {
     if (!videoUploadId) {
       setStartAiError('Upload or select a video before sending it for AI Review.');
+      return;
+    }
+    if (!consentState.canStartAI) {
+      setStartAiError(consentState.message);
       return;
     }
 
@@ -871,6 +897,7 @@ export default function Analyse() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
+      <PilotReadinessWarning className="mb-4" />
       <StepBar current={step} />
 
       <div className="mb-6 p-4 rounded-xl bg-card border border-border">
@@ -955,6 +982,13 @@ export default function Analyse() {
             </div>
           </div>
 
+          {selectedSwimmer && (
+            <div className={`mb-4 rounded-lg border p-3 text-xs ${consentState.canUpload ? 'border-slate-200 bg-white text-slate-700' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+              <div className="font-semibold">Swimmer consent status: {consentQuery.isLoading ? 'Checking…' : consentState.status.replace(/_/g, ' ')}</div>
+              <p className="mt-1 text-[10px] leading-4">{consentState.message}</p>
+            </div>
+          )}
+
           <div className="mb-4">
             <Label className="text-xs text-muted-foreground">Capture Source</Label>
             <Select value={captureSource} onValueChange={setCaptureSource}>
@@ -979,7 +1013,7 @@ export default function Analyse() {
           </div>
 
           {/* Multi-angle uploader */}
-          {sessionMode === 'multi_angle' && (
+          {sessionMode === 'multi_angle' && consentState.canUpload && (
             <div className="mb-5">
               <MultiAngleUploader
                 clubId={club?.id}
@@ -1005,6 +1039,11 @@ export default function Analyse() {
                 </div>
               )}
               <div className="h-px bg-border my-4" />
+            </div>
+          )}
+          {sessionMode === 'multi_angle' && !consentState.canUpload && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              Multi-angle upload is unavailable for this swimmer until consent is confirmed.
             </div>
           )}
 
@@ -1127,7 +1166,7 @@ export default function Analyse() {
           )}
           <div className="flex gap-3">
             {!uploadReady && (
-              <Button className="flex-1 bg-primary text-primary-foreground" disabled={!file || uploadInProgress || !selectedSwimmer} onClick={handleUpload}>
+              <Button className="flex-1 bg-primary text-primary-foreground" disabled={!file || uploadInProgress || !selectedSwimmer || !consentState.canUpload || consentQuery.isLoading} onClick={handleUpload}>
                 {uploadInProgress ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : <><Upload className="w-4 h-4 mr-2" />Upload to Private Storage</>}
               </Button>
             )}
@@ -1182,6 +1221,10 @@ export default function Analyse() {
               onChange={setReviewContext}
               stroke={stroke}
               cameraAngle={angle}
+            />
+            <AnalysisFocusChecklist
+              value={reviewContext.analysis_focus_areas}
+              onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
             />
             <div>
               <Label className="text-xs text-muted-foreground">Stroke</Label>
@@ -1261,11 +1304,18 @@ export default function Analyse() {
                 {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport} {AI_CREDIT_COPY.pilotUnknown}
               </p>
             </div>
+            <AICreditIndicator selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0} mode="ai" />
+            <AICreditIndicator selectedFocusCount={0} mode="manual" compact />
+            {!consentState.canStartAI && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+                {consentState.message}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Button
                 className="w-full bg-primary text-primary-foreground"
                 onClick={handleSendForAIReview}
-                disabled={startAiLoading || !stroke || !angle || !videoUploadId}
+                disabled={startAiLoading || !stroke || !angle || !videoUploadId || !consentState.canStartAI || consentQuery.isLoading}
               >
                 {startAiLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending to AI Review...</> : <><Zap className="w-4 h-4 mr-2" />Send for AI Review</>}
               </Button>

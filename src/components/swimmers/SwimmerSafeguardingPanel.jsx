@@ -73,7 +73,7 @@ export default function SwimmerSafeguardingPanel({ swimmer }) {
 
       {isError ? (
         <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-          Consent records are unavailable. Confirm migration 018 has been applied before enabling consent enforcement.
+          Consent records are currently unavailable. Upload and AI review for minors should remain disabled until migration 018 is confirmed. Other non-sensitive swimmer navigation remains available.
         </p>
       ) : (
         <div className="mt-4 space-y-4">
@@ -83,7 +83,7 @@ export default function SwimmerSafeguardingPanel({ swimmer }) {
               disabled={isLoading || saveConsent.isPending}
               onCheckedChange={(checked) => setForm((current) => ({ ...current, is_minor: checked === true }))}
             />
-            <span>This swimmer is a minor</span>
+            <span>Swimmer is recorded as a minor</span>
           </label>
 
           <div>

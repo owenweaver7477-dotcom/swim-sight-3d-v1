@@ -68,6 +68,9 @@ export default function StandardDetailModal({ standard, onClose, onEdit, onDupli
                     Default Reference
                   </span>
                 )}
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-cyan-50 text-cyan-700 border-cyan-200">
+                  {standard.evidence_level || 'Coach standard'}
+                </span>
               </div>
               <h2 className="text-base font-bold text-slate-900">{standard.title}</h2>
             </div>
@@ -100,7 +103,7 @@ export default function StandardDetailModal({ standard, onClose, onEdit, onDupli
           )}
 
           {standard.key_positions && (
-            <Section icon={BookOpen} title="Key Positions">
+            <Section icon={BookOpen} title="Observable Cues">
               <TextBlock text={standard.key_positions} />
             </Section>
           )}
@@ -132,7 +135,7 @@ export default function StandardDetailModal({ standard, onClose, onEdit, onDupli
           )}
 
           {dragZones.length > 0 && (
-            <Section icon={Tag} title="Linked Drag Zones">
+            <Section icon={Tag} title="Linked Resistance-Risk Zones">
               <div className="flex flex-wrap gap-1.5">
                 {dragZones.map(z => (
                   <span key={z} className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
@@ -152,8 +155,18 @@ export default function StandardDetailModal({ standard, onClose, onEdit, onDupli
           )}
 
           {standard.scoring_guidance && (
-            <Section icon={BookOpen} title="Scoring Guidance (Coach Notes)">
+            <Section icon={BookOpen} title="Coach Notes / Review Guidance">
               <TextBlock text={standard.scoring_guidance} />
+            </Section>
+          )}
+
+          {Array.isArray(standard.suggested_drills) && standard.suggested_drills.length > 0 && (
+            <Section icon={BookOpen} title="Suggested Drill Links">
+              <div className="flex flex-wrap gap-1.5">
+                {standard.suggested_drills.map(drill => (
+                  <span key={drill} className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] font-medium text-cyan-800">{drill}</span>
+                ))}
+              </div>
             </Section>
           )}
         </div>

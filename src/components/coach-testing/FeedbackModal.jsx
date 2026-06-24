@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, MessageSquare, Star, Loader2 } from 'lucide-react';
+import { X, MessageSquare, Star, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
+import { SUPPORT_COPY, SUPPORT_EMAIL, buildFeedbackMailto, getDeviceSummary } from '@/lib/supportConfig';
 
 const FEEDBACK_TYPES = [
   { value: 'usability',          label: 'Usability' },
@@ -42,11 +43,15 @@ export default function FeedbackModal({ onClose, pageRoute }) {
     rating: null,
     title: '',
     message: '',
+    expected: '',
     severity: '',
     screenshot_note: '',
+    ai_job_involved: 'Unknown',
+    report_involved: 'Unknown',
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -54,21 +59,42 @@ export default function FeedbackModal({ onClose, pageRoute }) {
     e.preventDefault();
     if (!form.message.trim()) return;
     setSubmitting(true);
-    await base44.entities.CoachFeedback.create({
-      club_id: club?.id || '',
-      user_id: user?.id || '',
-      page_route: pageRoute || window.location.pathname,
-      feedback_type: form.feedback_type,
-      rating: form.rating || undefined,
-      title: form.title || undefined,
-      message: form.message,
-      screenshot_note: form.screenshot_note || undefined,
-      severity: form.feedback_type === 'bug' && form.severity ? form.severity : undefined,
-      status: 'new',
-    });
-    setSubmitting(false);
-    setDone(true);
+    setSubmitError('');
+    try {
+      await base44.entities.CoachFeedback.create({
+        club_id: club?.id || '',
+        user_id: user?.id || '',
+        page_route: pageRoute || window.location.pathname,
+        feedback_type: form.feedback_type,
+        rating: form.rating || undefined,
+        title: form.title || undefined,
+        message: `${form.message}${form.expected ? `\nExpected: ${form.expected}` : ''}`,
+        screenshot_note: form.screenshot_note || undefined,
+        severity: form.feedback_type === 'bug' && form.severity ? form.severity : undefined,
+        status: 'new',
+      });
+      setDone(true);
+    } catch {
+      setSubmitError('The pilot log could not be saved. Open the prepared support email so this feedback is not lost.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const supportMailto = buildFeedbackMailto({
+    subject: `Swim Sight 3D ${form.feedback_type} feedback`,
+    clubName: club?.name,
+    coachName: user?.full_name || user?.name,
+    coachEmail: user?.email,
+    pageArea: pageRoute || window.location.pathname,
+    severity: form.severity || form.feedback_type,
+    happened: form.message,
+    expected: form.expected,
+    device: getDeviceSummary(),
+    aiJobInvolved: form.ai_job_involved,
+    reportInvolved: form.report_involved,
+    extraLines: [form.title && `Title: ${form.title}`, form.screenshot_note && `Screenshot note: ${form.screenshot_note}`],
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4" onClick={onClose}>
@@ -79,7 +105,7 @@ export default function FeedbackModal({ onClose, pageRoute }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
-            <span className="text-sm font-bold text-slate-900">Send Feedback</span>
+            <span className="text-sm font-bold text-slate-900">Feedback for Support</span>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-4 h-4" />
@@ -89,9 +115,12 @@ export default function FeedbackModal({ onClose, pageRoute }) {
         {done ? (
           <div className="py-6 text-center space-y-2">
             <div className="text-2xl">✓</div>
-            <div className="text-sm font-semibold text-slate-800">Thanks for your feedback!</div>
-            <p className="text-xs text-slate-500">Your input helps improve Swim Sight 3D.</p>
-            <Button size="sm" className="mt-3 bg-primary text-white" onClick={onClose}>Close</Button>
+            <div className="text-sm font-semibold text-slate-800">Feedback saved to the pilot log</div>
+            <p className="text-xs text-slate-500">{SUPPORT_COPY.saved}</p>
+            <div className="mt-3 flex justify-center gap-2">
+              <Button size="sm" variant="outline" asChild><a href={supportMailto}><Mail className="mr-1 h-3.5 w-3.5" />Email support</a></Button>
+              <Button size="sm" className="bg-primary text-white" onClick={onClose}>Close</Button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -146,6 +175,17 @@ export default function FeedbackModal({ onClose, pageRoute }) {
               />
             </div>
 
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">What did you expect?</label>
+              <textarea
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                rows={2}
+                placeholder="Describe the expected result or next action."
+                value={form.expected}
+                onChange={e => set('expected', e.target.value)}
+              />
+            </div>
+
             {/* Bug severity */}
             {form.feedback_type === 'bug' && (
               <div>
@@ -184,11 +224,35 @@ export default function FeedbackModal({ onClose, pageRoute }) {
 
             <div className="text-[10px] text-slate-400">Page: {pageRoute || window.location.pathname}</div>
 
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ['ai_job_involved', 'AI job involved'],
+                ['report_involved', 'Report / share / PDF'],
+              ].map(([field, label]) => (
+                <label key={field} className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  {label}
+                  <select className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-xs normal-case tracking-normal" value={form[field]} onChange={event => set(field, event.target.value)}>
+                    <option>Unknown</option><option>Yes</option><option>No</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-2.5 text-[10px] leading-4 text-cyan-900">
+              {SUPPORT_COPY.pilot} Support: {SUPPORT_EMAIL}
+            </div>
+
+            {submitError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+                {submitError} <a className="font-semibold underline" href={supportMailto}>Open support email</a>
+              </div>
+            )}
+
             <div className="flex gap-2 justify-end pt-1">
               <Button size="sm" type="button" variant="outline" className="h-8 text-xs" onClick={onClose}>Cancel</Button>
               <Button size="sm" type="submit" className="h-8 text-xs bg-primary text-white" disabled={submitting || !form.message.trim()}>
                 {submitting ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                {submitting ? 'Sending…' : 'Send Feedback'}
+                {submitting ? 'Saving…' : 'Save Feedback'}
               </Button>
             </div>
           </form>
