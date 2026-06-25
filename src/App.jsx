@@ -56,9 +56,23 @@ import FootageChecklist from './pages/FootageChecklist';
 import PilotLaunchPage from './pages/PilotLaunchPage';
 import { ADMIN_ACCESS_ROLES, COACH_ACCESS_ROLES } from '@/lib/permissions';
 import RouteErrorBoundary from '@/components/system/RouteErrorBoundary';
+import { useClubContext } from '@/lib/useClubContext';
 
 const COACH_APP_ROLES = COACH_ACCESS_ROLES;
 const OWNER_ADMIN_ROLES = ADMIN_ACCESS_ROLES;
+
+function AnalyseRoute() {
+  const location = useLocation();
+  const { club, memberRole } = useClubContext();
+  const { user } = useAuth();
+  const currentUserRole = memberRole || club?._memberRole || user?.role || 'unknown';
+
+  return (
+    <RouteErrorBoundary routeName="Analyse" currentPath={location.pathname} currentUserRole={currentUserRole}>
+      <Analyse />
+    </RouteErrorBoundary>
+  );
+}
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -156,7 +170,7 @@ const AuthenticatedApp = () => {
           <Route element={<RoleProtectedRoute allowedRoles={COACH_APP_ROLES} />}>
           {/* Primary coach routes */}
           <Route path="/dashboard" element={<TeamDashboard />} />
-          <Route path="/analyse" element={<RouteErrorBoundary routeName="Analyse"><Analyse /></RouteErrorBoundary>} />
+          <Route path="/analyse" element={<AnalyseRoute />} />
           <Route path="/ai-reviews" element={<AIReportsListPage />} />
           <Route path="/ai-review" element={<AIReportPage />} />
           <Route path="/swimmers" element={<Swimmers />} />

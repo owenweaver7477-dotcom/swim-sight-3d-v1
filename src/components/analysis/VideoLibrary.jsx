@@ -485,11 +485,11 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
           {upload.stroke_type ? (
             <span className="flex items-center gap-1 font-semibold text-foreground">
-              <Activity className="w-3 h-3 text-primary" />{upload.stroke_type}
+              <Tag className="w-3 h-3 text-primary" />{upload.stroke_type}
             </span>
           ) : (
             <span className="flex items-center gap-1 text-yellow-500 font-semibold">
-              <Activity className="w-3 h-3" />No stroke set
+              <Tag className="w-3 h-3" />No stroke set
             </span>
           )}
           {upload.camera_angle && (

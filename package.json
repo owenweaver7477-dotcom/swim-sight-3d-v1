@@ -15,6 +15,7 @@
     "test:pilot-recovery": "node scripts/check_pilot_recovery_foundation.mjs",
     "test:ai-processing-reliability": "node scripts/check_ai_processing_reliability.mjs",
     "test:ai-output-selection": "node scripts/check_ai_output_selection.mjs",
+    "test:analyse-route-runtime-safety": "node scripts/check_analyse_route_runtime_safety.mjs",
     "test:phase3-coach-polish": "node scripts/check_phase3_coach_polish.mjs",
     "test:production-surface": "node scripts/check_production_surface.mjs",
     "preview": "vite preview"

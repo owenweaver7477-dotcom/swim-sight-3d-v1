@@ -141,6 +141,51 @@ function StepBar({ current }) {
   );
 }
 
+class AnalysePanelBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[AnalysePanelBoundary]', {
+      section: this.props.name || 'Analyse section',
+      message: error?.message || String(error),
+      componentStack: errorInfo?.componentStack || '',
+    });
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
+        <div className="font-bold">{this.props.name || 'Analyse section'} is temporarily unavailable</div>
+        <p className="mt-1">The rest of Analyse is still available. Retry this section, go back to the dashboard, or continue from manual coach review.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" className="h-8 bg-white text-xs" onClick={() => this.setState({ hasError: false })}>
+            Retry section
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 bg-white text-xs" onClick={() => { window.location.href = '/dashboard'; }}>
+            Back to dashboard
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 bg-white text-xs" onClick={() => { window.location.href = '/ai-reviews'; }}>
+            Manual coach review
+          </Button>
+        </div>
+      </div>
+    );
+  }
+}
+
+function SafeAnalyseSection({ name, children }) {
+  return <AnalysePanelBoundary name={name}>{children}</AnalysePanelBoundary>;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Analyse() {
   const navigate = useNavigate();
@@ -235,17 +280,19 @@ export default function Analyse() {
   const strokeForAnalysis = session?.stroke_or_movement || stroke;
 
   // ── Queries ─────────────────────────────────────────────────────────────────
-  const { data: swimmers = [] } = useQuery({
+  const swimmersQuery = useQuery({
     queryKey: ['swimmers', club?.id],
     queryFn: () => entities.Swimmer.filter({ club_id: club.id }, 'last_name', 250),
     enabled: !!club?.id,
   });
+  const swimmers = Array.isArray(swimmersQuery.data) ? swimmersQuery.data : [];
 
-  const { data: squads = [] } = useQuery({
+  const squadsQuery = useQuery({
     queryKey: ['squads', club?.id],
     queryFn: () => entities.Squad.filter({ club_id: club.id }, 'name', 100),
     enabled: !!club?.id,
   });
+  const squads = Array.isArray(squadsQuery.data) ? squadsQuery.data : [];
 
   const consentQuery = useQuery({
     queryKey: ['analysis-swimmer-consent', selectedSwimmer?.id],
@@ -988,9 +1035,44 @@ export default function Analyse() {
     );
   }
 
+  if (swimmersQuery.isError || squadsQuery.isError) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-950">
+          <AlertCircle className="mx-auto mb-3 h-9 w-9 text-amber-600" />
+          <h2 className="text-base font-bold">Analyse setup is temporarily unavailable</h2>
+          <p className="mt-2 text-xs leading-5 text-amber-900">
+            The app could not load the swimmer setup data needed to start a new analysis. Your videos and reports have not been changed.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white text-xs"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['swimmers', club?.id] });
+                queryClient.invalidateQueries({ queryKey: ['squads', club?.id] });
+              }}
+            >
+              Retry
+            </Button>
+            <Button size="sm" variant="outline" className="bg-white text-xs" onClick={() => navigate('/dashboard')}>
+              Back to dashboard
+            </Button>
+            <Button size="sm" variant="outline" className="bg-white text-xs" onClick={() => navigate('/ai-reviews')}>
+              Manual coach review
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
-      <PilotReadinessWarning className="mb-4" />
+      <SafeAnalyseSection name="Pilot readiness">
+        <PilotReadinessWarning className="mb-4" />
+      </SafeAnalyseSection>
       <StepBar current={step} />
 
       <div className="mb-6 p-4 rounded-xl bg-card border border-border">
@@ -1020,10 +1102,12 @@ export default function Analyse() {
               Use existing video
             </Button>
           </div>
-          <AnalysisFocusChecklist
-            value={reviewContext.analysis_focus_areas}
-            onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
-          />
+          <SafeAnalyseSection name="Analysis focus checklist">
+            <AnalysisFocusChecklist
+              value={reviewContext.analysis_focus_areas}
+              onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
+            />
+          </SafeAnalyseSection>
         </div>
       )}
 
@@ -1127,25 +1211,29 @@ export default function Analyse() {
           {/* Session mode selector */}
           <div className="mb-5">
             <div className="text-xs font-semibold text-foreground mb-2">Analysis Mode</div>
-            <SessionModeSelector value={sessionMode} onChange={setSessionMode} />
+            <SafeAnalyseSection name="Analysis mode selector">
+              <SessionModeSelector value={sessionMode} onChange={setSessionMode} />
+            </SafeAnalyseSection>
           </div>
 
           {/* Multi-angle uploader */}
           {sessionMode === 'multi_angle' && consentState.canUpload && (
             <div className="mb-5">
-              <MultiAngleUploader
-                clubId={club?.id}
-                swimmerId={selectedSwimmer?.id}
-                userId={user?.id}
-                sessionId={null}
-                onUploadsChanged={(uploads, primaryKey) => {
-                  setMultiAngleUploads(uploads);
-                  setPrimaryAngleKey(primaryKey);
-                  // Set single videoUploadId to primary, or first uploaded
-                  const primaryRecord = primaryKey ? uploads[primaryKey] : Object.values(uploads)[0];
-                  if (primaryRecord) setVideoUploadId(primaryRecord.id);
-                }}
-              />
+              <SafeAnalyseSection name="Multi-angle upload">
+                <MultiAngleUploader
+                  clubId={club?.id}
+                  swimmerId={selectedSwimmer?.id}
+                  userId={user?.id}
+                  sessionId={null}
+                  onUploadsChanged={(uploads, primaryKey) => {
+                    setMultiAngleUploads(uploads || {});
+                    setPrimaryAngleKey(primaryKey);
+                    const uploadValues = Object.values(uploads || {});
+                    const primaryRecord = primaryKey ? uploads?.[primaryKey] : uploadValues[0];
+                    if (primaryRecord) setVideoUploadId(primaryRecord.id);
+                  }}
+                />
+              </SafeAnalyseSection>
               {Object.keys(multiAngleUploads).length > 0 && (
                 <div className="mt-4 flex gap-3">
                   <Button
@@ -1166,7 +1254,11 @@ export default function Analyse() {
           )}
 
           {/* Single-angle upload drop zone (always shown, optional in multi-angle) */}
-          {sessionMode === 'single_angle' && <CameraGuidancePanel />}
+          {sessionMode === 'single_angle' && (
+            <SafeAnalyseSection name="Camera guidance">
+              <CameraGuidancePanel />
+            </SafeAnalyseSection>
+          )}
           {sessionMode === 'single_angle' && <div className="mb-4" />}
           {sessionMode === 'multi_angle' && (
             <div className="text-xs font-semibold text-muted-foreground mb-2">Or upload a single video instead:</div>
@@ -1233,13 +1325,15 @@ export default function Analyse() {
                 </div>
               </div>
               {/* Review Setup Panel — appears after successful upload */}
-              <ReviewSetupPanel
-                videoUploadId={videoUploadId}
-                value={reviewContext}
-                onChange={setReviewContext}
-                stroke={stroke}
-                cameraAngle={angle}
-              />
+              <SafeAnalyseSection name="Review setup">
+                <ReviewSetupPanel
+                  videoUploadId={videoUploadId}
+                  value={reviewContext}
+                  onChange={setReviewContext}
+                  stroke={stroke}
+                  cameraAngle={angle}
+                />
+              </SafeAnalyseSection>
               {uploadedUrl && (
                 <div className="rounded-lg overflow-hidden bg-black" style={{ aspectRatio: '16/9' }}>
                   <video src={uploadedUrl} controls className="w-full h-full object-contain" />
@@ -1314,12 +1408,14 @@ export default function Analyse() {
               Add a swimmer first, then upload a video to trigger AI Analysis.
             </div>
           ) : (
-            <VideoLibrary
-              clubId={club.id}
-              swimmers={swimmers}
-              memberRole={club._memberRole}
-              onStartReview={handleLibrarySelect}
-            />
+            <SafeAnalyseSection name="Video library">
+              <VideoLibrary
+                clubId={club.id}
+                swimmers={swimmers}
+                memberRole={club._memberRole}
+                onStartReview={handleLibrarySelect}
+              />
+            </SafeAnalyseSection>
           )}
         </div>
       )}
@@ -1333,17 +1429,21 @@ export default function Analyse() {
           <h2 className="text-lg font-bold text-foreground mb-1">Configure Review</h2>
           <p className="text-xs text-muted-foreground mb-5">Confirm the stroke, camera angle, and exactly what the AI-assisted draft should look for before opening manual review or sending the uploaded video for AI Review.</p>
           <div className="space-y-4">
-            <ReviewSetupPanel
-              videoUploadId={videoUploadId}
-              value={reviewContext}
-              onChange={setReviewContext}
-              stroke={stroke}
-              cameraAngle={angle}
-            />
-            <AnalysisFocusChecklist
-              value={reviewContext.analysis_focus_areas}
-              onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
-            />
+            <SafeAnalyseSection name="Review setup">
+              <ReviewSetupPanel
+                videoUploadId={videoUploadId}
+                value={reviewContext}
+                onChange={setReviewContext}
+                stroke={stroke}
+                cameraAngle={angle}
+              />
+            </SafeAnalyseSection>
+            <SafeAnalyseSection name="Analysis focus checklist">
+              <AnalysisFocusChecklist
+                value={reviewContext.analysis_focus_areas}
+                onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
+              />
+            </SafeAnalyseSection>
             <div>
               <Label className="text-xs text-muted-foreground">Stroke</Label>
               <Select value={stroke} onValueChange={setStroke}>
@@ -1385,22 +1485,24 @@ export default function Analyse() {
                 </SelectContent>
               </Select>
             </div>
-            <AIReportOutputSelector
-              stroke={stroke}
-              cameraAngle={angle}
-              videoDurationSeconds={videoDurationSeconds}
-              selectedOutputIds={selectedReportOutputs}
-              onSelectedOutputIdsChange={setSelectedReportOutputs}
-              athleteProfile={athleteProfile}
-              onAthleteProfileChange={setAthleteProfile}
-              selectedPreset={selectedOutputPreset}
-              onSelectedPresetChange={setSelectedOutputPreset}
-              coachConfirmedDraftAI={coachConfirmedDraftAI}
-              onCoachConfirmedDraftAIChange={setCoachConfirmedDraftAI}
-              features={REPORT_OUTPUT_FEATURES}
-              onManualReview={() => createReview.mutate()}
-              manualReviewPending={createReview.isPending}
-            />
+            <SafeAnalyseSection name="AI report output selector">
+              <AIReportOutputSelector
+                stroke={stroke}
+                cameraAngle={angle}
+                videoDurationSeconds={videoDurationSeconds}
+                selectedOutputIds={selectedReportOutputs}
+                onSelectedOutputIdsChange={setSelectedReportOutputs}
+                athleteProfile={athleteProfile}
+                onAthleteProfileChange={setAthleteProfile}
+                selectedPreset={selectedOutputPreset}
+                onSelectedPresetChange={setSelectedOutputPreset}
+                coachConfirmedDraftAI={coachConfirmedDraftAI}
+                onCoachConfirmedDraftAIChange={setCoachConfirmedDraftAI}
+                features={REPORT_OUTPUT_FEATURES}
+                onManualReview={() => createReview.mutate()}
+                manualReviewPending={createReview.isPending}
+              />
+            </SafeAnalyseSection>
             <div>
               <Label className="text-xs text-muted-foreground">Session Title (optional)</Label>
               <Input value={reviewTitle} onChange={e => setReviewTitle(e.target.value)} placeholder="e.g. Adam — Breaststroke Kick — Jun 2026" className="bg-card border-border mt-1" />
@@ -1438,13 +1540,15 @@ export default function Analyse() {
                 {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport} {AI_CREDIT_COPY.pilotUnknown}
               </p>
             </div>
-            <AICreditIndicator
-              selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0}
-              selectedOutputCount={reportOutputPlan.selected.length}
-              estimatedCredits={reportOutputPlan.estimatedCredits}
-              mode="ai"
-            />
-            <AICreditIndicator selectedFocusCount={0} mode="manual" compact />
+            <SafeAnalyseSection name="AI credit indicator">
+              <AICreditIndicator
+                selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0}
+                selectedOutputCount={reportOutputPlan.selected.length}
+                estimatedCredits={reportOutputPlan.estimatedCredits}
+                mode="ai"
+              />
+              <AICreditIndicator selectedFocusCount={0} mode="manual" compact />
+            </SafeAnalyseSection>
             {!consentState.canStartAI && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
                 {consentState.message}
