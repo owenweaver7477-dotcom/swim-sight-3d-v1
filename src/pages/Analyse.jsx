@@ -4,27 +4,37 @@
  * Replaces the old Upload → Setup → Analysis 3-page chain.
  */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import entities from '@/lib/data/entities';
-import functions from '@/lib/data/functions';
-import { uploadPrivateVideo, fileSizeMb } from '@/lib/data/videoUploads';
-import { getReviewSession, setReviewSession, setCoachModeFinding,
-  SWIM_STROKES_FULL, CAMERA_ANGLES, SEVERITY_LEVELS, FAULT_SUGGESTIONS } from '@/lib/swimState';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import FindingCard from '@/components/analysis/FindingCard';
-import VideoLibrary from '@/components/analysis/VideoLibrary';
-import SessionModeSelector from '@/components/analysis/SessionModeSelector';
-import MultiAngleUploader from '@/components/analysis/MultiAngleUploader';
-import CameraGuidancePanel from '@/components/analysis/CameraGuidancePanel';
 import {
-  Play, Pause, SkipBack, SkipForward, Bookmark, FileText,
-  Upload, CheckCircle2, AlertCircle, Loader2, Film, X,
-  Plus, User, ChevronRight, ArrowLeft, Zap
+  useNavigate } from 'react-router-dom'; import entities from '@/lib/data/entities'; import functions from '@/lib/data/functions'; import { uploadPrivateVideo,
+  fileSizeMb } from '@/lib/data/videoUploads'; import { getReviewSession,
+  setReviewSession,
+  setCoachModeFinding,
+  SWIM_STROKES_FULL,
+  CAMERA_ANGLES,
+  SEVERITY_LEVELS,
+  FAULT_SUGGESTIONS } from '@/lib/swimState'; import { useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input'; import { Textarea } from '@/components/ui/textarea'; import { Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue } from '@/components/ui/select'; import { Label } from '@/components/ui/label'; import FindingCard from '@/components/analysis/FindingCard'; import VideoLibrary from '@/components/analysis/VideoLibrary'; import SessionModeSelector from '@/components/analysis/SessionModeSelector'; import MultiAngleUploader from '@/components/analysis/MultiAngleUploader'; import CameraGuidancePanel from '@/components/analysis/CameraGuidancePanel'; import {   Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Bookmark,
+  FileText,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Film,
+  X,
+  Plus,
+  User,
+  ChevronRight,
+  ArrowLeft,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
