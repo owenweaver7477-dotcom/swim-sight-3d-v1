@@ -55,6 +55,7 @@ import EliteLabRoadmap from './pages/EliteLabRoadmap';
 import FootageChecklist from './pages/FootageChecklist';
 import PilotLaunchPage from './pages/PilotLaunchPage';
 import { ADMIN_ACCESS_ROLES, COACH_ACCESS_ROLES } from '@/lib/permissions';
+import RouteErrorBoundary from '@/components/system/RouteErrorBoundary';
 
 const COACH_APP_ROLES = COACH_ACCESS_ROLES;
 const OWNER_ADMIN_ROLES = ADMIN_ACCESS_ROLES;
@@ -155,7 +156,7 @@ const AuthenticatedApp = () => {
           <Route element={<RoleProtectedRoute allowedRoles={COACH_APP_ROLES} />}>
           {/* Primary coach routes */}
           <Route path="/dashboard" element={<TeamDashboard />} />
-          <Route path="/analyse" element={<Analyse />} />
+          <Route path="/analyse" element={<RouteErrorBoundary routeName="Analyse"><Analyse /></RouteErrorBoundary>} />
           <Route path="/ai-reviews" element={<AIReportsListPage />} />
           <Route path="/ai-review" element={<AIReportPage />} />
           <Route path="/swimmers" element={<Swimmers />} />
