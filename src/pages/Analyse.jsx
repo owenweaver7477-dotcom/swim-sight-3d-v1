@@ -34,7 +34,7 @@ import {
   User,
   ChevronRight,
   ArrowLeft,
-  Zap,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
@@ -57,7 +57,7 @@ const STROKE_PHASES = {
   Start: ['Set Position', 'Reaction', 'Block Push', 'Flight', 'Entry', 'Streamline', 'Breakout'],
   Turn: ['Approach', 'Rotation', 'Wall Contact', 'Push-Off', 'Streamline', 'Underwater', 'Breakout'],
   Underwater: ['Launch', 'Streamline Hold', 'Dolphin Kick', 'Breakout'],
-  Breakout: ['Last Underwater Kick', 'Surface', 'First Stroke', 'Rhythm'],
+  Breakout: ['Last Underwater Kick', 'Surface', 'First Stroke', 'Rhythm']
 };
 
 const FAULT_TAGS = {
@@ -66,7 +66,7 @@ const FAULT_TAGS = {
   Backstroke: ['Head Moving', 'Poor Rotation', 'Dropped Hips', 'Wide Entry', 'Weak Catch', 'Crossover Entry', 'Inconsistent Kick'],
   Butterfly: ['Late Second Kick', 'Arms Too Low', 'Chest Not Pressing', 'Breath Too High', 'Poor Rhythm', 'Hips Dropping Fly', 'Weak Catch'],
   Start: ['Slow Reaction', 'Poor Streamline', 'Deep Entry', 'Weak Push-Off', 'Early Breakout', 'Poor Wall Contact', 'Slow Rotation'],
-  Turn: ['Wide Turn', 'Slow Rotation', 'Weak Push-Off', 'Early Breakout', 'Poor Streamline'],
+  Turn: ['Wide Turn', 'Slow Rotation', 'Weak Push-Off', 'Early Breakout', 'Poor Streamline']
 };
 const getFaultTags = (stroke) => FAULT_TAGS[stroke] || FAULT_TAGS['Freestyle'];
 const getPhases = (stroke) => STROKE_PHASES[stroke] || STROKE_PHASES['Freestyle'];
@@ -90,7 +90,7 @@ const REPORT_OUTPUT_FEATURES = Object.freeze({
   distance_metrics_enabled: import.meta.env.VITE_ENABLE_DISTANCE_METRICS === 'true',
   advanced_metrics_enabled: import.meta.env.VITE_ENABLE_ADVANCED_AI_METRICS === 'true',
   estimated_drag_enabled: import.meta.env.VITE_ENABLE_ESTIMATED_DRAG === 'true',
-  skills_analysis_enabled: import.meta.env.VITE_ENABLE_SKILLS_AI_ANALYSIS === 'true',
+  skills_analysis_enabled: import.meta.env.VITE_ENABLE_SKILLS_AI_ANALYSIS === 'true'
 });
 const EMPTY_ATHLETE_PROFILE = Object.freeze({
   body_mass_kg: '',
@@ -100,7 +100,7 @@ const EMPTY_ATHLETE_PROFILE = Object.freeze({
   calibration_available: false,
   wingspan_cm: '',
   skill_level: '',
-  race_context: '',
+  race_context: ''
 });
 function formatBytes(b) { return b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`; }
 function getFileSizeWarning(f) {
