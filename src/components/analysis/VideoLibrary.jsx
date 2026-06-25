@@ -354,9 +354,16 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
     if (status === 'completed') {
       return (
-        <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
-          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Preparing Report...
-        </Button>
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[10px] leading-relaxed text-amber-800">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+            <span>AI processing finished but no coach report is linked yet. Open Analysis Setup or Coach Studio to recover the review.</span>
+          </div>
+          <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
+            onClick={() => onStartReview(upload)}>
+            <ArrowRight className="w-3 h-3 mr-1.5" /> Open Analysis Setup
+          </Button>
+        </div>
       );
     }
 

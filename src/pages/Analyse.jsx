@@ -979,7 +979,7 @@ export default function Analyse() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="max-w-4xl mx-auto px-4 py-10">
       <PilotReadinessWarning className="mb-4" />
       <StepBar current={step} />
 
@@ -991,6 +991,31 @@ export default function Analyse() {
           <div><span className="font-semibold text-foreground">3. Coach approves</span><br />AI output is draft evidence; weak pose becomes manual review.</div>
         </div>
       </div>
+
+      {step !== 2 && (
+        <div className="mb-6">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-primary">AI setup preview</div>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                This is the list of what the AI-assisted review can be asked to look for before you submit a clip.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={() => videoLibraryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >
+              Use existing video
+            </Button>
+          </div>
+          <AnalysisFocusChecklist
+            value={reviewContext.analysis_focus_areas}
+            onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
+          />
+        </div>
+      )}
 
       {/* STEP 0 — Select swimmer */}
       {step === 0 && (
@@ -1217,16 +1242,16 @@ export default function Analyse() {
                   <div className="text-sm font-semibold text-foreground">Video uploaded — ready for review</div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Preview the clip below, then continue to configure the review. You can send it for AI Review or open Coach Studio for manual review. The Python server only receives a short-lived signed video URL when AI Review is started.
+                  Open Analysis Setup next to choose exactly what the AI-assisted draft should attempt to pick up. You can also open Coach Studio for manual review. The Python server only receives a short-lived signed video URL when AI Review is started.
                 </p>
                 <Button
                   size="sm"
                   className="bg-primary text-primary-foreground text-xs w-full"
                   onClick={() => {
-                    videoLibraryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setStep(2);
                   }}
                 >
-                  <Film className="w-3.5 h-3.5 mr-1.5" /> View Uploaded Video
+                  <Activity className="w-3.5 h-3.5 mr-1.5" /> Open Analysis Setup
                 </Button>
               </div>
             </div>
@@ -1296,7 +1321,7 @@ export default function Analyse() {
             <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
           <h2 className="text-lg font-bold text-foreground mb-1">Configure Review</h2>
-          <p className="text-xs text-muted-foreground mb-5">Confirm the stroke, camera angle, and review type before opening manual review or sending the uploaded video for AI Review.</p>
+          <p className="text-xs text-muted-foreground mb-5">Confirm the stroke, camera angle, and exactly what the AI-assisted draft should look for before opening manual review or sending the uploaded video for AI Review.</p>
           <div className="space-y-4">
             <ReviewSetupPanel
               videoUploadId={videoUploadId}
