@@ -24,7 +24,7 @@ import CameraGuidancePanel from '@/components/analysis/CameraGuidancePanel';
 import {
   Play, Pause, SkipBack, SkipForward, Bookmark, FileText,
   Upload, CheckCircle2, AlertCircle, Loader2, Film, X,
-  Plus, User, ChevronRight, ArrowLeft, Zap, Activity
+  Plus, User, ChevronRight, ArrowLeft, Zap
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
@@ -1251,7 +1251,7 @@ export default function Analyse() {
                     setStep(2);
                   }}
                 >
-                  <Activity className="w-3.5 h-3.5 mr-1.5" /> Open Analysis Setup
+                  <Zap className="w-3.5 h-3.5 mr-1.5" /> Open Analysis Setup
                 </Button>
               </div>
             </div>
@@ -1407,7 +1407,7 @@ export default function Analyse() {
                     <FileText className="w-3 h-3 mr-1" /> Open AI Reviews
                   </Button>
                   <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate('/ai-jobs')}>
-                    <Activity className="w-3 h-3 mr-1" /> AI Jobs
+                    <Zap className="w-3 h-3 mr-1" /> AI Jobs
                   </Button>
                 </div>
               </div>
