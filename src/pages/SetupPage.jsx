@@ -50,7 +50,7 @@ export default function SetupPage() {
     onSuccess: (review) => {
       const updated = { ...session, review_id: review.id, environment, stroke_or_movement: stroke, camera_angle: angle, review_type: reviewType };
       setReviewSession(updated);
-      navigate('/analysis');
+      navigate('/analyse');
     },
   });
 
