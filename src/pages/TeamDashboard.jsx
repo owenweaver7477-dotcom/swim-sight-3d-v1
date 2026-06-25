@@ -5,7 +5,6 @@ import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
-import PremiumSwimSightMockup from '@/components/showcase/PremiumSwimSightMockup';
 import {
   Users, Waves, Video, Plus, ChevronRight,
   AlertCircle, Loader2, Brain, Upload, CheckCircle2,
@@ -15,16 +14,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { subDays } from 'date-fns';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
-
-// ── Small stat chip ────────────────────────────────────────────────────────────
-function Stat({ label, value, highlight }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <div className={`text-2xl font-bold ${highlight ? 'text-primary' : 'text-slate-900'}`}>{value}</div>
-      <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
-    </div>
-  );
-}
 
 // ── Priority item row ──────────────────────────────────────────────────────────
 function PriorityRow({ icon: Icon, iconColor, label, meta, cta, onClick, urgent }) {
@@ -159,6 +148,8 @@ export default function TeamDashboard() {
       cameraAngle: r.camera_angle || r.review_context?.camera_angle || 'Coach review',
       status: finalStatuses.includes(r.status) ? 'Coach-approved' : 'Draft review',
       score: Math.round(r.overall_score ?? r.score ?? 86),
+      cta: 'View Report',
+      route: `/ai-review?report_id=${r.id}`,
     })),
     ...videos.slice(0, 5).map(v => ({
       name: swimmers.find(s => s.id === v.swimmer_id)?.name || 'Swimmer',
@@ -166,9 +157,32 @@ export default function TeamDashboard() {
       cameraAngle: v.camera_angle || v.review_context?.camera_angle || 'Camera angle',
       status: v.processing_status === 'uploaded' ? 'Ready for review' : v.processing_status || 'Uploaded',
       score: v.score ? Math.round(v.score) : 82,
+      cta: v.processing_status === 'uploaded' ? 'Review Video' : 'Open Analyse',
+      route: '/analyse',
     })),
   ].filter(row => row.name && row.name !== 'Unknown').slice(0, 3);
-  const primaryRow = workspaceRows[0] || {};
+  const dashboardStats = [
+    {
+      label: 'Total Athletes',
+      value: swimmers.length ? swimmers.length : 'No athletes yet',
+      note: swimmers.length ? 'Workspace athletes' : 'Add your first swimmer',
+    },
+    {
+      label: 'Analyses This Month',
+      value: analysesThisMonth || 'None yet',
+      note: analysesThisMonth ? 'Across this workspace' : 'Upload a video to begin',
+    },
+    {
+      label: 'Avg. Improvement',
+      value: publishedReports.length ? averageImprovement : 'Collecting',
+      note: publishedReports.length ? 'Based on finalised reports' : 'Complete reports to unlock',
+    },
+    {
+      label: 'AI Credits',
+      value: Number.isFinite(Number(aiCreditBalance)) ? Number(aiCreditBalance).toLocaleString() : 'Preparing',
+      note: 'Estimate-only display',
+    },
+  ];
 
   const priorityItems = [
     awaitingReview.length > 0 && {
@@ -212,50 +226,40 @@ export default function TeamDashboard() {
   const allClear = priorityItems.length === 0;
 
   return (
-    <div className="bg-[#020817] px-3 py-5 pb-20 text-white lg:px-5">
-      <div className="mx-auto max-w-[96rem]">
-        <PremiumSwimSightMockup
-          accountName={accountName}
-          accountFirstName={accountFirstName}
-          roleLabel={roleLabel}
-          planLabel={planLabel}
-          clubName={club.name}
-          athleteCount={swimmers.length}
-          analysesThisMonth={analysesThisMonth}
-          averageImprovement={averageImprovement}
-          aiCredits={aiCreditBalance}
-          selectedSwimmer={primaryRow.name || undefined}
-          stroke={primaryRow.stroke || undefined}
-          cameraAngle={primaryRow.cameraAngle || undefined}
-          dateLabel="Workspace latest"
-          analyses={workspaceRows}
-          onNewAnalysis={() => { setReviewSession(null); navigate('/analyse'); }}
-          onViewReports={() => navigate('/ai-reviews')}
-        />
-      </div>
+    <div className="min-h-screen bg-[#020817] px-3 py-5 pb-20 text-white lg:px-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-900/70 p-5 shadow-2xl shadow-sky-950/25 backdrop-blur-xl md:p-7">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_12%,rgba(14,165,233,0.22),transparent_26%),radial-gradient(circle_at_86%_8%,rgba(34,211,238,0.12),transparent_30%)]" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">Account · {accountName}</span>
+                <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">{roleLabel}</span>
+                <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-sky-100">{planLabel}</span>
+              </div>
+              <h1 className="mt-5 text-3xl font-bold tracking-tight text-white md:text-4xl">Welcome back, {accountFirstName} 👋</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">Here&apos;s what&apos;s happening across {club.name}. Review videos, approve draft AI findings, assign drills, and share coach-approved reports.</p>
+            </div>
+            <Button
+              size="sm"
+              className="h-10 w-full bg-sky-500 text-xs font-bold text-white shadow-lg shadow-sky-950/30 hover:bg-sky-400 sm:w-auto"
+              onClick={() => { setReviewSession(null); navigate('/analyse'); }}
+            >
+              <Upload className="w-3.5 h-3.5 mr-1.5" /> New Analysis
+            </Button>
+          </div>
+          <div className="relative mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {dashboardStats.map((stat) => (
+              <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{stat.label}</div>
+                <div className="mt-2 text-2xl font-bold text-white">{stat.value}</div>
+                <div className="mt-1 text-[11px] text-cyan-100/70">{stat.note}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      <div className="mx-auto mt-8 max-w-5xl rounded-[1.5rem] border border-white/10 bg-white/[0.96] px-4 py-8 text-slate-950 shadow-2xl shadow-black/30 backdrop-blur">
-
-      <PageHeader
-        eyebrow={club.name}
-        title="Coach Control Centre"
-        subtitle="What needs your attention today: videos to review, Coach Studio decisions, reports to finalise, and swimmer follow-up."
-        action={
-          <Button size="sm" className="bg-primary text-white text-xs h-8" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
-            <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Video
-          </Button>
-        }
-      />
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        <Stat label="Swimmers" value={swimmers.length} />
-        <Stat label="Private Videos" value={videos.length} />
-        <Stat label="Need Review" value={awaitingReview.length} highlight={awaitingReview.length > 0} />
-        <Stat label="Finalised Reports" value={publishedReports.length} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Left — priorities + quick actions */}
         <div className="lg:col-span-2 space-y-6">
@@ -300,30 +304,48 @@ export default function TeamDashboard() {
             </div>
           </div>
 
-          {/* Recent reports */}
-          {recentReports.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Recent Finalised Reports</div>
-                <Link to="/ai-reviews" className="text-[10px] text-primary font-semibold flex items-center gap-0.5 hover:underline">
-                  View all <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-                {recentReports.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-slate-800 truncate">{r.swimmerName}</div>
-                      <div className="text-[10px] text-slate-500 truncate">{r.title || 'AI Report'}</div>
-                    </div>
-                    <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="text-[10px] text-primary font-semibold hover:underline flex-shrink-0">
-                      Open →
-                    </button>
-                  </div>
-                ))}
-              </div>
+          {/* Recent analyses */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Recent Analyses</div>
+              <Link to="/ai-reviews" className="text-[10px] text-cyan-300 font-semibold flex items-center gap-0.5 hover:underline">
+                View all <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-          )}
+            <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+              {workspaceRows.length > 0 ? workspaceRows.map(row => (
+                <div key={`${row.name}-${row.stroke}-${row.status}`} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-slate-800 truncate">{row.name}</div>
+                    <div className="text-[10px] text-slate-500 truncate">{row.stroke} • {row.cameraAngle}</div>
+                    <div className="mt-0.5 text-[10px] font-medium text-sky-700">{row.status}</div>
+                  </div>
+                  <div className="hidden h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 sm:flex">
+                    {row.score || '—'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(row.route)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-primary hover:bg-primary/5"
+                  >
+                    {row.cta}
+                  </button>
+                </div>
+              )) : (
+                <div className="px-4 py-5">
+                  <div className="text-xs font-semibold text-slate-800">No recent analyses yet</div>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">Upload a video or finalise a coach-approved report to populate this workspace history.</p>
+                  <button
+                    type="button"
+                    onClick={() => { setReviewSession(null); navigate('/analyse'); }}
+                    className="mt-3 rounded-lg bg-primary px-3 py-2 text-[10px] font-bold text-white"
+                  >
+                    Start New Analysis
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right — club focus */}
@@ -375,24 +397,68 @@ export default function TeamDashboard() {
             </div>
           )}
 
-          {/* Technical focus */}
-          {topFaults.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Club Technical Focus</div>
-                <Link to="/drill-library" className="text-[10px] text-primary font-semibold hover:underline">Drills</Link>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-                {topFaults.map(([name, count], i) => (
-                  <div key={name} className="flex items-center gap-3 px-4 py-3">
-                    <div className="text-[10px] font-bold text-slate-300 w-4 flex-shrink-0">{i + 1}</div>
-                    <div className="text-xs text-slate-700 flex-1 truncate">{name}</div>
-                    <span className="text-[10px] font-semibold text-primary flex-shrink-0">{count}×</span>
-                  </div>
-                ))}
-              </div>
+          {/* Technique overview */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Technique Overview</div>
+              <Link to="/drill-library" className="text-[10px] text-cyan-300 font-semibold hover:underline">Drills</Link>
             </div>
-          )}
+            <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+              {topFaults.length > 0 ? topFaults.map(([name, count], i) => (
+                <div key={name} className="flex items-center gap-3 px-4 py-3">
+                  <div className="text-[10px] font-bold text-slate-300 w-4 flex-shrink-0">{i + 1}</div>
+                  <div className="text-xs text-slate-700 flex-1 truncate">{name}</div>
+                  <span className="text-[10px] font-semibold text-primary flex-shrink-0">{count}×</span>
+                </div>
+              )) : (
+                <div className="px-4 py-5">
+                  <div className="text-xs font-semibold text-slate-800">Trend charts are waiting for data</div>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">Complete coach-reviewed reports to unlock team technical patterns.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Latest report */}
+          <div className="p-4 rounded-xl bg-white border border-slate-200">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Latest Report</div>
+            {recentReports[0] ? (
+              <div>
+                <div className="text-xs font-semibold text-slate-800 truncate">{recentReports[0].swimmerName}</div>
+                <div className="mt-1 text-[11px] text-slate-500 truncate">{recentReports[0].title || 'Coach-approved report'}</div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/ai-review?report_id=${recentReports[0].id}`)}
+                  className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-[10px] font-bold text-white"
+                >
+                  View Report
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="text-xs font-semibold text-slate-800">No final report yet</div>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">Start with a video review, approve findings, and finalise the report when ready.</p>
+                <button
+                  type="button"
+                  onClick={() => { setReviewSession(null); navigate('/analyse'); }}
+                  className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-primary hover:bg-primary/5"
+                >
+                  Start New Analysis
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* AI output setup */}
+          <button
+            type="button"
+            onClick={() => { setReviewSession(null); navigate('/analyse'); }}
+            className="w-full rounded-xl border border-cyan-200/30 bg-cyan-50 px-4 py-4 text-left hover:bg-cyan-100 transition-colors"
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-cyan-700">Choose AI Report Outputs</div>
+            <div className="mt-2 text-xs font-semibold text-slate-900">Select technique, timing, rhythm, and estimate-only metrics before processing.</div>
+            <div className="mt-2 text-[10px] leading-5 text-slate-600">Advanced outputs stay locked until profile, camera angle, and calibration requirements are met.</div>
+          </button>
 
           {/* Drill Library CTA */}
           <button onClick={() => navigate('/drill-library')}

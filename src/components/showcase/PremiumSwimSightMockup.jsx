@@ -189,6 +189,7 @@ export default function PremiumSwimSightMockup({
   cameraAngle = 'Side View',
   dateLabel = '24 Jun 2026',
   analyses = [],
+  interactive = false,
   onNewAnalysis,
   onViewReports,
   className = '',
@@ -205,16 +206,24 @@ export default function PremiumSwimSightMockup({
   const displayStroke = stroke || selectedRow.stroke || 'Stroke Review';
   const displayCameraAngle = cameraAngle || selectedRow.cameraAngle || 'Camera Angle';
   const aiCreditLabel = Number.isFinite(Number(aiCredits)) ? Number(aiCredits).toLocaleString() : 'Preparing';
+  const canStartAnalysis = interactive && typeof onNewAnalysis === 'function';
+  const canViewReports = interactive && typeof onViewReports === 'function';
+  const inertControlClass = interactive ? '' : 'pointer-events-none cursor-default';
   const previewButtonProps = {
     type: 'button',
-    tabIndex: -1,
-    'aria-hidden': true,
+    tabIndex: interactive ? 0 : -1,
+    'aria-hidden': interactive ? undefined : true,
   };
 
   return (
     <div className={`relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#020817] p-3 text-white shadow-2xl shadow-sky-950/30 ${className}`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.23),transparent_24%),radial-gradient(circle_at_85%_18%,rgba(6,182,212,0.15),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0),rgba(2,6,23,0.96))]" />
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'linear-gradient(90deg,#fff 1px,transparent 1px),linear-gradient(#fff 1px,transparent 1px)', backgroundSize: '44px 44px' }} />
+      {!interactive && (
+        <div className="pointer-events-none absolute right-5 top-5 z-10 rounded-full border border-cyan-200/25 bg-cyan-200/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100">
+          Product preview
+        </div>
+      )}
 
       <div className="relative grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
         <Panel className="min-h-[26rem]">
@@ -246,10 +255,10 @@ export default function PremiumSwimSightMockup({
                 </div>
                 <button
                   type="button"
-                  onClick={onNewAnalysis}
-                  tabIndex={onNewAnalysis ? 0 : -1}
-                  aria-hidden={onNewAnalysis ? undefined : true}
-                  className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-sky-950/30"
+                  onClick={canStartAnalysis ? onNewAnalysis : undefined}
+                  tabIndex={canStartAnalysis ? 0 : -1}
+                  aria-hidden={canStartAnalysis ? undefined : true}
+                  className={`inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-sky-950/30 ${inertControlClass}`}
                 >
                   <Plus className="h-3.5 w-3.5" /> New Analysis
                 </button>
@@ -288,10 +297,10 @@ export default function PremiumSwimSightMockup({
                         <div className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400/40 text-xs font-bold text-emerald-300">{score}</div>
                         <button
                           type="button"
-                          onClick={onViewReports}
-                          tabIndex={onViewReports ? 0 : -1}
-                          aria-hidden={onViewReports ? undefined : true}
-                          className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-slate-200"
+                          onClick={canViewReports ? onViewReports : undefined}
+                          tabIndex={canViewReports ? 0 : -1}
+                          aria-hidden={canViewReports ? undefined : true}
+                          className={`rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-slate-200 ${inertControlClass}`}
                         >
                           View Report
                         </button>
@@ -361,10 +370,10 @@ export default function PremiumSwimSightMockup({
               </div>
               <button
                 type="button"
-                onClick={onViewReports}
-                tabIndex={onViewReports ? 0 : -1}
-                aria-hidden={onViewReports ? undefined : true}
-                className="mt-4 w-full rounded-xl bg-sky-500 px-4 py-3 text-xs font-bold text-white"
+                onClick={canViewReports ? onViewReports : undefined}
+                tabIndex={canViewReports ? 0 : -1}
+                aria-hidden={canViewReports ? undefined : true}
+                className={`mt-4 w-full rounded-xl bg-sky-500 px-4 py-3 text-xs font-bold text-white ${inertControlClass}`}
               >
                 View Full Report
               </button>
@@ -382,7 +391,7 @@ export default function PremiumSwimSightMockup({
                 {['Camera Roll', 'Record Video', 'Upload File', 'Choose AI Outputs'].map((item) => (
                   <div key={item} className="mb-2 rounded-lg bg-white/[0.06] px-2 py-2">{item}</div>
                 ))}
-                <button {...previewButtonProps} className="mt-3 w-full rounded-lg bg-sky-500 py-2 font-bold">Start Analysis</button>
+                <button {...previewButtonProps} className={`mt-3 w-full rounded-lg bg-sky-500 py-2 font-bold ${inertControlClass}`}>Start Analysis</button>
               </div>
             </PhoneFrame>
             <PhoneFrame>
@@ -446,8 +455,8 @@ export default function PremiumSwimSightMockup({
                 </div>
               </div>
               <div className="flex gap-2">
-                <button {...previewButtonProps} className="flex-1 rounded-lg bg-sky-500 py-2 text-xs font-bold">Share Report</button>
-                <button {...previewButtonProps} className="flex-1 rounded-lg border border-white/10 py-2 text-xs font-bold"><Download className="mr-1 inline h-3 w-3" /> PDF</button>
+                <button {...previewButtonProps} className={`flex-1 rounded-lg bg-sky-500 py-2 text-xs font-bold ${inertControlClass}`}>Share Report</button>
+                <button {...previewButtonProps} className={`flex-1 rounded-lg border border-white/10 py-2 text-xs font-bold ${inertControlClass}`}><Download className="mr-1 inline h-3 w-3" /> PDF</button>
               </div>
             </div>
           </div>

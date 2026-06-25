@@ -95,13 +95,13 @@ export default function HomePage() {
               AI suggests. Coaches decide.
             </div>
             <h1 className="reveal mt-6 max-w-4xl text-4xl font-bold tracking-tight text-white md:text-6xl">
-              Swim Sight 3D turns swim video into coach-approved performance reports.
+              AI-assisted swim video analysis for serious coaches.
             </h1>
             <p className="reveal mt-6 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-              Upload a clip, choose the report outputs, review draft AI evidence, approve the findings, and share a clear swimmer improvement plan.
+              Draft findings. Coach-approved reports. Private team workspaces.
             </p>
             <p className="reveal mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-              It supports the coach — it does not replace the coach.
+              Choose AI report outputs before processing: technique, timing, rhythm, and estimate-only advanced metrics. It supports the coach — it does not replace the coach.
             </p>
             <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition-colors hover:bg-cyan-100">
@@ -119,7 +119,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="reveal mt-10">
-            <PremiumSwimSightMockup className="mx-auto" />
+            <PremiumSwimSightMockup className="mx-auto" interactive={false} />
           </div>
         </div>
       </section>
