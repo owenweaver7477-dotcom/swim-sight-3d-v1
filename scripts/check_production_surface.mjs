@@ -75,9 +75,8 @@ assert.match(diagnosticsGateSource, /import\.meta\.env\.DEV === true/);
 assert.match(diagnosticsGateSource, /DIAGNOSTIC_ROLES\.has\(memberRole\)/);
 assert.match(diagnosticsGateSource, /appRole === 'admin'/);
 
-assert.match(homepageSource, /AI-assisted swim video analysis for serious coaches\./);
-assert.match(homepageSource, /Draft findings\. Coach-approved reports\. Private team workspaces\./);
-assert.match(homepageSource, /Choose AI report outputs before processing: technique, timing, rhythm, and estimate-only advanced metrics\./);
+assert.match(homepageSource, /AI-assisted swim video review for coaches\./);
+assert.match(homepageSource, /Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers\./);
 assert.match(homepageSource, /does not replace the coach/i);
 
 const publicChrome = `${publicNavSource}\n${publicFooterSource}`;
