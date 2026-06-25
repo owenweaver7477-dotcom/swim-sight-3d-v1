@@ -7,10 +7,11 @@ import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
-  Map, LogOut, Plus, Menu, X, Waves, ChevronsUpDown, Check, Brain,
+  Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Brain,
   ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3, Cpu, ClipboardCheck, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SwimSightLogo from '@/components/brand/SwimSightLogo';
 
 // ── Grouped navigation structure ──────────────────────────────────────────────
 const NAV_MAIN = [
@@ -174,15 +175,7 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-[#1E4A6A]">
-        <Link to="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#0077B6] flex items-center justify-center">
-            <Waves className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <div className="text-sm font-bold text-white leading-tight">Swim Sight 3D</div>
-            <div className="text-[10px] text-[#8BA5B8]">Analysis Platform</div>
-          </div>
-        </Link>
+        <SwimSightLogo to="/dashboard" tone="light" size="sm" />
       </div>
 
       {/* Club workspace switcher */}
@@ -278,12 +271,7 @@ export default function Sidebar() {
     <>
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#0B1F33] border-b border-[#1E4A6A] flex items-center px-4 justify-between">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#0077B6] flex items-center justify-center">
-            <Waves className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="font-bold text-sm text-white">Swim Sight 3D</span>
-        </Link>
+        <SwimSightLogo to="/dashboard" tone="light" size="sm" compact />
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="p-2 text-[#8BA5B8]"

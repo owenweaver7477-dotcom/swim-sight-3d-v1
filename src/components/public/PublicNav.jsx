@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ArrowRight, Menu, Waves, X } from 'lucide-react';
+import { ArrowRight, Menu, X } from 'lucide-react';
+import SwimSightLogo from '@/components/brand/SwimSightLogo';
 
 const navItems = [
   { to: '/features', label: 'Features' },
@@ -26,15 +27,7 @@ export default function PublicNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-cyan-200">
-            <Waves className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block text-sm font-bold leading-tight text-slate-950">Swim Sight 3D</span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Coach-approved analysis</span>
-          </span>
-        </Link>
+        <SwimSightLogo to="/" tone="dark" size="sm" />
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Public navigation">
           {navItems.map((item) => (
