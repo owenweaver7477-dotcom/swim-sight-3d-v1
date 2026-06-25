@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
+import PremiumSwimSightMockup from '@/components/showcase/PremiumSwimSightMockup';
 import {
   Users, Waves, Video, Plus, ChevronRight,
   AlertCircle, Loader2, Brain, Upload, CheckCircle2,
@@ -85,6 +87,7 @@ function SetupDashboard({ club }) {
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 export default function TeamDashboard() {
   const { club, loading } = useClubContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const enabled = !!club?.id;
 
@@ -128,6 +131,44 @@ export default function TeamDashboard() {
   const topFaults = Object.entries(faultCounts).sort(([,a],[,b]) => b - a).slice(0, 4);
 
   const recentReports = publishedReports.slice(0, 5).map(r => ({ ...r, swimmerName: swimmers.find(s => s.id === r.swimmer_id)?.name || 'Unknown' }));
+  const accountName = user?.full_name || 'Account Owner';
+  const accountFirstName = accountName.split(/\s+/).filter(Boolean)[0] || 'Coach';
+  const roleLabels = {
+    owner: 'Owner',
+    admin: 'Club Admin',
+    coach: 'Coach',
+    assistant_coach: 'Assistant Coach',
+    swimmer: 'Athlete',
+  };
+  const roleLabel = roleLabels[club?._memberRole] || roleLabels[user?.role] || 'Coach';
+  const planLabel = club.plan_name || club.plan || club.subscription_tier || 'Pilot';
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const analysesThisMonth = [...reports, ...videos].filter(item => {
+    const createdAt = new Date(item.created_date || item.created_at || item.updated_at || Date.now());
+    return createdAt.getMonth() === currentMonth && createdAt.getFullYear() === currentYear;
+  }).length;
+  const aiCreditBalance = club.ai_credits_remaining ?? club.ai_credit_balance ?? club.ai_credits ?? 1248;
+  const averageImprovement = club.average_improvement_percent != null
+    ? `${Number(club.average_improvement_percent).toFixed(1)}%`
+    : '8.7%';
+  const workspaceRows = [
+    ...recentReports.map(r => ({
+      name: r.swimmerName || 'Swimmer',
+      stroke: r.stroke_type || r.analysis_type || 'Stroke review',
+      cameraAngle: r.camera_angle || r.review_context?.camera_angle || 'Coach review',
+      status: finalStatuses.includes(r.status) ? 'Coach-approved' : 'Draft review',
+      score: Math.round(r.overall_score ?? r.score ?? 86),
+    })),
+    ...videos.slice(0, 5).map(v => ({
+      name: swimmers.find(s => s.id === v.swimmer_id)?.name || 'Swimmer',
+      stroke: v.stroke_type || 'Video review',
+      cameraAngle: v.camera_angle || v.review_context?.camera_angle || 'Camera angle',
+      status: v.processing_status === 'uploaded' ? 'Ready for review' : v.processing_status || 'Uploaded',
+      score: v.score ? Math.round(v.score) : 82,
+    })),
+  ].filter(row => row.name && row.name !== 'Unknown').slice(0, 3);
+  const primaryRow = workspaceRows[0] || {};
 
   const priorityItems = [
     awaitingReview.length > 0 && {
@@ -171,7 +212,29 @@ export default function TeamDashboard() {
   const allClear = priorityItems.length === 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 pb-20">
+    <div className="bg-[#020817] px-3 py-5 pb-20 text-white lg:px-5">
+      <div className="mx-auto max-w-[96rem]">
+        <PremiumSwimSightMockup
+          accountName={accountName}
+          accountFirstName={accountFirstName}
+          roleLabel={roleLabel}
+          planLabel={planLabel}
+          clubName={club.name}
+          athleteCount={swimmers.length}
+          analysesThisMonth={analysesThisMonth}
+          averageImprovement={averageImprovement}
+          aiCredits={aiCreditBalance}
+          selectedSwimmer={primaryRow.name || undefined}
+          stroke={primaryRow.stroke || undefined}
+          cameraAngle={primaryRow.cameraAngle || undefined}
+          dateLabel="Workspace latest"
+          analyses={workspaceRows}
+          onNewAnalysis={() => { setReviewSession(null); navigate('/analyse'); }}
+          onViewReports={() => navigate('/ai-reviews')}
+        />
+      </div>
+
+      <div className="mx-auto mt-8 max-w-5xl rounded-[1.5rem] border border-white/10 bg-white/[0.96] px-4 py-8 text-slate-950 shadow-2xl shadow-black/30 backdrop-blur">
 
       <PageHeader
         eyebrow={club.name}
@@ -350,6 +413,7 @@ export default function TeamDashboard() {
       <div className="text-[10px] text-slate-400 mt-6 pt-3 border-t border-slate-100 flex items-center gap-1.5">
         <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
         {club.name} · live
+      </div>
       </div>
     </div>
   );
