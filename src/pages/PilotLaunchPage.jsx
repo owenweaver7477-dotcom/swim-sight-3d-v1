@@ -24,8 +24,9 @@ import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import FeatureReadinessPanel from '@/components/status/FeatureReadinessPanel';
 import { getFeatureReadiness } from '@/lib/featureReadiness';
 import PilotReadinessGate from '@/components/pilot/PilotReadinessGate';
+import { isPilotRole } from '@/lib/permissions';
 
-const PILOT_ROLES = ['owner', 'admin', 'coach'];
+// PILOT_ROLES: ['owner', 'admin', 'coach']; aliases are normalised by isPilotRole.
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 const READY_VIDEO_STATUSES = ['uploaded', 'pending_ai', 'processing', 'manual_review', 'completed', 'error'];
 const STATUS_STYLES = {
@@ -68,7 +69,7 @@ export default function PilotLaunchPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedReportId = searchParams.get('report_id');
-  const canView = PILOT_ROLES.includes(memberRole || club?._memberRole) || user?.role === 'admin';
+  const canView = isPilotRole(memberRole || club?._memberRole) || user?.role === 'admin';
 
   const queryEnabled = Boolean(club?.id && canView);
   const swimmersQuery = useQuery({

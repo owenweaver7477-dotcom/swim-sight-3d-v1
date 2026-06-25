@@ -37,6 +37,7 @@ import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import RecoveryActionCard from '@/components/status/RecoveryActionCard';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
 import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
+import { isCoachAppRole, isPilotRole } from '@/lib/permissions';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -70,8 +71,6 @@ const REVIEW_STATUS_CONFIG = {
   coach_approved:  { label: 'Coach Approved',    color: 'text-green-400 bg-green-900/20 border-green-700/30', icon: CheckCircle2 },
 };
 
-const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
-const PILOT_ROLES = ['owner', 'admin', 'coach'];
 const FINAL_REPORT_STATUSES = ['coach_approved', 'finalised', 'published', 'shared'];
 const COACH_STUDIO_PHASES = {
   breaststroke: ['streamline', 'pull', 'breath', 'recovery', 'kick_setup', 'kick_drive', 'line_reset'],
@@ -368,7 +367,7 @@ export default function AIReportPage() {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Determine coach role
-  const canEdit = COACH_ROLES.includes(memberRole) || user?.role === 'admin';
+  const canEdit = isCoachAppRole(memberRole) || user?.role === 'admin';
 
   const { data: reportArr = [], isLoading: loadingReport } = useQuery({
     queryKey: ['ai-report', reportId],
@@ -1001,7 +1000,7 @@ export default function AIReportPage() {
             isReportFinalised={isReportFinalised}
           />
 
-          {(PILOT_ROLES.includes(club?._memberRole) || user?.role === 'admin') && (
+          {(isPilotRole(club?._memberRole) || user?.role === 'admin') && (
             <details className="rounded-xl border border-cyan-200 bg-cyan-50/60">
               <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-cyan-900">
                 <ClipboardCheck className="h-4 w-4" />

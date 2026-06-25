@@ -54,9 +54,10 @@ import AIInfrastructureStatus from './pages/AIInfrastructureStatus';
 import EliteLabRoadmap from './pages/EliteLabRoadmap';
 import FootageChecklist from './pages/FootageChecklist';
 import PilotLaunchPage from './pages/PilotLaunchPage';
+import { ADMIN_ACCESS_ROLES, COACH_ACCESS_ROLES } from '@/lib/permissions';
 
-const COACH_APP_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
-const OWNER_ADMIN_ROLES = ['owner', 'admin'];
+const COACH_APP_ROLES = COACH_ACCESS_ROLES;
+const OWNER_ADMIN_ROLES = ADMIN_ACCESS_ROLES;
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();

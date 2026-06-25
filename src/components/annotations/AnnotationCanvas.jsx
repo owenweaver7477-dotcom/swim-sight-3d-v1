@@ -152,7 +152,7 @@ export default function AnnotationCanvas({ timestampSeconds, onSave, onCancel, s
               <Eye className="mr-1 h-3.5 w-3.5" /> Show drawing tools
             </Button>
             <Button size="sm" className="h-9 bg-cyan-500 text-xs text-slate-950 hover:bg-cyan-400" onClick={save} disabled={saving || !shapes.length}>
-              <Save className="mr-1 h-3.5 w-3.5" /> Save
+              <Save className="mr-1 h-3.5 w-3.5" /> Done Drawing
             </Button>
             <Button size="icon" variant="ghost" className="h-9 w-9 text-white hover:bg-white/10" onClick={onCancel} title="Exit annotation mode" aria-label="Exit annotation mode">
               <X className="h-4 w-4" />

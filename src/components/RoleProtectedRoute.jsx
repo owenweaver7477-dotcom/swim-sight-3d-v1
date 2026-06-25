@@ -4,6 +4,7 @@ import { Loader2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/AuthContext';
 import { useClubContext } from '@/lib/useClubContext';
+import { normalizeRole } from '@/lib/permissions';
 
 export default function RoleProtectedRoute({ allowedRoles = [], children }) {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function RoleProtectedRoute({ allowedRoles = [], children }) {
     );
   }
 
-  const role = memberRole || club?._memberRole || null;
+  const role = normalizeRole(memberRole || club?._memberRole || null);
   const allowed = user?.role === 'admin' || allowedRoles.includes(role);
 
   if (!club) {

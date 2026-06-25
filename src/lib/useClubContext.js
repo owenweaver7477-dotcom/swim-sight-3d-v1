@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getActiveClub, setActiveClub, setActiveRole, signOut as clearSwimState } from '@/lib/swimState';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
+import { normalizeRole } from '@/lib/permissions';
 
 const DEFAULT_PRIMARY_COLOR = '#0077B6';
 const DEFAULT_ACCENT_COLOR = '#00A6C8';
@@ -26,13 +27,15 @@ function deriveInitials(name = '') {
 
 export function normaliseClub(club, membership) {
   if (!club) return null;
-  const role = membership?.role || club._memberRole || null;
+  const rawRole = membership?.role || club._rawMemberRole || club._memberRole || null;
+  const role = normalizeRole(rawRole);
   return {
     ...club,
     initials: club.initials || deriveInitials(club.name),
     primary_color: club.primary_color || DEFAULT_PRIMARY_COLOR,
     accent_color: club.accent_color || DEFAULT_ACCENT_COLOR,
     _memberRole: role,
+    _rawMemberRole: rawRole,
     _membershipId: membership?.id || club._membershipId,
     _member: membership || club._member || null,
   };

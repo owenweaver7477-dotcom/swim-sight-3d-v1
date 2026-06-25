@@ -18,8 +18,8 @@ import SwimmerProgressAnalytics from '@/components/analytics/SwimmerProgressAnal
 import ReportHistoryList from '@/components/analytics/ReportHistoryList';
 import { activeCompletedReports, PENDING_STATUSES } from '@/components/analytics/analyticsHelpers';
 import SwimmerSafeguardingPanel from '@/components/swimmers/SwimmerSafeguardingPanel';
+import { isPilotRole } from '@/lib/permissions';
 
-const MANAGE_SWIMMER_ROLES = ['owner', 'admin', 'coach'];
 const EMPTY_FORM = {
   name: '',
   squad_id: '',
@@ -41,7 +41,7 @@ export default function Swimmers() {
   const [newSquadName, setNewSquadName] = useState('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const canManageSwimmers = MANAGE_SWIMMER_ROLES.includes(memberRole);
+  const canManageSwimmers = isPilotRole(memberRole);
 
   const { data: swimmers = [], isLoading } = useQuery({
     queryKey: ['swimmers', club?.id],

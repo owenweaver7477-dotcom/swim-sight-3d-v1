@@ -177,36 +177,88 @@ export default function CoachStudioWorkflowPanel({
     ['Share / export checked', activeShare],
   ];
 
+  const quickSteps = [
+    {
+      title: 'Watch',
+      status: video ? 'Complete' : 'Blocked',
+      action: 'Play, pause, slow down, and find the key moment.',
+    },
+    {
+      title: 'Draw',
+      status: annotations.length ? 'Complete' : 'In progress',
+      action: 'Open Coach Draw only when the frame needs a visual mark.',
+    },
+    {
+      title: 'Tag Fault',
+      status: findings.length ? 'Complete' : 'In progress',
+      action: 'Tag the main fault or create a short coach finding.',
+    },
+    {
+      title: 'Add Cue',
+      status: hasDrill || approvedFindings.some(finding => finding.correction_cue || finding.cue || finding.next_focus) ? 'Complete' : 'In progress',
+      action: 'Add the correction cue, drill, and next focus.',
+    },
+    {
+      title: 'Save Report',
+      status: reportFinal ? 'Complete' : findings.length && pendingFindings.length === 0 ? 'In progress' : 'Not started',
+      action: 'Approve coach-safe content before sharing or exporting.',
+    },
+  ];
+
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4" aria-labelledby="coach-workflow-title">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+    <section className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4" aria-labelledby="coach-workflow-title">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Coach Studio workflow</div>
-          <h2 id="coach-workflow-title" className="mt-1 text-base font-bold text-slate-900">Nine clear stages from setup to secure sharing</h2>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">AI-assisted review is one optional stage. Manual coach review remains available throughout.</p>
+          <h2 id="coach-workflow-title" className="mt-1 text-base font-bold text-slate-900">Watch. Draw. Tag. Cue. Save.</h2>
         </div>
-        <span className="text-[10px] text-slate-500">Local pilot checklist · derived from current report state</span>
+        <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[10px] font-semibold text-cyan-800">
+          Manual review available if AI is unavailable
+        </span>
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="rounded-lg border border-slate-200 bg-slate-50 p-3 xl:sticky xl:top-20 xl:self-start" aria-label="Coach Studio compact readiness">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Compact readiness</div>
-          <div className="mt-3 space-y-2">
+      <div className="mt-3 grid gap-2 sm:grid-cols-5">
+        {quickSteps.map((step, index) => {
+          const Icon = statusIcon(step.status);
+          return (
+            <div key={step.title} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className={`flex h-7 w-7 items-center justify-center rounded-md border ${STATUS_STYLES[step.status]}`}>
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                </div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{index + 1}</span>
+              </div>
+              <div className="mt-2 text-sm font-bold text-slate-900">{step.title}</div>
+              <p className="mt-1 text-[10px] leading-4 text-slate-600">{step.action}</p>
+              <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold ${STATUS_STYLES[step.status]}`}>
+                {step.status}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <details className="mt-3 rounded-lg border border-slate-200 bg-white">
+        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-slate-700">
+          <span>More readiness checks</span>
+          <span className="text-[10px] font-medium text-slate-500">Local pilot checklist</span>
+        </summary>
+        <div className="border-t border-slate-200 p-3">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {readiness.map(([label, done]) => (
-              <div key={label} className="flex items-center justify-between gap-3 text-[11px]">
+              <div key={label} className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px]">
                 <span className="text-slate-600">{label}</span>
                 <span className={done ? 'font-semibold text-emerald-700' : 'font-medium text-slate-400'}>{done ? 'Ready' : 'Check'}</span>
               </div>
             ))}
           </div>
-        </aside>
 
-        <div className="grid gap-2 md:grid-cols-2">
-          {sections.map((section, index) => {
-            const Icon = statusIcon(section.status);
-            return (
-              <details key={section.title} className="group rounded-lg border border-slate-200 bg-white p-3 open:border-cyan-200 open:bg-cyan-50/30">
-                <summary className="flex min-h-11 cursor-pointer list-none items-start gap-3">
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {sections.map((section, index) => {
+              const Icon = statusIcon(section.status);
+              return (
+                <div key={section.title} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex min-h-10 items-start gap-3">
                   <div className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border ${STATUS_STYLES[section.status]}`}>
                     <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   </div>
@@ -215,20 +267,14 @@ export default function CoachStudioWorkflowPanel({
                     <div className="text-xs font-bold text-slate-900">{section.title}</div>
                   </div>
                   <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${STATUS_STYLES[section.status]}`}>{section.status}</span>
-                </summary>
-                <div className="mt-3 border-t border-slate-200 pt-3">
-                  <p className="text-[11px] leading-5 text-slate-600">{section.purpose}</p>
-                  <div className="mt-2 grid gap-2 text-[10px] leading-4 sm:grid-cols-2">
-                    <div><span className="font-bold text-slate-700">Coach action:</span> <span className="text-slate-600">{section.action}</span></div>
-                    <div><span className="font-bold text-slate-700">Unlocks:</span> <span className="text-slate-600">{section.unlocks}</span></div>
                   </div>
                   <div className="mt-3"><CoachWorkflowChecklist items={section.checks} /></div>
                 </div>
-              </details>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </details>
     </section>
   );
 }

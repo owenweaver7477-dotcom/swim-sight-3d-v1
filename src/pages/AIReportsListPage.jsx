@@ -13,6 +13,7 @@ import {
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { format } from 'date-fns';
+import { isPilotRole } from '@/lib/permissions';
 
 // ── Reliability label ──────────────────────────────────────────────────────────
 const PROCESSING_JOB_STATUSES = [
@@ -199,7 +200,7 @@ export default function AIReportsListPage() {
     return acc;
   }, {});
 
-  const canDelete = ['owner', 'admin', 'coach'].includes(club?._memberRole);
+  const canDelete = isPilotRole(club?._memberRole);
 
   // Queue sections
   const finalisedStatuses = ['coach_approved', 'finalised', 'published', 'shared'];

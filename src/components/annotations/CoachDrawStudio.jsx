@@ -328,12 +328,12 @@ export default function CoachDrawStudio({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] leading-5 text-amber-900">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-bold">Drawing tools are in pilot refinement.</span>
+          <span className="font-bold text-slate-900">Video-first review</span>
           <FeatureStatusBadge status="partial" />
+          <span>Tap Draw, mark the frame, then choose Done Drawing or Hide drawing tools.</span>
         </div>
-        <p className="mt-1">Use timestamp notes if annotation tools are not suitable for this review.</p>
       </div>
       {renderVideoSurface(inlineVideoRef)}
 

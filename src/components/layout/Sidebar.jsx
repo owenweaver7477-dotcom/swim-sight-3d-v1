@@ -11,6 +11,13 @@ import {
   ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3, Cpu, ClipboardCheck, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  getRoleLabel,
+  isAdminRole,
+  isCoachAppRole,
+  isPilotRole,
+  normalizeRole,
+} from '@/lib/permissions';
 
 // ── Grouped navigation structure ──────────────────────────────────────────────
 const NAV_MAIN = [
@@ -42,9 +49,6 @@ const NAV_ADMIN = [
   { to: '/roadmap',       label: 'Roadmap',         icon: Map },
 ];
 
-const ADMIN_ROLES = ['owner', 'admin'];
-const COACH_APP_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
-const PILOT_ROLES = ['owner', 'admin', 'coach'];
 const PILOT_NAV_ITEM = { to: '/pilot-launch', label: 'Private Coach Pilot', icon: ClipboardCheck };
 
 export default function Sidebar() {
@@ -66,10 +70,11 @@ export default function Sidebar() {
   };
 
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + '/');
-  const memberRole = club?._memberRole || getActiveRole();
-  const isAdmin = ADMIN_ROLES.includes(memberRole) || user?.role === 'admin';
-  const canUseCoachApp = COACH_APP_ROLES.includes(memberRole) || user?.role === 'admin';
-  const canUsePilot = PILOT_ROLES.includes(memberRole) || user?.role === 'admin';
+  const memberRole = normalizeRole(club?._memberRole || getActiveRole());
+  const rawMemberRole = club?._rawMemberRole || club?._memberRole || memberRole;
+  const isAdmin = isAdminRole(memberRole) || user?.role === 'admin';
+  const canUseCoachApp = isCoachAppRole(memberRole) || user?.role === 'admin';
+  const canUsePilot = isPilotRole(memberRole) || user?.role === 'admin';
 
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
@@ -121,7 +126,7 @@ export default function Sidebar() {
             </div>
             <div className="min-w-0 flex-1 text-left">
               <div className="text-xs font-semibold text-white truncate">{club.name}</div>
-              {memberRole && <div className="text-[10px] text-[#8BA5B8] capitalize">{memberRole}</div>}
+              {memberRole && <div className="text-[10px] text-[#8BA5B8]">{getRoleLabel(rawMemberRole)}</div>}
             </div>
             <ChevronsUpDown className="w-3.5 h-3.5 text-[#8BA5B8] flex-shrink-0" />
           </div>

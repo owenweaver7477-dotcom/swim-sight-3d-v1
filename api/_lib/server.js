@@ -1,7 +1,24 @@
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from './supabaseServer.js';
 
+const ROLE_ALIASES = {
+  administrator: 'admin',
+  club_admin: 'admin',
+  clubadmin: 'admin',
+  head_coach: 'coach',
+  headcoach: 'coach',
+  assistant: 'assistant_coach',
+  assistantcoach: 'assistant_coach',
+  assistant_coach: 'assistant_coach',
+  athlete: 'swimmer',
+};
+
 export const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 export const ADMIN_ROLES = ['owner', 'admin'];
+
+export function normalizeRole(role) {
+  const key = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return ROLE_ALIASES[key] || key;
+}
 
 export function createServiceClient() {
   return createServiceRoleSupabaseClient();
@@ -78,13 +95,13 @@ export async function requireClubRole(service, clubId, userId, roles) {
   if (profile?.app_role === 'admin') return { role: 'app_admin', profile };
 
   const membership = await getClubMembership(service, clubId, userId);
-  if (!membership || !roles.includes(membership.role)) {
+  if (!membership || !roles.includes(normalizeRole(membership.role))) {
     const error = new Error('Forbidden');
     error.status = 403;
     throw error;
   }
 
-  return membership;
+  return { ...membership, role: normalizeRole(membership.role), raw_role: membership.role };
 }
 
 export function normaliseAiServerUrl() {

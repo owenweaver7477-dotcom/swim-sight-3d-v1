@@ -118,7 +118,7 @@ export default function AnnotationToolbar({
           <Trash2 className="w-3.5 h-3.5 mr-1" />Clear
         </Button>
         <Button size="sm" className="h-10 text-xs bg-cyan-500 text-slate-950 hover:bg-cyan-400" onClick={onSave} disabled={saving || !canSave}>
-          <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : canSave ? 'Save Annotation' : 'Draw first'}
+          <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : canSave ? 'Done Drawing' : 'Draw first'}
         </Button>
       </div>
     </div>

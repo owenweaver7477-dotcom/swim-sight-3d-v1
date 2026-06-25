@@ -13,8 +13,8 @@ import { format, differenceInMinutes } from 'date-fns';
 import AIJobStatusBadge from './AIJobStatusBadge';
 import { AI_CREDIT_COPY } from '@/lib/plans/featureGates';
 import RecoveryActionCard from '@/components/status/RecoveryActionCard';
+import { isCoachAppRole } from '@/lib/permissions';
 
-const COACH_ROLES = ['owner', 'admin', 'coach', 'assistant_coach'];
 const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'finalising_upload'];
 const FAILED_UPLOAD_STATUSES = ['upload_failed'];
 const ACTIVE_PROCESSING_STATUSES = ['queued_ai', 'processing_ai', 'pending_ai', 'processing'];
@@ -591,7 +591,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
 
 export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberRole, onStartReview }) {
   const queryClient = useQueryClient();
-  const canManage = COACH_ROLES.includes(memberRole);
+  const canManage = isCoachAppRole(memberRole);
   const canDelete = canManage;
 
   const { data: uploads = [], isLoading } = useQuery({
