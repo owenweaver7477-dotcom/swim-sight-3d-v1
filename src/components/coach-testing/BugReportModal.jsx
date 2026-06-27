@@ -9,7 +9,7 @@ import { SUPPORT_COPY, SUPPORT_EMAIL, buildFeedbackMailto, getDeviceSummary } fr
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const ROUTES = [
   '/dashboard', '/analyse', '/ai-reviews', '/ai-review', '/swimmers',
-  '/performance', '/club-progress', '/swimmer-trends', '/technical-standards',
+  '/performance', '/club-progress', '/swimmer-trends',
   '/drill-library', '/club-settings', '/coach-testing', '/reference-library',
 ];
 

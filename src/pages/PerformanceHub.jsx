@@ -5,7 +5,7 @@ import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { activeCompletedReports, approvedFindings, buildFaultFrequency, reportsBySwimmer, scoreTrendForSwimmer } from '@/components/analytics/analyticsHelpers';
-import { Award, BarChart3, BookOpen, ChevronRight, Loader2, Shield, Target, TrendingUp, Trophy, Users, Waves } from 'lucide-react';
+import { BarChart3, BookOpen, ChevronRight, Loader2, Shield, Target, TrendingUp, Trophy, Users, Waves } from 'lucide-react';
 
 const CARDS = [
   {
@@ -25,12 +25,6 @@ const CARDS = [
     icon: Trophy,
     title: 'Team Leaderboard',
     description: 'Review consistency and improvement using coach-approved data only.',
-  },
-  {
-    to: '/technical-standards',
-    icon: Award,
-    title: 'Technical Standards',
-    description: 'Stroke-phase reference standards that coaches can link to findings and reviews.',
   },
   {
     to: '/reference-library',

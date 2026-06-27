@@ -45,7 +45,6 @@ import AIReportPage from './pages/AIReportPage';
 import AIReportsListPage from './pages/AIReportsListPage';
 import SharedReportPage from './pages/SharedReportPage';
 import SwimmerTrends from './pages/SwimmerTrends';
-import TechnicalStandards from './pages/TechnicalStandards';
 import PerformanceHub from './pages/PerformanceHub';
 import AIJobMonitor from './pages/AIJobMonitor';
 import AICalibration from './pages/AICalibration';
@@ -175,7 +174,6 @@ const AuthenticatedApp = () => {
           <Route path="/reference-library" element={<ReferenceLibrary />} />
           <Route path="/club-progress" element={<ClubProgress />} />
           <Route path="/swimmer-trends" element={<SwimmerTrends />} />
-          <Route path="/technical-standards" element={<TechnicalStandards />} />
           <Route path="/performance" element={<PerformanceHub />} />
           {/* Club management */}
           <Route path="/club-settings" element={<ClubSettings />} />

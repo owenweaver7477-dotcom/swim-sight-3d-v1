@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, Waves, ChevronsUpDown, Check, Brain,
-  ShieldAlert, Activity, TrendingUp, BookOpen, Target, BarChart3, ClipboardCheck, Server
+  ShieldAlert, Activity, TrendingUp, BookOpen, BarChart3, ClipboardCheck, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +41,6 @@ const NAV_ADMIN = [
   { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
   { to: '/footage-checklist', label: 'Footage Checklist', icon: ClipboardCheck },
   { to: '/ai-infrastructure-status', label: 'AI Infrastructure', icon: Server },
-  { to: '/technical-standards', label: 'Technical Standards', icon: Target },
   { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
   { to: '/ai-jobs',       label: 'AI Job Monitor',  icon: Activity },
   { to: '/roadmap',       label: 'Roadmap',         icon: Map },
