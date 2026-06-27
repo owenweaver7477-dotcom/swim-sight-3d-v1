@@ -40,7 +40,7 @@ const STATUS_CONFIG = {
     className: 'border-orange-200 bg-orange-50 text-orange-800',
   },
   future_lab: {
-    label: 'Future Elite Lab',
+    label: 'AI Analysis Improvements',
     icon: Lock,
     className: 'border-slate-300 bg-slate-100 text-slate-700',
   },

@@ -67,7 +67,7 @@ export default function PricingPage() {
               {plan.key === PLAN_KEYS.ELITE_LAB && (
                 <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-800">
                   <Lock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                  Elite Lab is future premium access for reference comparison in development. It is not a live measurement product today.
+                  Advanced analysis workflows such as longer videos, higher-resolution review, and future multi-angle analysis may use different credit rules.
                 </div>
               )}
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm font-semibold leading-6 text-slate-700">{note}</div>

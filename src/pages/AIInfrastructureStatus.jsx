@@ -126,13 +126,13 @@ const SECTIONS = [
     description: 'Three-dimensional reconstruction cannot be inferred safely from one uncalibrated view.',
     items: [
       {
-        title: 'Synchronization and triangulation', status: 'future_lab', category: 'Future Elite Lab',
+        title: 'Synchronization and triangulation', status: 'future_lab', category: 'Future Analysis',
         description: 'Future calibrated multi-view reconstruction needs synchronized feeds, camera profiles, and reprojection QA.',
         prerequisite: 'Two or more calibrated synchronized views', safe_now: false, blocked_by: 'No synchronized capture set',
         visible_to_coach: false, visible_to_shared_report: false, next_action: 'Define capture synchronization and measurable rejection thresholds.',
       },
       {
-        title: 'SMPL and mesh fitting', status: 'future_lab', category: 'Future Elite Lab',
+        title: 'SMPL and mesh fitting', status: 'future_lab', category: 'Future Analysis',
         description: 'A prototype 3D reference visualisation may be explored only after reliable calibrated keypoints exist.',
         prerequisite: 'Validated multi-view keypoints and suitable model licence', safe_now: false, blocked_by: 'No validated reconstruction input',
         visible_to_coach: false, visible_to_shared_report: false, next_action: 'Treat future meshes as coach-reviewed reference visuals only.',
@@ -206,7 +206,7 @@ export default function AIInfrastructureStatus() {
               <Link to="/footage-checklist"><ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />Footage Checklist</Link>
             </Button>
             <Button asChild size="sm" variant="outline" className="h-8 text-xs">
-              <Link to="/elite-lab-roadmap"><Server className="mr-1.5 h-3.5 w-3.5" />Elite Lab Roadmap</Link>
+
             </Button>
           </div>
         }

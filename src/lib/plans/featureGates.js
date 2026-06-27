@@ -41,8 +41,8 @@ export const PLAN_DEFINITIONS = {
   },
   [PLAN_KEYS.ELITE_LAB]: {
     key: PLAN_KEYS.ELITE_LAB,
-    label: 'Elite Lab',
-    shortLabel: 'Elite Lab',
+    label: 'Advanced AI Analysis',
+    shortLabel: 'AI Analysis',
     description: 'Future premium reference comparison, multi-angle review, priority AI, and advanced exports.',
     summary: 'Future premium lab workflow. Not a live measurement tool.',
     ctaLabel: 'Request access',
@@ -110,7 +110,7 @@ export const FEATURE_GATES = {
     label: 'Priority AI queue',
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
-    lockedMessage: 'Priority AI queue is planned for Elite Lab.',
+    lockedMessage: 'Priority AI queue is planned for future analysis workflows.',
     ctaLabel: 'Request access',
   },
   advanced_progress: {
@@ -125,7 +125,7 @@ export const FEATURE_GATES = {
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
     lockedMessage: 'Premium export controls will be part of future plan settings. Browser print remains available.',
-    ctaLabel: 'Discuss Elite Lab',
+    ctaLabel: 'Discuss AI Analysis',
   },
   club_workspace: {
     label: 'Club workspace',
@@ -145,14 +145,14 @@ export const FEATURE_GATES = {
     label: 'Multi-angle review',
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
-    lockedMessage: 'Multi-angle review is planned for Elite Lab. Current AI processes the primary angle only.',
+    lockedMessage: 'Multi-angle review is a future analysis workflow. Current AI processes the primary angle only.',
     ctaLabel: 'Request access',
   },
   elite_3d_comparison: {
-    label: 'Elite Lab reference comparison',
+    label: 'Reference comparison',
     requiredPlan: PLAN_KEYS.ELITE_LAB,
     allowedPlans: [PLAN_KEYS.ELITE_LAB],
-    lockedMessage: 'Elite Lab reference comparison is a future premium workflow, not a live measurement tool.',
+    lockedMessage: 'Reference comparison is a future premium workflow, not a live measurement tool.',
     ctaLabel: 'Request access',
   },
 };
@@ -160,7 +160,7 @@ export const FEATURE_GATES = {
 export const AI_CREDIT_COPY = {
   manualReport: 'Manual Coach Studio review uses 0 AI credits.',
   standardReview: 'A standard AI Review is planned to use 1 AI credit.',
-  futureVariable: 'Longer, high-resolution, multi-angle, and Elite Lab reviews may use different future credit rules.',
+  futureVariable: 'Longer, high-resolution, and multi-angle analysis reviews may use different future credit rules.',
   pilotUnknown: 'AI credits are being prepared for pilot plans. Manual Coach Studio review remains available without AI credits.',
 };
 
