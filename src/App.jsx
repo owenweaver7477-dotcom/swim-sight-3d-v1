@@ -49,9 +49,7 @@ import TechnicalStandards from './pages/TechnicalStandards';
 import PerformanceHub from './pages/PerformanceHub';
 import AIJobMonitor from './pages/AIJobMonitor';
 import AICalibration from './pages/AICalibration';
-import BiomechanicsHUD from './pages/BiomechanicsHUD';
 import AIInfrastructureStatus from './pages/AIInfrastructureStatus';
-import EliteLabRoadmap from './pages/EliteLabRoadmap';
 import FootageChecklist from './pages/FootageChecklist';
 import PilotLaunchPage from './pages/PilotLaunchPage';
 import { ADMIN_ACCESS_ROLES, COACH_ACCESS_ROLES } from '@/lib/permissions';
@@ -199,9 +197,7 @@ const AuthenticatedApp = () => {
           <Route element={<RoleProtectedRoute allowedRoles={OWNER_ADMIN_ROLES} />}>
             <Route path="/ai-jobs" element={<AIJobMonitor />} />
             <Route path="/ai-calibration" element={<AICalibration />} />
-            <Route path="/biomechanics-hud" element={<BiomechanicsHUD />} />
             <Route path="/ai-infrastructure-status" element={<AIInfrastructureStatus />} />
-            <Route path="/elite-lab-roadmap" element={<EliteLabRoadmap />} />
             <Route path="/footage-checklist" element={<FootageChecklist />} />
             <Route path="/coach-testing" element={<Navigate to="/roadmap" replace />} />
             <Route path="/roadmap" element={<Roadmap />} />
