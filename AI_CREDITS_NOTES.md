@@ -6,7 +6,7 @@ Phase 15A prepares a pilot-safe AI credit foundation. It does not add Stripe, ch
 
 - Manual Coach Studio review uses `0` AI credits.
 - Standard AI Review is prepared to use `1` AI credit.
-- Longer, high-resolution, multi-angle, priority queue, and Elite Lab workflows remain future credit rules.
+- Longer, high-resolution, multi-angle, and priority queue workflows remain future credit rules.
 
 ## Backend Entitlement Fields
 

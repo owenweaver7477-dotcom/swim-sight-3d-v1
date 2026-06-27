@@ -14,7 +14,7 @@ This document describes the Phase 13 paid-AI architecture foundation. It prepare
 
 - Manual Coach Studio review uses `0` AI credits.
 - A standard AI Review is planned to use `1` AI credit.
-- Longer, high-resolution, multi-angle, and Elite Lab workflows may use different future credit rules.
+- Longer, high-resolution, and multi-angle analysis workflows may use different future credit rules.
 - Current pilot credit messaging is informational unless a real server-side entitlement system is added.
 
 ## Security Boundary
@@ -43,4 +43,4 @@ Stripe, checkout, subscriptions, invoices, billing portal access, webhook handli
 
 ## Product Safety
 
-Elite Lab language should remain future-facing until the underlying product is real. Avoid claims about automatic truth, live measurement, or coach replacement. AI Assist should stay positioned as draft evidence that coaches review, edit, approve, or reject.
+Future product language should stay focused on AI-assisted swim analysis, coach review, drill recommendations, feedback, and progress tracking. Avoid claims about automatic truth, live measurement, or coach replacement.

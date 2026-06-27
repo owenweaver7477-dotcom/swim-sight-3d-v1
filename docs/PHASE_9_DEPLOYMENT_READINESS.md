@@ -25,7 +25,7 @@ Changes in this pass:
 - Both public shared-report handlers require an active link and a finalised report.
 - The legacy shared-report handler no longer returns drag blocks, internal IDs, or internal coach notes.
 - Structured-data JSON escapes HTML-significant `<` characters before rendering.
-- Internal AI, pilot, calibration, job-monitor, roadmap, and Elite Lab routes are owner/admin-only.
+- Internal AI, calibration, job-monitor, feedback, and product-improvement routes are owner/admin-only.
 - Production UI no longer renders backend connection or developer diagnostic panels.
 - A production-surface regression check rejects old diagnostic wording, dummy club names, and route-guard regressions.
 
