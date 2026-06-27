@@ -1,11 +1,13 @@
 import triggerHandler from '../_lib/ai/triggerHandler.js';
 import callbackHandler from '../_lib/ai/callbackHandler.js';
 import cancelHandler from '../_lib/ai/cancelHandler.js';
+import statusHandler from '../_lib/ai/statusHandler.js';
 
 const handlers = {
   trigger: triggerHandler,
   callback: callbackHandler,
   cancel: cancelHandler,
+  status: statusHandler,
 };
 
 export default async function handler(req, res) {

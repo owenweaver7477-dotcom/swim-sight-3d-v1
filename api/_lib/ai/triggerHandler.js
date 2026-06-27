@@ -1,7 +1,6 @@
 import {
   COACH_ROLES,
   createServiceClient,
-  handleApiError,
   readJsonBody,
   requireClubRole,
   requireUser,
@@ -22,6 +21,7 @@ import {
 } from '../entitlements.js';
 import { consentGate, envFlagEnabled } from '../safeguarding.js';
 import { publicOutputSelection, validateAIReportOutputRequest } from '../aiReportOutputSelection.js';
+import { safeAnalysisJobForClient, safeAnalysisJobResponse } from './jobResponse.js';
 
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
@@ -176,7 +176,7 @@ export default async function handler(req, res) {
         message: activeJob.queue_status === 'queued' || activeJob.status === 'queued'
           ? 'This video is already queued for AI Review.'
           : 'AI Review is already in progress for this video.',
-        job: activeJob,
+        job: safeAnalysisJobForClient(activeJob),
         server_job_id: activeJob.server_job_id || null,
         video_upload_id: upload.id,
         processing_status: 'pending_ai',
@@ -216,7 +216,7 @@ export default async function handler(req, res) {
     if (latestJob && !RETRYABLE_JOB_STATUSES.includes(latestJob.status) && upload.processing_status !== 'uploaded') {
       return sendJson(res, 409, {
         error: 'The latest AI job is not retryable yet. Wait for it to finish or reset timed-out jobs.',
-        job: latestJob,
+        job: safeAnalysisJobForClient(latestJob),
         ...safeVideoState(upload, true),
       });
     }
@@ -224,7 +224,7 @@ export default async function handler(req, res) {
     if (latestJob && RETRYABLE_JOB_STATUSES.includes(latestJob.status) && latestAttemptCount >= maxAttempts) {
       return sendJson(res, 409, {
         error: `AI Review has reached ${maxAttempts} attempts for this video. Continue with manual review, or ask an owner/admin to inspect the job history.`,
-        job: latestJob,
+        job: safeAnalysisJobForClient(latestJob),
         retryable: false,
         ...safeVideoState(upload, true),
       });
@@ -295,30 +295,32 @@ export default async function handler(req, res) {
     if (currentJobError) throw currentJobError;
 
     if (dispatchResult.failed && dispatchResult.job?.id === job.id) {
-      return sendJson(res, 502, {
-        error: dispatchResult.error || 'AI dispatch failed before the worker accepted the job.',
+      const safeJob = safeAnalysisJobForClient(currentJob);
+      const safeError = safeJob.user_error_message || 'AI-assisted analysis could not start. Manual coach review is still available.';
+      return sendJson(res, 202, safeAnalysisJobResponse(currentJob, {
+        success: false,
+        error: safeError,
+        message: safeError,
         queued: false,
         dispatched: false,
-        job: currentJob,
         video_upload_id: upload.id,
         processing_status: 'error',
         queue_status: currentJob.queue_status || null,
         retryable: currentJob.retryable !== false,
-      });
+      }));
     }
 
     const queued = currentJob.queue_status === 'queued' || currentJob.status === 'queued';
     const dispatched = dispatchResult.dispatched && dispatchResult.job?.id === job.id;
     const summary = await getAIQueueSummary(service, { clubId: upload.club_id });
 
-    return sendJson(res, 200, {
+    return sendJson(res, 202, safeAnalysisJobResponse(currentJob, {
       success: true,
       queued,
       dispatched,
       message: dispatched
         ? 'AI Review started.'
         : 'Queued for AI Review. Swim Sight 3D will send this video when the AI worker has capacity.',
-      job: currentJob,
       server_job_id: currentJob.server_job_id || null,
       video_upload_id: upload.id,
       processing_status: dispatched ? 'processing_ai' : 'pending_ai',
@@ -333,7 +335,7 @@ export default async function handler(req, res) {
       entitlement: publicEntitlementResponse(entitlement),
       credit_usage: creditUsage,
       output_selection: publicOutputSelection(outputSelection),
-    });
+    }));
   } catch (error) {
     if (error.entitlement) {
       try {
@@ -410,6 +412,15 @@ export default async function handler(req, res) {
         // Best-effort failure recording only.
       }
     }
-    return handleApiError(res, error);
+    const safeMessage = 'AI-assisted analysis could not start. Manual coach review is still available.';
+    return sendJson(res, error.status || 500, {
+      error: safeMessage,
+      user_error: safeMessage,
+      user_error_message: safeMessage,
+      developer_error_present: true,
+      manual_review_available: true,
+      job_id: job?.id || null,
+      video_upload_id: upload?.id || null,
+    });
   }
 }

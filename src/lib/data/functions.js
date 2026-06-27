@@ -78,6 +78,10 @@ export const functions = {
     return postJson('/api/ai/cancel', { job_id: jobId });
   },
 
+  getAIJobStatus(jobId) {
+    return getJson(`/api/ai/status?job_id=${encodeURIComponent(jobId)}`);
+  },
+
   getSignedVideoUrl(videoUploadId) {
     return postJson(`/api/video-uploads/${videoUploadId}/signed-url`, {});
   },

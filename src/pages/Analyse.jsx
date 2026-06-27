@@ -654,11 +654,20 @@ export default function Analyse() {
       });
 
       const res = await functions.triggerPoseAnalysis({ video_upload_id: videoUploadId, ...outputRequest });
-      setUploadStatus(res.data?.processing_status || 'processing_ai');
-      setStartAiMessage(res.data?.queued && !res.data?.dispatched
-        ? `Queued for AI Review${res.data?.queue_position ? ` — position ${res.data.queue_position}` : ''}. Open AI Jobs to watch the queue.`
-        : 'AI Review started. Open AI Reviews or AI Jobs to watch progress.'
-      );
+      const data = res.data || {};
+      const safeJobStatus = data.status || data.job?.analysis_job_status || data.job?.status;
+      setUploadStatus(data.processing_status || (safeJobStatus === 'failed' ? 'error' : 'pending_ai'));
+      if (data.success === false || safeJobStatus === 'failed') {
+        const safeMessage = data.user_error_message || data.user_error || data.error || 'AI-assisted analysis could not start. Manual coach review is still available.';
+        setStartAiError(`${safeMessage} Open Coach Studio to continue manually, or retry AI Review later.`);
+        setStartAiMessage('');
+      } else {
+        setStartAiError('');
+        setStartAiMessage(data.queued && !data.dispatched
+          ? `Queued for AI Review${data.queue_position ? ` — position ${data.queue_position}` : ''}. You can continue manual coach review while it waits.`
+          : 'AI-assisted analysis was accepted. Draft findings will appear after processing and still require coach approval.'
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ['video-uploads'] });
       queryClient.invalidateQueries({ queryKey: ['ai-jobs-active', club?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-reports', club?.id] });

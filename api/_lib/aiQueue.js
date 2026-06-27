@@ -1,4 +1,5 @@
 import { getPublicAppUrl, normaliseAiServerUrl } from './server.js';
+import { safeAnalysisJobForClient } from './ai/jobResponse.js';
 
 export const RENDER_ACTIVE_JOB_STATUSES = [
   'accepted',
@@ -20,7 +21,7 @@ export const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing']
 export const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'];
 
 const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
-const DEFAULT_AI_SERVER_ACCEPTANCE_TIMEOUT_MS = 60 * 1000;
+const DEFAULT_AI_SERVER_ACCEPTANCE_TIMEOUT_MS = 8 * 1000;
 const DEFAULT_MAX_ACTIVE_AI_JOBS = 1;
 
 function nowIso() {
@@ -56,32 +57,12 @@ export function getMaxActiveAIJobs() {
 
 export function getAIServerAcceptanceTimeoutMs() {
   const parsed = Number.parseInt(process.env.AI_SERVER_ACCEPTANCE_TIMEOUT_MS || '', 10);
-  if (Number.isFinite(parsed) && parsed >= 30_000 && parsed <= 120_000) return parsed;
+  if (Number.isFinite(parsed) && parsed >= 2_000 && parsed <= 120_000) return parsed;
   return DEFAULT_AI_SERVER_ACCEPTANCE_TIMEOUT_MS;
 }
 
 function publicJob(job) {
-  if (!job) return null;
-  return {
-    id: job.id,
-    club_id: job.club_id,
-    video_upload_id: job.video_upload_id,
-    report_id: job.report_id || null,
-    server_job_id: job.server_job_id || null,
-    status: job.status,
-    queue_status: job.queue_status || null,
-    queue_position: job.queue_position ?? null,
-    stage: job.stage || null,
-    progress_percent: job.progress_percent ?? 0,
-    retry_count: job.retry_count ?? 0,
-    attempt_count: job.attempt_count ?? null,
-    max_attempts: job.max_attempts ?? null,
-    retryable: job.retryable !== false,
-    render_acceptance_status: job.render_acceptance_status || null,
-    callback_status: job.callback_status || null,
-    dispatch_error: job.dispatch_error || null,
-    error_message: job.error_message || null,
-  };
+  return safeAnalysisJobForClient(job);
 }
 
 async function refreshQueuePositions(service) {

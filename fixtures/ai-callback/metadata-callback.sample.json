@@ -1,0 +1,24 @@
+{
+  "job_id": "synthetic-worker-job-001",
+  "app_job_id": "00000000-0000-4000-8000-000000000001",
+  "video_upload_id": "00000000-0000-4000-8000-000000000002",
+  "status": "metadata_ready",
+  "stage": "metadata_probe",
+  "progress_percent": 12,
+  "video_metadata": {
+    "duration_seconds": 42.5,
+    "fps": 60,
+    "frame_count": 2550,
+    "width": 1920,
+    "height": 1080,
+    "codec": "h264",
+    "container": "mp4",
+    "file_size_mb": 146.2,
+    "orientation": "landscape"
+  },
+  "frame_sampling": {
+    "sampling_rate_fps": 5,
+    "max_sampled_frames": 300
+  },
+  "warnings": []
+}

@@ -19,6 +19,23 @@ const ACTIVE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'finalising_upl
 const FAILED_UPLOAD_STATUSES = ['upload_failed'];
 const ACTIVE_PROCESSING_STATUSES = ['queued_ai', 'processing_ai', 'pending_ai', 'processing'];
 const REFRESHING_STATUSES = [...ACTIVE_UPLOAD_STATUSES, ...ACTIVE_PROCESSING_STATUSES];
+const ACTIVE_JOB_STATUSES = [
+  'queued',
+  'accepted',
+  'running',
+  'downloading_video',
+  'extracting_frames',
+  'running_pose_detection',
+  'analysing_stroke',
+  'generating_outputs',
+  'callback_sending',
+];
+const ACTIVE_JOB_QUEUE_STATUSES = ['queued', 'dispatching', 'dispatched', 'processing', 'cancel_requested'];
+const AI_POLL_FAST_MS = 5 * 1000;
+const AI_POLL_MEDIUM_MS = 15 * 1000;
+const AI_POLL_SLOW_MS = 30 * 1000;
+const AI_POLL_MEDIUM_AFTER_MS = 2 * 60 * 1000;
+const AI_POLL_SLOW_AFTER_MS = 10 * 60 * 1000;
 
 const NEXT_ACTION_LABELS = {
   use_clearer_video: 'Try uploading a clearer or higher-quality video.',
@@ -47,6 +64,35 @@ function asQualityFlags(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') return value.split(',').filter(Boolean);
   return [];
+}
+
+function parseTimeMs(value) {
+  if (!value) return null;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isActiveAIJob(job) {
+  return ACTIVE_JOB_QUEUE_STATUSES.includes(job?.queue_status)
+    || ACTIVE_JOB_STATUSES.includes(job?.status);
+}
+
+function getAIJobPollingInterval(uploads = [], jobs = []) {
+  const activeUploadTimes = uploads
+    .filter((upload) => REFRESHING_STATUSES.includes(upload.processing_status) || ACTIVE_UPLOAD_STATUSES.includes(upload.upload_status))
+    .map((upload) => parseTimeMs(upload.updated_date || upload.created_date))
+    .filter(Boolean);
+  const activeJobTimes = jobs
+    .filter(isActiveAIJob)
+    .map((job) => parseTimeMs(job.started_at || job.accepted_at || job.queued_at || job.created_date || job.created_at))
+    .filter(Boolean);
+  const oldest = Math.min(...activeUploadTimes, ...activeJobTimes);
+  if (!Number.isFinite(oldest)) return false;
+
+  const elapsed = Date.now() - oldest;
+  if (elapsed < AI_POLL_MEDIUM_AFTER_MS) return AI_POLL_FAST_MS;
+  if (elapsed < AI_POLL_SLOW_AFTER_MS) return AI_POLL_MEDIUM_MS;
+  return AI_POLL_SLOW_MS;
 }
 
 function getCoachStatusSummary({
@@ -603,24 +649,15 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
     },
     enabled: !!clubId,
     staleTime: 15 * 1000,
-    refetchInterval: (query) => {
-      const currentUploads = query?.state?.data;
-      const active = Array.isArray(currentUploads)
-        && currentUploads.some(u => REFRESHING_STATUSES.includes(u.processing_status) || ACTIVE_UPLOAD_STATUSES.includes(u.upload_status));
-      return active ? 10000 : false;
-    },
+    refetchInterval: (query) => getAIJobPollingInterval(query?.state?.data || [], []),
   });
-
-  const activeVideoIds = uploads
-    .filter(u => REFRESHING_STATUSES.includes(u.processing_status) || ACTIVE_UPLOAD_STATUSES.includes(u.upload_status))
-    .map(u => u.id);
 
   const { data: activeJobs = [] } = useQuery({
     queryKey: ['ai-jobs-active', clubId],
     queryFn: () => entities.AIProcessingJob.filter({ club_id: clubId }, '-created_date', 50),
     enabled: !!clubId,
-    staleTime: 8 * 1000,
-    refetchInterval: activeVideoIds.length > 0 ? 8000 : false,
+    staleTime: 5 * 1000,
+    refetchInterval: (query) => getAIJobPollingInterval(uploads, query?.state?.data || []),
   });
 
   const deleteUpload = useMutation({

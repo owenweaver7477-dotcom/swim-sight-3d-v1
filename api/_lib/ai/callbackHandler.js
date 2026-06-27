@@ -1,5 +1,25 @@
 import { createServiceClient, handleApiError, isUuid, readJsonBody, sendJson } from '../server.js';
 import { dispatchNextQueuedAIJob, markJobQueueComplete } from '../aiQueue.js';
+import {
+  METADATA_PROGRESS_STATUSES,
+  buildSafeVideoProbeCallbackSummary,
+  isMetadataProgressStatus,
+  jobStatusForMetadataProgress,
+} from './metadataCallback.js';
+import {
+  POSE_2D_PROGRESS_STATUSES,
+  buildSafePose2DArtifactSummary,
+  buildSafePose2DCallbackSummary,
+  isPose2DProgressStatus,
+  jobStatusForPose2DProgress,
+} from './pose2dCallback.js';
+import {
+  POSE_3D_PROGRESS_STATUSES,
+  buildSafePose3DArtifactSummary,
+  buildSafePose3DCallbackSummary,
+  isPose3DProgressStatus,
+  jobStatusForPose3DProgress,
+} from './pose3dCallback.js';
 
 const MIN_DETECTION_RATIO_FOR_AI_FINDINGS = 0.55;
 const MIN_KEYPOINTS_FOR_AI_FINDINGS = 12;
@@ -15,6 +35,9 @@ const PROGRESS_STATUSES = [
   'analysing_stroke',
   'generating_outputs',
   'callback_sending',
+  ...METADATA_PROGRESS_STATUSES,
+  ...POSE_2D_PROGRESS_STATUSES,
+  ...POSE_3D_PROGRESS_STATUSES,
   'running',
   'queued',
 ];
@@ -144,6 +167,11 @@ function buildQualityFlags(payload, callbackError, quality) {
 }
 
 function safeCallbackSummary(payload, quality) {
+  const videoProbeSummary = buildSafeVideoProbeCallbackSummary(payload);
+  const pose2DSummary = buildSafePose2DCallbackSummary(payload);
+  const pose2DArtifact = buildSafePose2DArtifactSummary(payload);
+  const pose3DSummary = buildSafePose3DCallbackSummary(payload);
+  const pose3DArtifact = buildSafePose3DArtifactSummary(payload);
   return {
     status: payload.status || null,
     analysis_mode: payload.analysis_mode || null,
@@ -173,6 +201,25 @@ function safeCallbackSummary(payload, quality) {
       ? payload.skipped_outputs.slice(0, 50).map((item) => ({ id: item?.id || null, reason: item?.reason || null }))
       : [],
     estimate_only_outputs: normaliseArray(payload.estimate_only_outputs),
+    video_probe_summary: videoProbeSummary,
+    pose_2d_summary: pose2DSummary,
+    pose_artifact: pose2DArtifact,
+    pose_3d_summary: pose3DSummary,
+    pose_3d_artifact: pose3DArtifact,
+  };
+}
+
+function mergeCallbackSummary(existingSummary, nextSummary) {
+  const existing = existingSummary && typeof existingSummary === 'object' ? existingSummary : {};
+  const next = nextSummary && typeof nextSummary === 'object' ? nextSummary : {};
+  return {
+    ...existing,
+    ...next,
+    video_probe_summary: next.video_probe_summary ?? existing.video_probe_summary ?? null,
+    pose_2d_summary: next.pose_2d_summary ?? existing.pose_2d_summary ?? null,
+    pose_artifact: next.pose_artifact ?? existing.pose_artifact ?? null,
+    pose_3d_summary: next.pose_3d_summary ?? existing.pose_3d_summary ?? null,
+    pose_3d_artifact: next.pose_3d_artifact ?? existing.pose_3d_artifact ?? null,
   };
 }
 
@@ -368,23 +415,46 @@ export default async function handler(req, res) {
       : callbackMessage;
 
     if (progressOnly && job) {
+      const existingSummary = job.callback_summary && typeof job.callback_summary === 'object'
+        ? job.callback_summary
+        : {};
+      const progressDelta = safeCallbackSummary(payload, quality);
+      const progressSummary = mergeCallbackSummary(existingSummary, progressDelta);
+      const progressProbe = progressSummary.video_probe_summary;
+      const progressMetadata = progressProbe?.videoMetadata || {};
+      const metadataProgress = isMetadataProgressStatus(callbackStatus);
+      const pose2DProgress = isPose2DProgressStatus(callbackStatus);
+      const pose3DProgress = isPose3DProgressStatus(callbackStatus);
+      const progressStatus = isMetadataProgressStatus(callbackStatus)
+        ? jobStatusForMetadataProgress(callbackStatus)
+        : pose2DProgress
+        ? jobStatusForPose2DProgress(callbackStatus)
+        : pose3DProgress
+        ? jobStatusForPose3DProgress(callbackStatus)
+        : callbackStatus === 'running'
+        ? 'running'
+        : callbackStatus;
+      const progressQualityFlags = metadataProgress || pose2DProgress || pose3DProgress
+        ? Array.from(new Set([...normaliseArray(payload.quality_flags), callbackStatus]))
+        : qualityFlags;
       await service.from('ai_processing_jobs').update({
-        status: callbackStatus === 'running' ? 'running' : callbackStatus,
+        status: progressStatus,
         queue_status: 'processing',
         stage: payload.stage || callbackStatus,
         progress_percent: payload.progress_percent ?? job.progress_percent ?? 0,
         pose_reliability: payload.pose_reliability || job.pose_reliability || null,
-        quality_flags: qualityFlags,
+        quality_flags: progressQualityFlags,
         recommended_next_action: payload.recommended_next_action || job.recommended_next_action || null,
         detection_ratio: payload.detection_ratio ?? job.detection_ratio ?? null,
         frame_count_processed: payload.frame_count_processed ?? job.frame_count_processed ?? null,
         detected_keypoints_count: payload.detected_keypoints_count ?? job.detected_keypoints_count ?? null,
         stage_history: appendStageHistory(job.stage_history, callbackStageEntry(payload, callbackStatus)),
         analysis_mode: payload.analysis_mode || job.analysis_mode || null,
-        video_duration_seconds: payload.video_duration_seconds ?? job.video_duration_seconds ?? null,
-        video_fps: payload.video_fps ?? job.video_fps ?? null,
+        video_duration_seconds: progressMetadata.durationSeconds ?? payload.video_duration_seconds ?? job.video_duration_seconds ?? null,
+        video_fps: progressMetadata.fps ?? payload.video_fps ?? job.video_fps ?? null,
         started_at: job.started_at || now,
         callback_status: 'progress',
+        callback_summary: progressSummary,
       }).eq('id', job.id);
 
       await service.from('video_uploads').update({
@@ -459,7 +529,7 @@ export default async function handler(req, res) {
         analysis_mode: analysisMode,
         video_duration_seconds: payload.video_duration_seconds ?? null,
         video_fps: payload.video_fps ?? null,
-        callback_summary: safeCallbackSummary(payload, quality),
+        callback_summary: mergeCallbackSummary(job.callback_summary, safeCallbackSummary(payload, quality)),
         active_slot_claimed_at: null,
         lease_owner: null,
         lease_expires_at: null,
