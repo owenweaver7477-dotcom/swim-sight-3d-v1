@@ -1,7 +1,12 @@
 import { createServiceClient, handleApiError, requireClubRole, requireUser, sendJson } from '../../_lib/server.js';
+import {
+  DEFAULT_SIGNED_READ_TTL_SECONDS,
+  buildSignedReadResponse,
+  normaliseVideoStorageRecord,
+} from '../../../src/lib/storage/videoStorage.js';
 
 const MEMBER_ROLES = ['owner', 'admin', 'coach', 'assistant_coach', 'swimmer', 'parent'];
-const SIGNED_URL_EXPIRES_IN = 10 * 60;
+const SIGNED_URL_EXPIRES_IN = DEFAULT_SIGNED_READ_TTL_SECONDS;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -26,8 +31,9 @@ export default async function handler(req, res) {
       return sendJson(res, 409, { error: 'Video upload is not complete yet' });
     }
 
-    const bucket = upload.file_bucket || upload.storage_bucket;
-    const path = upload.file_path || upload.storage_path;
+    const storage = normaliseVideoStorageRecord(upload);
+    const bucket = storage.file_bucket;
+    const path = storage.video_storage_key;
     if (!bucket || !path) {
       return sendJson(res, 422, { error: 'Video storage path is missing' });
     }
@@ -46,10 +52,11 @@ export default async function handler(req, res) {
       .createSignedUrl(path, SIGNED_URL_EXPIRES_IN);
 
     if (signError) throw signError;
-    return sendJson(res, 200, {
-      signed_url: data.signedUrl,
-      expires_in: SIGNED_URL_EXPIRES_IN,
-    });
+    return sendJson(res, 200, buildSignedReadResponse({
+      signedUrl: data.signedUrl,
+      expiresIn: SIGNED_URL_EXPIRES_IN,
+      storageProvider: storage.storage_provider,
+    }));
   } catch (error) {
     return handleApiError(res, error);
   }

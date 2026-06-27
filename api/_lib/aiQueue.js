@@ -1,5 +1,9 @@
 import { getPublicAppUrl, normaliseAiServerUrl } from './server.js';
 import { safeAnalysisJobForClient } from './ai/jobResponse.js';
+import {
+  DEFAULT_WORKER_SIGNED_READ_TTL_SECONDS,
+  normaliseVideoStorageRecord,
+} from '../../src/lib/storage/videoStorage.js';
 
 export const RENDER_ACTIVE_JOB_STATUSES = [
   'accepted',
@@ -20,7 +24,7 @@ export const DUPLICATE_BLOCKING_JOB_STATUSES = [
 export const ACTIVE_QUEUE_STATUSES = ['dispatching', 'dispatched', 'processing'];
 export const RETRYABLE_JOB_STATUSES = ['error', 'timed_out', 'retry_available', 'unreliable_pose', 'manual_review', 'manual_review_recommended'];
 
-const PYTHON_SIGNED_URL_TTL_SECONDS = 15 * 60;
+const PYTHON_SIGNED_URL_TTL_SECONDS = DEFAULT_WORKER_SIGNED_READ_TTL_SECONDS;
 const DEFAULT_AI_SERVER_ACCEPTANCE_TIMEOUT_MS = 8 * 1000;
 const DEFAULT_MAX_ACTIVE_AI_JOBS = 1;
 
@@ -336,8 +340,9 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
     return { dispatched: false, failed: true, error: 'Queued AI job is missing its video upload.' };
   }
 
-  const storageBucket = upload.file_bucket || upload.storage_bucket;
-  const storagePath = upload.file_path || upload.storage_path;
+  const storage = normaliseVideoStorageRecord(upload);
+  const storageBucket = storage.file_bucket;
+  const storagePath = storage.video_storage_key;
   if (!storageBucket || !storagePath) {
     return failDispatch(
       service,
@@ -372,7 +377,10 @@ async function dispatchClaimedJob({ service, req, job, upload }) {
     club_id: upload.club_id,
     swimmer_id: upload.swimmer_id,
     uploaded_by_user_id: upload.created_by,
+    storage_provider: storage.storage_provider,
+    video_key: storage.video_storage_key,
     signed_video_url: signed.signedUrl,
+    signed_video_url_expires_in_seconds: PYTHON_SIGNED_URL_TTL_SECONDS,
     stroke_type: upload.stroke_type,
     analysis_type: upload.analysis_type || 'Technique Review',
     camera_angle: upload.camera_angle || 'Side',

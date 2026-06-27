@@ -1,3 +1,5 @@
+import { normaliseVideoStorageRecord, PRIVATE_VIDEO_BUCKET } from '../../src/lib/storage/videoStorage.js';
+
 export const CONSENT_REQUIRED_CODE = 'minor_guardian_consent_required';
 export const DEFAULT_FOOTAGE_RETENTION_DAYS = 30;
 export const COMPLETED_REPORT_STATUSES = new Set([
@@ -34,9 +36,10 @@ export function footageRetentionDays(value) {
 }
 
 export function privateVideoStorageReference(upload) {
-  const bucket = upload?.file_bucket || upload?.storage_bucket;
-  const path = upload?.file_path || upload?.storage_path;
-  if (bucket !== 'private-videos' || !path) return null;
+  const storage = normaliseVideoStorageRecord(upload || {});
+  const bucket = storage.file_bucket;
+  const path = storage.video_storage_key;
+  if (bucket !== PRIVATE_VIDEO_BUCKET || !path) return null;
   return { bucket, path };
 }
 

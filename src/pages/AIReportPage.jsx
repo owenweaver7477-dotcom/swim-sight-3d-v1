@@ -759,7 +759,7 @@ export default function AIReportPage() {
 
     functions.getSignedVideoUrl(video.id)
       .then((res) => {
-        if (!cancelled) setSignedVideoUrl(res.data?.signed_url || '');
+        if (!cancelled) setSignedVideoUrl(res.data?.signed_read_url || res.data?.signed_url || '');
       })
       .catch((err) => {
         if (!cancelled) setSignedVideoError(err?.message || 'Could not load private video preview.');

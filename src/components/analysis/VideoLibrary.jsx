@@ -268,8 +268,9 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     setUrlError('');
     try {
       const res = await functions.getSignedVideoUrl(upload.id);
-      if (res.data?.signed_url) {
-        setSignedUrl(res.data.signed_url);
+      const nextSignedUrl = res.data?.signed_read_url || res.data?.signed_url;
+      if (nextSignedUrl) {
+        setSignedUrl(nextSignedUrl);
         setShowPlayer(true);
       } else {
         setUrlError('Could not load video.');

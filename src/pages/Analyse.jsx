@@ -559,8 +559,9 @@ export default function Analyse() {
       setUploadedVideoId(uploadRecord.id);
 
       const res = await functions.getSignedVideoUrl(uploadRecord.id);
-      if (res.data?.signed_url) {
-        setUploadedUrl(res.data.signed_url);
+      const nextSignedUrl = res.data?.signed_read_url || res.data?.signed_url;
+      if (nextSignedUrl) {
+        setUploadedUrl(nextSignedUrl);
       }
       setUploadStatus('uploaded');
       setUploadStatusMessage(`Video uploaded. Ready for AI Review. Video row: ${uploadRecord.id}`);
@@ -706,7 +707,8 @@ export default function Analyse() {
     // Fetch signed URL so Step 3 has video ready
     try {
       const res = await functions.getSignedVideoUrl(upload.id);
-      if (res.data?.signed_url) setUploadedUrl(res.data.signed_url);
+      const nextSignedUrl = res.data?.signed_read_url || res.data?.signed_url;
+      if (nextSignedUrl) setUploadedUrl(nextSignedUrl);
     } catch {
       // Non-fatal — coach can still do analysis without playback
     }

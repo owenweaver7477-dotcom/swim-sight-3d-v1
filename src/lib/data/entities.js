@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabaseClient';
 import { getActiveClub } from '@/lib/swimState';
+import {
+  buildPrivateVideoUri,
+  normaliseVideoStorageRecord,
+} from '@/lib/storage/videoStorage';
 
 const CREATED_ALIAS = 'created_date';
 const UPDATED_ALIAS = 'updated_date';
@@ -168,6 +172,9 @@ function mapReportFromDb(row) {
 function mapVideoUploadToDb(data) {
   if (!data) return data;
   const {
+    storage_provider,
+    video_storage_key,
+    content_type,
     file_uri,
     file_name,
     file_size,
@@ -205,16 +212,33 @@ function mapVideoUploadToDb(data) {
   const reviewContext = Object.fromEntries(
     Object.entries(reviewContextFields).filter(([, value]) => value !== undefined)
   );
+  const storage = normaliseVideoStorageRecord({
+    ...remaining,
+    storage_provider,
+    video_storage_key,
+    content_type,
+    file_name,
+    file_size,
+  });
+  const hasStorageInput = Boolean(
+    remaining.file_bucket
+    || remaining.storage_bucket
+    || remaining.file_path
+    || remaining.storage_path
+    || video_storage_key
+  );
+  const fileSizeBytes = remaining.file_size_bytes ?? file_size ?? storage.file_size_bytes;
 
   return {
     ...remaining,
-    file_bucket: remaining.file_bucket || remaining.storage_bucket,
-    file_path: remaining.file_path || remaining.storage_path,
-    storage_bucket: remaining.storage_bucket || remaining.file_bucket,
-    storage_path: remaining.storage_path || remaining.file_path,
+    file_bucket: hasStorageInput ? (remaining.file_bucket || remaining.storage_bucket || storage.file_bucket) : undefined,
+    file_path: hasStorageInput ? (remaining.file_path || remaining.storage_path || storage.file_path) : undefined,
+    storage_bucket: hasStorageInput ? (remaining.storage_bucket || remaining.file_bucket || storage.storage_bucket) : undefined,
+    storage_path: hasStorageInput ? (remaining.storage_path || remaining.file_path || storage.storage_path) : undefined,
     original_filename: remaining.original_filename || file_name,
-    file_size_bytes: remaining.file_size_bytes ?? file_size,
-    file_size_mb: remaining.file_size_mb ?? (remaining.file_size_bytes || file_size ? Number(((remaining.file_size_bytes ?? file_size) / 1048576).toFixed(2)) : undefined),
+    mime_type: remaining.mime_type || storage.mime_type,
+    file_size_bytes: fileSizeBytes,
+    file_size_mb: remaining.file_size_mb ?? (fileSizeBytes ? Number((fileSizeBytes / 1048576).toFixed(2)) : undefined),
     created_by: remaining.created_by || uploaded_by_user_id,
     stroke_type: remaining.stroke_type || stroke,
     review_context: Object.keys(reviewContext).length
@@ -226,8 +250,9 @@ function mapVideoUploadToDb(data) {
 function mapVideoUploadFromDb(row) {
   if (!row) return row;
   const reviewContext = row.review_context || {};
-  const bucket = row.file_bucket || row.storage_bucket;
-  const path = row.file_path || row.storage_path;
+  const storage = normaliseVideoStorageRecord(row);
+  const bucket = storage.file_bucket;
+  const path = storage.video_storage_key;
   return withBase44DateAliases({
     ...row,
     ...reviewContext,
@@ -235,7 +260,10 @@ function mapVideoUploadFromDb(row) {
     file_path: path,
     storage_bucket: row.storage_bucket || bucket,
     storage_path: row.storage_path || path,
-    file_uri: bucket && path ? `private://${bucket}/${path}` : undefined,
+    storage_provider: storage.storage_provider,
+    video_storage_key: storage.video_storage_key,
+    content_type: storage.content_type,
+    file_uri: buildPrivateVideoUri(storage) || undefined,
     file_name: row.original_filename,
     file_size: row.file_size_bytes,
     stroke: row.stroke_type,

@@ -22,6 +22,7 @@ import {
 import { consentGate, envFlagEnabled } from '../safeguarding.js';
 import { publicOutputSelection, validateAIReportOutputRequest } from '../aiReportOutputSelection.js';
 import { safeAnalysisJobForClient, safeAnalysisJobResponse } from './jobResponse.js';
+import { normaliseVideoStorageRecord } from '../../../src/lib/storage/videoStorage.js';
 
 const RETRYABLE_VIDEO_STATUSES = ['uploaded', 'completed', 'unreliable_pose', 'error', 'manual_review'];
 const INCOMPLETE_UPLOAD_STATUSES = ['preparing_upload', 'uploading', 'upload_failed'];
@@ -41,12 +42,14 @@ function maxExistingAttempt(existingJobs = []) {
   );
 }
 
-function safeVideoState(upload, storageReady = false) {
+function safeVideoState(upload, storageReady = undefined) {
+  const storage = normaliseVideoStorageRecord(upload || {});
   return {
     video_upload_id: upload?.id || null,
     processing_status: upload?.processing_status || null,
     upload_status: upload?.upload_status || null,
-    storage_ready: storageReady,
+    storage_provider: storage.storage_provider,
+    storage_ready: storageReady ?? Boolean(storage.video_storage_key),
   };
 }
 
@@ -105,7 +108,7 @@ export default async function handler(req, res) {
     if (!upload.stroke_type) {
       return sendJson(res, 400, {
         error: 'stroke_type is missing from this video. Configure the review before sending it for AI analysis.',
-        ...safeVideoState(upload, Boolean((upload.file_bucket || upload.storage_bucket) && (upload.file_path || upload.storage_path))),
+        ...safeVideoState(upload),
       });
     }
 
@@ -114,7 +117,7 @@ export default async function handler(req, res) {
       return sendJson(res, outputSelection.status || 422, {
         error: outputSelection.error,
         locked_outputs: outputSelection.locked_outputs || [],
-        ...safeVideoState(upload, Boolean((upload.file_bucket || upload.storage_bucket) && (upload.file_path || upload.storage_path))),
+        ...safeVideoState(upload),
       });
     }
 
@@ -141,8 +144,9 @@ export default async function handler(req, res) {
       });
     }
 
-    const storageBucket = upload.file_bucket || upload.storage_bucket;
-    const storagePath = upload.file_path || upload.storage_path;
+    const storage = normaliseVideoStorageRecord(upload);
+    const storageBucket = storage.file_bucket;
+    const storagePath = storage.video_storage_key;
     if (!storageBucket || !storagePath) {
       return sendJson(res, 422, {
         error: 'This video is missing its private storage location. Retry the upload before sending it for AI Review.',

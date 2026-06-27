@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabaseClient';
 import entities from '@/lib/data/entities';
+import {
+  buildPrivateVideoStorageKey,
+  buildVideoStorageReviewContext,
+  normaliseVideoStorageRecord,
+} from '@/lib/storage/videoStorage';
 
 export const PRIVATE_VIDEO_BUCKET = 'private-videos';
 const DEFAULT_STORAGE_UPLOAD_TIMEOUT_MS = 12 * 60 * 1000;
@@ -20,7 +25,7 @@ export function safeVideoFilename(filename = 'video') {
 }
 
 export function buildPrivateVideoPath({ clubId, swimmerId, videoUploadId, filename }) {
-  return `${clubId}/${swimmerId}/${videoUploadId}/${safeVideoFilename(filename)}`;
+  return buildPrivateVideoStorageKey({ clubId, swimmerId, videoUploadId, filename });
 }
 
 function createUploadTimeoutError(timeoutMs) {
@@ -120,6 +125,21 @@ export async function uploadPrivateVideo({
   const now = new Date().toISOString();
   const durationSeconds = metadata.duration_seconds ?? await readVideoDuration(file);
   const retryBase = Number(currentExistingRecord?.upload_retry_count || 0);
+  const storageRecord = normaliseVideoStorageRecord({
+    file_bucket: PRIVATE_VIDEO_BUCKET,
+    file_path: filePath,
+    original_filename: file.name,
+    content_type: file.type || 'video/mp4',
+    file_size_bytes: file.size,
+    upload_status: 'uploading',
+    created_by: userId,
+    club_id: clubId,
+    swimmer_id: swimmer.id,
+  });
+  const nextReviewContext = {
+    ...(metadata.review_context || {}),
+    video_storage: buildVideoStorageReviewContext(storageRecord),
+  };
   const baseRecord = {
     id: videoUploadId,
     club_id: clubId,
@@ -150,7 +170,7 @@ export async function uploadPrivateVideo({
     capture_device: metadata.capture_device || null,
     capture_source: metadata.capture_source || null,
     video_quality_rating: metadata.video_quality_rating || null,
-    review_context: metadata.review_context || {},
+    review_context: nextReviewContext,
     created_by: userId || null,
   };
 

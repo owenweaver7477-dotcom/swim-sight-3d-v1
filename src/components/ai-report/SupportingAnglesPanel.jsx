@@ -53,8 +53,9 @@ function AngleCard({ upload, isPrimary, onRetryAI, canRetry, annotationCount = 0
     setLoadingUrl(true);
     try {
       const res = await base44.functions.invoke('getSignedVideoUrl', { video_upload_id: upload.id });
-      if (res.data?.signed_url) {
-        setSignedUrl(res.data.signed_url);
+      const nextSignedUrl = res.data?.signed_read_url || res.data?.signed_url;
+      if (nextSignedUrl) {
+        setSignedUrl(nextSignedUrl);
         setShowPlayer(true);
       }
     } catch { /* non-fatal */ }
