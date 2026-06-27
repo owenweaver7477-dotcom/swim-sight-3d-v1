@@ -184,10 +184,6 @@ export default function DragRiskPanel({ report, video, findings = [], canEdit })
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drag-analysis', videoUploadId] }),
   });
 
-  const updateStandard = useMutation({
-    mutationFn: ({ item, id, title }) => base44.entities.DragAnalysis.update(item.id, { linked_standard_id: id, linked_standard_title: title }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drag-analysis', videoUploadId] }),
-  });
 
   const active = dragItems.filter(d => d.approval_status !== 'rejected');
   const pending = dragItems.filter(d => d.approval_status === 'pending');
