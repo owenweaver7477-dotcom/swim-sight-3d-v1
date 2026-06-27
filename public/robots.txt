@@ -13,9 +13,7 @@ Disallow: /swimmers
 Disallow: /performance
 Disallow: /club-progress
 Disallow: /swimmer-trends
-Disallow: /technical-standards
 Disallow: /reference-library
-Disallow: /biomechanics-hud
 Disallow: /settings
 Disallow: /shared-report/
 Disallow: /join

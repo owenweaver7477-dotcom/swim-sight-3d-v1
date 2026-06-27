@@ -49,9 +49,7 @@ The sitemap intentionally excludes authenticated, internal, tokenised, and priva
 - `/performance`
 - `/club-progress`
 - `/swimmer-trends`
-- `/technical-standards`
 - `/reference-library`
-- `/biomechanics-hud`
 - `/settings`
 - `/shared-report/:token`
 - `/join`

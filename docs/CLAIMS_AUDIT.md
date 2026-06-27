@@ -30,7 +30,6 @@ This is a product-copy audit, not legal advice or scientific validation.
   shared as real analysis.
 - `src/pages/Roadmap.jsx:75` — describes future resistance cues as estimates,
   not force measurements.
-- `src/pages/EliteLabRoadmap.jsx:22,28,56,58,96` — references physical hardware
   measurements, workload evidence, or future calibration and says the preview
   is not a live measurement tool.
 - `src/pages/AIInfrastructureStatus.jsx:79,116,121,146` — blocks advanced work
