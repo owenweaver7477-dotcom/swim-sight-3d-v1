@@ -2,20 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import { REFERENCE_PROFILES_LIST } from '@/lib/swimState';
-import { DEFAULT_STANDARDS } from '@/components/standards/defaultStandards';
 import PageHeader from '@/components/shared/PageHeader';
 import { Input } from '@/components/ui/input';
-import { BookOpen, Search, Target, AlertTriangle } from 'lucide-react';
+import { BookOpen, Search, AlertTriangle } from 'lucide-react';
 
 const STROKE_GROUPS = ['All', 'Freestyle', 'Breaststroke', 'Butterfly', 'Backstroke', 'Individual Medley', 'Starts', 'Turns', 'Underwater', 'Fundamentals', 'Transition'];
 
 function referenceDescription(profile) {
-  const related = DEFAULT_STANDARDS.find(standard =>
-    profile.stroke_group === 'Fundamentals'
-      ? standard.stroke === 'General'
-      : standard.stroke === profile.stroke_group || standard.title.toLowerCase().includes(profile.stroke_group.toLowerCase())
-  );
-  return related?.technical_goal || 'Use this profile as a coach reference point for reviewing stroke phase, body line, timing, and correction cues.';
+  return profile.description || 'Use this profile as a coach reference point for reviewing stroke phase, body line, timing, and correction cues.';
 }
 
 function ProfileCard({ profile, onSelect }) {
@@ -93,14 +87,6 @@ export default function ReferenceLibrary() {
     });
   }, [profiles, strokeFilter, search]);
 
-  const relatedStandards = selectedProfile
-    ? DEFAULT_STANDARDS.filter(standard => (
-      selectedProfile.stroke_group === 'Fundamentals'
-        ? standard.stroke === 'General'
-        : standard.stroke === selectedProfile.stroke_group || standard.title.toLowerCase().includes(selectedProfile.stroke_group.toLowerCase())
-    )).slice(0, 4)
-    : [];
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
       <PageHeader
@@ -170,23 +156,6 @@ export default function ReferenceLibrary() {
                     {selectedProfile.description || referenceDescription(selectedProfile)}
                   </p>
                 </div>
-
-                {relatedStandards.length > 0 && (
-                  <div>
-                    <div className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
-                      <Target className="w-3.5 h-3.5 text-primary" /> Related Technical Standards
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {relatedStandards.map(standard => (
-                        <div key={standard.title} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                          <div className="text-xs font-semibold text-slate-900">{standard.title}</div>
-                          <div className="text-[10px] text-primary mt-0.5">{standard.stroke} · {standard.phase}</div>
-                          <p className="text-[11px] text-slate-500 leading-relaxed mt-2 line-clamp-3">{standard.technical_goal}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <div className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Club Reference Assets</div>

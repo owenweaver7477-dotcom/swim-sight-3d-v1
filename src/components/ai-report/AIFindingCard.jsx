@@ -6,7 +6,6 @@ import {
   ThumbsUp, ThumbsDown, Pencil, Check, X, MessageSquare, Box, Dumbbell
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import StandardLinker from '@/components/standards/StandardLinker';
 import { suggestDrillsForFinding } from '@/lib/drillMatching';
 import AITrustBadge from '@/components/ai/AITrustBadge';
 import FindingEvidencePanel from '@/components/ai/FindingEvidencePanel';
@@ -47,7 +46,6 @@ export default function AIFindingCard({
   onReject,
   onUpdateCue,
   onUpdateNote,
-  onUpdateStandard,
   onAssignDrill,
   drillOptions = [],
   canEdit = true,
@@ -312,23 +310,6 @@ export default function AIFindingCard({
           )}
 
           {isAiFinding && <FindingEvidencePanel finding={finding} />}
-
-          {/* Linked Technical Standard */}
-          {canEdit && !isRejected && onUpdateStandard && (
-            <div className="pt-1">
-              <StandardLinker
-                clubId={clubId}
-                value={finding.linked_standard_id}
-                onChange={(id, title) => onUpdateStandard(finding, id, title)}
-              />
-            </div>
-          )}
-          {!canEdit && finding.linked_standard_title && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/10">
-              <span className="text-[10px] text-primary font-semibold">Standard:</span>
-              <span className="text-[10px] text-slate-700">{finding.linked_standard_title}</span>
-            </div>
-          )}
 
           {/* Load 3D Reference — only for non-rejected findings */}
           {(onLoad3D || !isRejected) && (

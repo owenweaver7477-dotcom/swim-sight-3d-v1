@@ -50,7 +50,6 @@ export default function CoachStudioWorkflowPanel({
   const pendingFindings = findings.filter(finding => !hasCoachDecision(finding));
   const approvedFindings = findings.filter(finding => finding.approval_status === 'approved');
   const hasDrill = approvedFindings.some(finding => finding.drill || finding.linked_drill_id || finding.linked_drill_title);
-  const hasStandard = findings.some(finding => finding.technical_standard_id || finding.linked_standard_id || finding.standard_id);
   const reportFinal = FINAL_REPORT_STATUSES.has(report?.status);
   const activeShare = sharedLinks.some(link => link.status === 'active');
   const aiStatus = String(aiJob?.status || aiJob?.queue_status || '').toLowerCase();
@@ -114,17 +113,6 @@ export default function CoachStudioWorkflowPanel({
         { label: 'AI status understood', done: Boolean(aiStatus) || aiUnavailable },
         { label: 'Every AI draft has a coach decision', done: aiFindings.length > 0 && aiFindings.every(hasCoachDecision) },
         { label: 'Manual review available if AI is unavailable', done: true },
-      ],
-    },
-    {
-      title: 'Technical standards',
-      status: hasStandard ? 'Complete' : findings.length ? 'In progress' : 'Not started',
-      purpose: 'Connect observations to a consistent stroke-and-phase coaching standard.',
-      action: hasStandard ? 'Check the standard still matches the finding.' : 'Link a standard where it adds useful coaching context.',
-      unlocks: 'Consistent language across coaches and squads.',
-      checks: [
-        { label: 'Finding phase checked', done: findings.some(finding => finding.stroke_phase || finding.phase) },
-        { label: 'Technical standard linked or intentionally skipped', done: hasStandard },
       ],
     },
     {

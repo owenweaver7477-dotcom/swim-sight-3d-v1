@@ -3,10 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, CheckCircle2, X, Plus, ChevronDown, ChevronUp, Info, BookOpen, Zap } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, X, Plus, ChevronDown, ChevronUp, Info, Zap } from 'lucide-react';
 import DragRiskCreateModal from './DragRiskCreateModal';
 import DragRiskSummary from './DragRiskSummary';
-import StandardLinker from '@/components/standards/StandardLinker';
 
 const RISK_CONFIG = {
   low:     { label: 'Low Risk',     cls: 'text-green-700 bg-green-50 border-green-200',    dot: 'bg-green-500' },
@@ -39,7 +38,7 @@ function RiskBadge({ level }) {
   );
 }
 
-function DragItemCard({ item, canEdit, onApprove, onReject, onToggleReport, onDelete, onUpdateStandard, clubId }) {
+function DragItemCard({ item, canEdit, onApprove, onReject, onToggleReport, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const cfg = RISK_CONFIG[item.drag_risk_level] || RISK_CONFIG.unknown;
   const isAI = item.source === 'ai_pose';
@@ -118,24 +117,6 @@ function DragItemCard({ item, canEdit, onApprove, onReject, onToggleReport, onDe
             <div className="text-[10px] text-muted-foreground">
               Evidence: {item.evidence_type || 'coach_review'} · Mode: {item.analysis_mode || 'manual'}
             </div>
-
-            {/* Linked standard — show when linked */}
-            {item.linked_standard_title && (
-              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-primary/5 border border-primary/10">
-                <BookOpen className="w-3 h-3 text-primary flex-shrink-0" />
-                <span className="text-[10px] text-primary font-semibold">Standard:</span>
-                <span className="text-[10px] text-slate-700">{item.linked_standard_title}</span>
-              </div>
-            )}
-
-            {/* Link a standard */}
-            {canEdit && onUpdateStandard && item.approval_status !== 'rejected' && (
-              <StandardLinker
-                clubId={clubId}
-                value={item.linked_standard_id}
-                onChange={(id, title) => onUpdateStandard(item, id, title)}
-              />
-            )}
 
             {canEdit && item.approval_status !== 'rejected' && (
               <div className="flex items-center gap-2 pt-1">
@@ -280,7 +261,6 @@ export default function DragRiskPanel({ report, video, findings = [], canEdit })
               onReject={(i) => reject.mutate(i)}
               onToggleReport={(i, v) => toggleReport.mutate({ item: i, included: v })}
               onDelete={(id) => deleteItem.mutate(id)}
-              onUpdateStandard={(i, id, title) => updateStandard.mutate({ item: i, id, title })}
               clubId={report?.club_id}
             />
           ))}
