@@ -14,6 +14,7 @@ async function collectTextFiles(directory) {
     const entries = await readdir(directory, { withFileTypes: true });
     const files = [];
     for (const entry of entries) {
+      if (entry.name.startsWith('.') || ['node_modules', 'dist', 'build', 'coverage'].includes(entry.name)) continue;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) files.push(...await collectTextFiles(absolute));
       else if (/\.(?:jsx?|tsx?|jsonc?|sql|md)$/.test(entry.name)) files.push(absolute);
