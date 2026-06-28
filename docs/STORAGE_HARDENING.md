@@ -102,6 +102,29 @@ signed_video_url_expires_in_seconds
 
 Future Modal/RunPod workers should prefer provider-native object access using the private `video_key` and scoped service credentials. Until that worker access is implemented, the signed URL remains short-lived and internal to the worker request.
 
+## Phase 11 Production Readiness Notes
+
+Current production-compatible behaviour:
+
+- the app dispatches `storage_provider` and `video_key` for future direct object access,
+- the app also dispatches a short-lived `signed_video_url` for the current Render worker,
+- the worker should prefer the signed URL path until direct provider credentials are configured and tested,
+- missing private storage or signed URL creation failures must return safe coach-facing recovery text and leave manual coach review available.
+
+Future Supabase direct object access requires these worker-side environment variables:
+
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_VIDEO_BUCKET=private-videos
+```
+
+Those values must only exist on the trusted worker environment. They must not be exposed to the frontend, public reports, shared report links, support emails, or browser-visible error messages.
+
+The Supabase provider/key path should stay disabled or fail safely until credentials exist and real upload/job testing proves it works. If the worker receives `storage_provider="supabase_private"` and `video_key` but lacks credentials, it should return a safe processing failure rather than falling back to public storage or logging the private key.
+
+Move to Modal/RunPod only after the current Render compatibility path is stable with real uploads, async jobs, signed URL expiry handling, public report sanitisation, and manual review fallback. Modal/RunPod should use the same provider/key contract so the app does not need another storage rewrite.
+
 ## Retention Expectations
 
 Retention helpers identify raw footage through the same private storage adapter. Raw footage can be deleted while derived, coach-approved report content remains.
