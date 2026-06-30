@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ArrowRight, Menu, Waves, X } from 'lucide-react';
+import { ArrowRight, Menu, X } from 'lucide-react';
 
 const navItems = [
   { to: '/features', label: 'Features' },
@@ -27,9 +27,13 @@ export default function PublicNav() {
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-cyan-200">
-            <Waves className="h-5 w-5" />
-          </span>
+          <img
+            src="/brand/swim-sight-logo.png"
+            alt="Swim Sight 3D"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-xl object-contain"
+          />
           <span>
             <span className="block text-sm font-bold leading-tight text-slate-950">Swim Sight 3D</span>
             <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Coach-approved analysis</span>
