@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
+import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
 import {
   Users, Waves, Video, Plus, ChevronRight,
@@ -14,33 +15,55 @@ import { Button } from '@/components/ui/button';
 import { subDays } from 'date-fns';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 
-// ── Small stat chip ────────────────────────────────────────────────────────────
-function Stat({ label, value, highlight }) {
+// ── KPI card (real data only) ───────────────────────────────────────────────────
+function KpiCard({ icon: Icon, label, value, sub, accent = 'bg-primary/10 text-primary', highlight }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <div className={`text-2xl font-bold ${highlight ? 'text-primary' : 'text-slate-900'}`}>{value}</div>
-      <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm shadow-slate-950/[0.03] ${highlight ? 'border-amber-200' : 'border-slate-200'}`}>
+      <div className="flex items-center justify-between">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        {highlight && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-600">Action</span>}
+      </div>
+      <div className="mt-3 text-2xl font-bold text-slate-900">{value}</div>
+      <div className="text-[11px] text-slate-500">{label}</div>
+      {sub && <div className="mt-1 text-[10px] font-semibold text-emerald-600">{sub}</div>}
     </div>
   );
 }
 
-// ── Priority item row ──────────────────────────────────────────────────────────
+// ── Priority item row ────────────────────────────────────────────────────────────
 function PriorityRow({ icon: Icon, iconColor, label, meta, cta, onClick, urgent }) {
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${urgent ? 'border-amber-200 bg-amber-50/50' : 'border-slate-100 bg-white'}`}>
-      <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor || 'text-slate-400'}`} />
-      <div className="flex-1 min-w-0">
-        <div className="text-xs font-semibold text-slate-800">{label}</div>
-        {meta && <div className="text-[10px] text-slate-500 mt-0.5 truncate">{meta}</div>}
+    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3.5 shadow-sm shadow-slate-950/[0.02] ${urgent ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200 bg-white'}`}>
+      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${urgent ? 'bg-amber-100' : 'bg-slate-100'}`}>
+        <Icon className={`h-4 w-4 ${iconColor || 'text-slate-400'}`} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-slate-800">{label}</div>
+        {meta && <div className="mt-0.5 truncate text-[11px] text-slate-500">{meta}</div>}
       </div>
-      <button onClick={onClick} className="flex-shrink-0 flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80">
-        {cta} <ChevronRight className="w-3 h-3" />
+      <button onClick={onClick} className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15">
+        {cta} <ChevronRight className="h-3 w-3" />
       </button>
     </div>
   );
 }
 
-// ── No club state ──────────────────────────────────────────────────────────────
+// ── Section wrapper ──────────────────────────────────────────────────────────────
+function SectionCard({ title, action, children }) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{title}</div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── No club state ────────────────────────────────────────────────────────────────
 function NoClubDashboard() {
   const navigate = useNavigate();
   return (
@@ -57,7 +80,7 @@ function NoClubDashboard() {
   );
 }
 
-// ── Setup state ────────────────────────────────────────────────────────────────
+// ── Setup state ──────────────────────────────────────────────────────────────────
 function SetupDashboard({ club }) {
   const navigate = useNavigate();
   const steps = [
@@ -85,6 +108,7 @@ function SetupDashboard({ club }) {
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 export default function TeamDashboard() {
   const { club, loading } = useClubContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const enabled = !!club?.id;
 
@@ -129,6 +153,18 @@ export default function TeamDashboard() {
 
   const recentReports = publishedReports.slice(0, 5).map(r => ({ ...r, swimmerName: swimmers.find(s => s.id === r.swimmer_id)?.name || 'Unknown' }));
 
+  // Real "new this week" deltas from created_date — no fabricated percentages.
+  const sevenDaysAgo = subDays(new Date(), 7);
+  const newSince = (arr, field = 'created_date') => arr.filter(x => x[field] && new Date(x[field]) >= sevenDaysAgo).length;
+  const swimmersNew = newSince(swimmers);
+  const videosNew = newSince(videos);
+  const reportsNew = publishedReports.filter(r => new Date(r.updated_date || r.created_date) >= sevenDaysAgo).length;
+
+  // Real greeting + coach name (from auth).
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const coachName = (user?.full_name || '').trim().split(' ')[0];
+
   const priorityItems = [
     awaitingReview.length > 0 && {
       icon: Brain, iconColor: 'text-amber-500', urgent: true,
@@ -171,41 +207,70 @@ export default function TeamDashboard() {
   const allClear = priorityItems.length === 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 pb-20">
+    <div className="mx-auto max-w-6xl px-4 py-8 pb-24 sm:px-6">
 
-      <PageHeader
-        eyebrow={club.name}
-        title="Coach Control Centre"
-        subtitle="What needs your attention today: videos to review, Coach Studio decisions, reports to finalise, and swimmer follow-up."
-        action={
-          <Button size="sm" className="bg-primary text-white text-xs h-8" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
-            <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Video
-          </Button>
-        }
-      />
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        <Stat label="Swimmers" value={swimmers.length} />
-        <Stat label="Private Videos" value={videos.length} />
-        <Stat label="Need Review" value={awaitingReview.length} highlight={awaitingReview.length > 0} />
-        <Stat label="Finalised Reports" value={publishedReports.length} />
+      {/* Welcome banner — real club, greeting, and coach name */}
+      <div className="relative mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-sky-50 via-white to-white p-6">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-[radial-gradient(circle_at_85%_20%,rgba(0,119,182,0.10),transparent_60%)]" />
+        <Waves className="pointer-events-none absolute -bottom-6 right-4 h-32 w-32 text-primary/[0.06]" />
+        <div className="relative">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{club.name}</div>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">
+            {greeting}, <span className="text-primary">Coach{coachName ? ` ${coachName}` : ''}</span>.
+          </h1>
+          <p className="mt-1.5 max-w-lg text-sm text-slate-500">
+            Review AI-assisted findings, approve what you agree with, and share coach-approved reports.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" className="h-9 bg-primary text-xs text-white hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
+              <Upload className="mr-1.5 h-3.5 w-3.5" /> Start New Analysis
+            </Button>
+            <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => navigate('/ai-reviews')}>
+              <Brain className="mr-1.5 h-3.5 w-3.5" /> Coach Studio
+              {awaitingReview.length > 0 && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">{awaitingReview.length}</span>}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* KPI row — real fetched counts, real "new this week" deltas */}
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard icon={Users} label="Swimmers" value={swimmers.length} accent="bg-primary/10 text-primary" sub={swimmersNew > 0 ? `+${swimmersNew} this week` : null} />
+        <KpiCard icon={Video} label="Private Videos" value={videos.length} accent="bg-sky-100 text-sky-600" sub={videosNew > 0 ? `+${videosNew} this week` : null} />
+        <KpiCard icon={Brain} label="Awaiting coach review" value={awaitingReview.length} accent="bg-amber-100 text-amber-600" highlight={awaitingReview.length > 0} />
+        <KpiCard icon={CheckCircle2} label="Finalised Reports" value={publishedReports.length} accent="bg-emerald-100 text-emerald-600" sub={reportsNew > 0 ? `+${reportsNew} this week` : null} />
+      </div>
 
-        {/* Left — priorities + quick actions */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Start analysis — CTA that navigates to /analyse only (not an uploader) */}
+      <button
+        onClick={() => { setReviewSession(null); navigate('/analyse'); }}
+        className="group mb-6 flex w-full items-center gap-4 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.03] px-5 py-5 text-left transition-colors hover:border-primary/50 hover:bg-primary/[0.06] sm:px-6"
+      >
+        <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/25">
+          <Upload className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-bold text-slate-900">Start a new AI analysis</div>
+          <div className="text-xs text-slate-500">Upload a short swim clip to begin — the coach reviews and approves every finding.</div>
+        </div>
+        <span className="hidden flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-primary/90 sm:inline-flex">
+          Start analysis <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      </button>
 
-          {/* Priorities */}
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Today's Review Queue</div>
+      {/* Main grid */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {/* Left — priorities + recent reports */}
+        <div className="space-y-6 lg:col-span-2">
+
+          <SectionCard title="What needs your attention today">
             {allClear ? (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-green-200 bg-green-50">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5">
+                <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-600" />
                 <div>
-                  <div className="text-xs font-semibold text-green-800">All clear</div>
-                  <div className="text-[10px] text-green-700">No AI reports are waiting for coach decisions right now.</div>
+                  <div className="text-sm font-semibold text-emerald-800">All clear</div>
+                  <div className="text-[11px] text-emerald-700">No AI reports are waiting for coach decisions right now.</div>
                 </div>
               </div>
             ) : (
@@ -213,12 +278,34 @@ export default function TeamDashboard() {
                 {priorityItems.map((item, i) => <PriorityRow key={i} {...item} />)}
               </div>
             )}
-          </div>
+          </SectionCard>
 
-          {/* Quick actions */}
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Quick Actions</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {recentReports.length > 0 && (
+            <SectionCard
+              title="Recent Finalised Reports"
+              action={<Link to="/ai-reviews" className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+            >
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.02]">
+                {recentReports.map(r => (
+                  <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-4 w-4" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-semibold text-slate-800">{r.swimmerName}</div>
+                      <div className="truncate text-[10px] text-slate-500">{r.title || 'AI Report'}</div>
+                    </div>
+                    <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Open →</button>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+        </div>
+
+        {/* Right — actions + workflow + focus */}
+        <div className="space-y-6">
+
+          <SectionCard title="Quick Actions">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Upload Video', icon: Upload, to: '/analyse' },
                 { label: 'Add Swimmer', icon: Plus, to: '/swimmers' },
@@ -228,47 +315,41 @@ export default function TeamDashboard() {
                 const Icon = a.icon;
                 return (
                   <button key={a.to} onClick={() => navigate(a.to)}
-                    className="flex flex-col items-center gap-2 p-3 bg-white rounded-xl border border-slate-200 hover:border-primary/30 hover:bg-primary/5 transition-colors text-center">
-                    <Icon className="w-5 h-5 text-primary" />
+                    className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white p-3.5 text-center shadow-sm shadow-slate-950/[0.02] transition-colors hover:border-primary/30 hover:bg-primary/5">
+                    <Icon className="h-5 w-5 text-primary" />
                     <span className="text-[10px] font-semibold text-slate-700">{a.label}</span>
                   </button>
                 );
               })}
             </div>
-          </div>
+          </SectionCard>
 
-          {/* Recent reports */}
-          {recentReports.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Recent Finalised Reports</div>
-                <Link to="/ai-reviews" className="text-[10px] text-primary font-semibold flex items-center gap-0.5 hover:underline">
-                  View all <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-                {recentReports.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-slate-800 truncate">{r.swimmerName}</div>
-                      <div className="text-[10px] text-slate-500 truncate">{r.title || 'AI Report'}</div>
+          {awaitingReview.length > 0 && (
+            <SectionCard title="Review Queue">
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.02]">
+                {awaitingReview.slice(0, 4).map(r => {
+                  const sw = swimmers.find(s => s.id === r.swimmer_id);
+                  return (
+                    <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-semibold text-slate-800">{r.title || 'AI Report'}</div>
+                        {sw && <div className="text-[10px] text-slate-500">{sw.name}</div>}
+                      </div>
+                      <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Review →</button>
                     </div>
-                    <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="text-[10px] text-primary font-semibold hover:underline flex-shrink-0">
-                      Open →
-                    </button>
+                  );
+                })}
+                {awaitingReview.length > 4 && (
+                  <div className="px-4 py-2.5">
+                    <Link to="/ai-reviews" className="text-[10px] font-semibold text-primary hover:underline">+{awaitingReview.length - 4} more in Coach Studio</Link>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
+            </SectionCard>
           )}
-        </div>
 
-        {/* Right — club focus */}
-        <div className="space-y-6">
-
-          {/* Coach workflow */}
-          <div className="p-4 rounded-xl bg-white border border-slate-200">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Coach Workflow</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-950/[0.02]">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Coach Workflow</div>
             <div className="space-y-2">
               {[
                 ['1', 'Upload a 5-10 second swim clip'],
@@ -277,78 +358,43 @@ export default function TeamDashboard() {
                 ['4', 'Finalise and share the coach-approved report'],
               ].map(([num, label]) => (
                 <div key={num} className="flex items-center gap-2 text-[11px] text-slate-600">
-                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center flex-shrink-0">{num}</span>
+                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">{num}</span>
                   <span>{label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* AI Review queue mini */}
-          {awaitingReview.length > 0 && (
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Review Queue</div>
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-                {awaitingReview.slice(0, 4).map(r => {
-                  const sw = swimmers.find(s => s.id === r.swimmer_id);
-                  return (
-                    <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-slate-800 truncate">{r.title || 'AI Report'}</div>
-                        {sw && <div className="text-[10px] text-slate-500">{sw.name}</div>}
-                      </div>
-                      <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="text-[10px] font-semibold text-primary hover:underline flex-shrink-0">
-                        Review →
-                      </button>
-                    </div>
-                  );
-                })}
-                {awaitingReview.length > 4 && (
-                  <div className="px-4 py-2.5">
-                    <Link to="/ai-reviews" className="text-[10px] text-primary font-semibold hover:underline">+{awaitingReview.length - 4} more in Coach Studio</Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Technical focus */}
           {topFaults.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Club Technical Focus</div>
-                <Link to="/drill-library" className="text-[10px] text-primary font-semibold hover:underline">Drills</Link>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+            <SectionCard title="Club Technical Focus" action={<Link to="/drill-library" className="text-[10px] font-semibold text-primary hover:underline">Drills</Link>}>
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.02]">
                 {topFaults.map(([name, count], i) => (
                   <div key={name} className="flex items-center gap-3 px-4 py-3">
-                    <div className="text-[10px] font-bold text-slate-300 w-4 flex-shrink-0">{i + 1}</div>
-                    <div className="text-xs text-slate-700 flex-1 truncate">{name}</div>
-                    <span className="text-[10px] font-semibold text-primary flex-shrink-0">{count}×</span>
+                    <div className="w-4 flex-shrink-0 text-[10px] font-bold text-slate-300">{i + 1}</div>
+                    <div className="flex-1 truncate text-xs text-slate-700">{name}</div>
+                    <span className="flex-shrink-0 text-[10px] font-semibold text-primary">{count}×</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </SectionCard>
           )}
 
-          {/* Drill Library CTA */}
           <button onClick={() => navigate('/drill-library')}
-            className="w-full flex items-center gap-3 px-4 py-4 bg-white rounded-xl border border-slate-200 hover:border-primary/30 hover:bg-primary/5 transition-colors text-left">
-            <Dumbbell className="w-5 h-5 text-primary flex-shrink-0" />
-            <div className="flex-1 min-w-0">
+            className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm shadow-slate-950/[0.02] transition-colors hover:border-primary/30 hover:bg-primary/5">
+            <Dumbbell className="h-5 w-5 flex-shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
               <div className="text-xs font-semibold text-slate-800">Drill Library</div>
               <div className="text-[10px] text-slate-500">Corrective packs and coach cues</div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300" />
+            <ChevronRight className="h-4 w-4 text-slate-300" />
           </button>
-
         </div>
       </div>
 
       <FeedbackButton pageRoute="/dashboard" />
 
-      <div className="text-[10px] text-slate-400 mt-6 pt-3 border-t border-slate-100 flex items-center gap-1.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+      <div className="mt-6 flex items-center gap-1.5 border-t border-slate-100 pt-3 text-[10px] text-slate-400">
+        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
         {club.name} · live
       </div>
     </div>
