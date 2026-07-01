@@ -29,7 +29,7 @@ const NAV_MAIN = [
 ];
 
 const NAV_TOOLS = [
-  { to: '/performance',     label: 'Reports / Performance', icon: TrendingUp },
+  { to: '/performance',     label: 'Performance Hub', icon: TrendingUp },
 ];
 
 const NAV_CLUB = [
@@ -79,8 +79,8 @@ export default function Sidebar() {
       <Link to={item.to}>
         <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all cursor-pointer ${
           active
-            ? 'bg-primary/10 text-primary font-semibold border-l-2 border-primary'
-            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            ? 'bg-primary/10 text-primary font-semibold ring-1 ring-primary/10 shadow-sm shadow-primary/5'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
         }`}>
           <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-primary' : 'text-slate-400'}`} />
           <span>{item.label}</span>
@@ -89,8 +89,8 @@ export default function Sidebar() {
     );
   };
 
-  const SectionLabel = ({ label }) => (
-    <div className="px-3 pt-3 pb-1">
+  const SectionLabel = ({ label, divider }) => (
+    <div className={`px-3 pb-1 ${divider ? 'mt-3 border-t border-slate-100 pt-3' : 'pt-3'}`}>
       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{label}</span>
     </div>
   );
@@ -175,18 +175,18 @@ export default function Sidebar() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-slate-200">
-        <Link to="/dashboard" className="flex items-center gap-2.5">
+      <div className="px-4 py-6 border-b border-slate-200">
+        <Link to="/dashboard" className="flex items-center gap-3">
           <img
             src="/brand/swim-sight-logo.png"
             alt="Swim Sight 3D"
-            width={36}
-            height={36}
-            className="w-9 h-9 rounded-lg object-contain"
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-lg object-contain"
           />
           <div>
             <div className="text-sm font-bold text-slate-900 leading-tight">Swim Sight 3D</div>
-            <div className="text-[10px] text-slate-400">Performance Analysis</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Performance Analysis</div>
           </div>
         </Link>
       </div>
@@ -198,10 +198,7 @@ export default function Sidebar() {
       {canUseCoachApp && <div className="px-3 py-2">
         <Button
           size="sm"
-          className="w-full h-9 text-xs font-semibold text-white"
-          style={{ backgroundColor: '#0077B6' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#005F8F'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0077B6'}
+          className="w-full h-9 text-xs font-semibold text-white bg-gradient-to-r from-[#0077B6] to-[#00A6C8] shadow-md shadow-primary/20 transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
           onClick={() => navigate('/analyse')}
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" /> New Analysis
@@ -220,14 +217,14 @@ export default function Sidebar() {
             </div>
 
             {/* — Tools — */}
-            <SectionLabel label="Tools" />
+            <SectionLabel label="Tools" divider />
             <div className="space-y-0.5">
               {NAV_TOOLS.map(item => <NavItem key={item.to} item={item} />)}
               {canUsePilot && <NavItem item={PILOT_NAV_ITEM} />}
             </div>
 
             {/* — Club — */}
-            <SectionLabel label="Club" />
+            <SectionLabel label="Club" divider />
             <div className="space-y-0.5">
               {NAV_CLUB.map(item => <NavItem key={item.to} item={item} />)}
             </div>
@@ -236,10 +233,10 @@ export default function Sidebar() {
 
         {/* Internal operational tools are owner/admin only. */}
         {isAdmin && (
-          <div className="mt-2">
+          <div className="mt-3 border-t border-slate-100 pt-2">
             <button
               onClick={() => setAdminOpen(!adminOpen)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all"
             >
               <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="flex-1 text-left font-semibold uppercase tracking-widest text-[10px]">Admin</span>
@@ -255,19 +252,19 @@ export default function Sidebar() {
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-slate-200 px-3 py-3">
+      <div className="px-3 pb-3 pt-2">
         {user ? (
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+          <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0077B6] to-[#00A6C8] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
               {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-slate-900 truncate">{user.full_name || 'Account'}</div>
-              <div className="text-[10px] text-slate-400 truncate">{user.email}</div>
+              <div className="text-[10px] text-slate-400 truncate">{memberRole ? getRoleLabel(rawMemberRole) : user.email}</div>
             </div>
             <button
               onClick={handleSignOut}
-              className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
               title="Sign out"
             >
               <LogOut className="w-3.5 h-3.5" />
