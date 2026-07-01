@@ -9,28 +9,32 @@ import { Button } from '@/components/ui/button';
 import {
   activeCompletedReports,
   approvedFindings,
+  buildAvgScoreSeries,
+  buildFaultFrequency,
   buildFrequency,
   buildScoreSeries,
   findingLabel,
   findingPhase,
   formatShortDate,
-  latestNextFocusItems,
   reportDate,
   reportStroke,
   reportsBySwimmer,
+  reportsWithinDays,
   scoreTrendForSwimmer,
+  scoredReports,
   swimmerName,
 } from '@/components/analytics/analyticsHelpers';
 import { AlertTriangle, FileText, Loader2, Shield, Target, TrendingUp, Users, Waves } from 'lucide-react';
 
 const MIN_TREND_REPORTS = 3;
 
+// ── Individual swimmer trend card (preserved from the original page) ──────────────
 function TrendCard({ swimmer, squad, reports, findings }) {
   const series = buildScoreSeries(reports);
   const trend = scoreTrendForSwimmer(reports, MIN_TREND_REPORTS);
   const reportIds = reports.map(report => report.id);
   const swimmerFindings = approvedFindings(findings, reportIds);
-  const focusItems = latestNextFocusItems(swimmerFindings, 3);
+  const focusItems = latestFocus(swimmerFindings, 3);
   const repeatedFocus = buildFrequency(swimmerFindings, findingPhase, 3);
   const latestReport = [...reports].sort((a, b) => new Date(reportDate(b)) - new Date(reportDate(a)))[0];
 
@@ -128,10 +132,131 @@ function TrendCard({ swimmer, squad, reports, findings }) {
   );
 }
 
+// Local wrapper so TrendCard keeps its existing focus behaviour without a new import.
+function latestFocus(findings, limit) {
+  const seen = new Set();
+  const out = [];
+  findings.forEach(finding => {
+    const focus = finding.next_focus || finding.correction_cue || finding.drill;
+    if (!focus || seen.has(focus)) return;
+    seen.add(focus);
+    out.push(focus);
+  });
+  return out.slice(0, limit);
+}
+
+// ── Small metric card ─────────────────────────────────────────────────────────
+function Metric({ icon: Icon, label, value, sub }) {
+  return (
+    <div className="p-4 rounded-xl bg-white border border-border">
+      <Icon className="w-4 h-4 text-primary mb-2" />
+      <div className="text-2xl font-black text-foreground">{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      {sub && <div className="text-[10px] text-primary mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+// ── Honest low-data state for aggregate scopes ────────────────────────────────────
+function LowDataState({ scopeLabel, scoredCount }) {
+  return (
+    <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center">
+      <AlertTriangle className="w-7 h-7 text-amber-500 mx-auto mb-2" />
+      <div className="text-sm font-semibold text-slate-800">Not enough data for a {scopeLabel} trend yet</div>
+      <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
+        A trend line appears after {MIN_TREND_REPORTS}+ scored, coach-approved reports in this view. Currently {scoredCount}. The app will not infer progress from insufficient data.
+      </p>
+    </div>
+  );
+}
+
+// ── Aggregate trend (Squad / Club) — real overall_score + approved findings only ──
+function AggregateTrend({ scopeLabel, reports, findings, swimmerCount, membershipNote }) {
+  const scored = scoredReports(reports);
+  const series = buildAvgScoreSeries(reports);
+  const avg = scored.length
+    ? Math.round(scored.reduce((sum, report) => sum + Number(report.overall_score), 0) / scored.length)
+    : null;
+  const reviewedSwimmers = new Set(reports.map(report => report.swimmer_id).filter(Boolean)).size;
+  const approved = approvedFindings(findings, reports.map(report => report.id));
+  const topFaults = buildFaultFrequency(approved, 6);
+  const enough = scored.length >= MIN_TREND_REPORTS;
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Metric icon={FileText} label="Scored reports" value={scored.length} />
+        <Metric icon={Users} label="Reviewed swimmers" value={reviewedSwimmers} sub={swimmerCount != null ? `of ${swimmerCount}` : undefined} />
+        <Metric icon={TrendingUp} label="Average score" value={avg != null ? avg : '—'} />
+        <Metric icon={Target} label="Approved findings" value={approved.length} />
+      </div>
+
+      {membershipNote && <div className="text-[10px] text-muted-foreground">{membershipNote}</div>}
+
+      {enough ? (
+        <div className="p-4 rounded-xl bg-white border border-border">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Average overall score over time</div>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={series} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="score" stroke="#0077b6" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div className="mt-1 text-[10px] text-muted-foreground">Each point is the average of that month&apos;s scored, coach-approved reports.</div>
+        </div>
+      ) : (
+        <LowDataState scopeLabel={scopeLabel} scoredCount={scored.length} />
+      )}
+
+      {topFaults.length > 0 && (
+        <div className="p-4 rounded-xl bg-white border border-border">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Top approved findings</div>
+          <div className="space-y-1.5">
+            {topFaults.map((fault, index) => (
+              <div key={fault.name} className="flex items-center gap-2">
+                <span className="text-[9px] text-muted-foreground w-3 flex-shrink-0">{index + 1}.</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between text-[10px] mb-0.5">
+                    <span className="text-foreground truncate">{fault.name}</span>
+                    <span className="text-primary font-semibold ml-2 flex-shrink-0">{fault.count}×</span>
+                  </div>
+                  <div className="h-1 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary/70 rounded-full" style={{ width: `${(fault.count / topFaults[0].count) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STROKE_OPTIONS = [
+  ['all', 'All strokes'],
+  ['freestyle', 'Freestyle'],
+  ['breaststroke', 'Breaststroke'],
+  ['backstroke', 'Backstroke'],
+  ['butterfly', 'Butterfly'],
+  ['general', 'General'],
+];
+
+const RANGE_OPTIONS = [
+  ['all', 'All time'],
+  ['90', 'Last 90 days'],
+  ['30', 'Last 30 days'],
+];
+
 export default function SwimmerTrends() {
   const { club } = useClubContext();
+  const [scope, setScope] = useState('individual');
   const [squadFilter, setSquadFilter] = useState('all');
   const [strokeFilter, setStrokeFilter] = useState('all');
+  const [rangeFilter, setRangeFilter] = useState('all');
 
   const { data: swimmers = [], isLoading: swimmersLoading } = useQuery({
     queryKey: ['trends-swimmers', club?.id],
@@ -158,36 +283,46 @@ export default function SwimmerTrends() {
   });
 
   const isLoading = swimmersLoading || reportsLoading || findingsLoading;
+  const rangeDays = rangeFilter === '30' ? 30 : rangeFilter === '90' ? 90 : null;
 
-  const trendData = useMemo(() => {
-    const completed = activeCompletedReports(reports);
-    const grouped = reportsBySwimmer(completed);
+  const data = useMemo(() => {
+    const completedAll = activeCompletedReports(reports);
     const squadMap = new Map(squads.map(squad => [squad.id, squad]));
+    const swimmerSquad = new Map(swimmers.map(swimmer => [swimmer.id, swimmer.squad_id]));
 
+    // Shared filters: date range + stroke, applied to finalised reports only.
+    const matchesStroke = report => strokeFilter === 'all' || reportStroke(report).toLowerCase().includes(strokeFilter);
+    const baseReports = reportsWithinDays(completedAll, rangeDays).filter(matchesStroke);
+
+    // Individual scope
+    const grouped = reportsBySwimmer(baseReports);
     const filteredSwimmers = swimmers.filter(swimmer => squadFilter === 'all' || swimmer.squad_id === squadFilter);
-    const visible = filteredSwimmers
-      .map(swimmer => {
-        const swimmerReports = (grouped[swimmer.id] || []).filter(report =>
-          strokeFilter === 'all' || reportStroke(report).toLowerCase().includes(strokeFilter)
-        );
-        return {
-          swimmer,
-          squad: squadMap.get(swimmer.squad_id),
-          reports: swimmerReports.sort((a, b) => new Date(reportDate(b)) - new Date(reportDate(a))),
-        };
-      })
+    const individualVisible = filteredSwimmers
+      .map(swimmer => ({
+        swimmer,
+        squad: squadMap.get(swimmer.squad_id),
+        reports: (grouped[swimmer.id] || []).sort((a, b) => new Date(reportDate(b)) - new Date(reportDate(a))),
+      }))
       .filter(item => item.reports.length > 0);
+    const individualNoReports = filteredSwimmers.filter(swimmer => !(grouped[swimmer.id] || []).length);
+    const scoredWithTrend = individualVisible.filter(item => scoreTrendForSwimmer(item.reports, MIN_TREND_REPORTS).hasTrend).length;
+    const focusLabels = buildFrequency(approvedFindings(findings, completedAll.map(report => report.id)), findingLabel, 5);
 
-    const noReports = filteredSwimmers.filter(swimmer => !(grouped[swimmer.id] || []).length);
-    const scoredWithTrend = visible.filter(item => scoreTrendForSwimmer(item.reports, MIN_TREND_REPORTS).hasTrend).length;
-    const focusLabels = buildFrequency(
-      approvedFindings(findings, completed.map(report => report.id)),
-      findingLabel,
-      5
-    );
+    // Squad scope (current membership)
+    const squadReports = squadFilter === 'all' ? [] : baseReports.filter(report => swimmerSquad.get(report.swimmer_id) === squadFilter);
+    const squadSwimmerCount = swimmers.filter(swimmer => swimmer.squad_id === squadFilter).length;
 
-    return { completed, visible, noReports, scoredWithTrend, focusLabels };
-  }, [findings, reports, squadFilter, squads, strokeFilter, swimmers]);
+    return {
+      completedCount: completedAll.length,
+      individualVisible,
+      individualNoReports,
+      scoredWithTrend,
+      focusLabels,
+      squadReports,
+      squadSwimmerCount,
+      clubReports: baseReports,
+    };
+  }, [reports, findings, squads, swimmers, squadFilter, strokeFilter, rangeDays]);
 
   if (!club) {
     return (
@@ -201,12 +336,14 @@ export default function SwimmerTrends() {
     );
   }
 
+  const scopes = [['individual', 'Individual'], ['squad', 'Squad'], ['club', 'Club']];
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-20">
       <PageHeader
         eyebrow="Progress"
         title="Swimmer Trends"
-        subtitle="Individual progress from real finalised reports. Trends appear only when there is enough data."
+        subtitle="Progress by swimmer, squad, or whole club — from real finalised reports only. Trends appear only when there is enough data."
         action={
           <Link to="/club-progress">
             <Button size="sm" variant="outline" className="h-8 text-xs">
@@ -223,41 +360,34 @@ export default function SwimmerTrends() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="p-4 rounded-xl bg-white border border-border">
-          <FileText className="w-4 h-4 text-primary mb-2" />
-          <div className="text-2xl font-black text-foreground">{trendData.completed.length}</div>
-          <div className="text-[10px] text-muted-foreground">Finalised reports</div>
-        </div>
-        <div className="p-4 rounded-xl bg-white border border-border">
-          <Users className="w-4 h-4 text-primary mb-2" />
-          <div className="text-2xl font-black text-foreground">{trendData.visible.length}</div>
-          <div className="text-[10px] text-muted-foreground">Swimmers with data</div>
-        </div>
-        <div className="p-4 rounded-xl bg-white border border-border">
-          <TrendingUp className="w-4 h-4 text-primary mb-2" />
-          <div className="text-2xl font-black text-foreground">{trendData.scoredWithTrend}</div>
-          <div className="text-[10px] text-muted-foreground">Score trends ready</div>
-        </div>
-        <div className="p-4 rounded-xl bg-white border border-border">
-          <Target className="w-4 h-4 text-primary mb-2" />
-          <div className="text-2xl font-black text-foreground">{trendData.focusLabels.length}</div>
-          <div className="text-[10px] text-muted-foreground">Common focus areas</div>
-        </div>
+      {/* Scope selector */}
+      <div className="mb-5 inline-flex rounded-xl bg-slate-100 p-1">
+        {scopes.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setScope(id)}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              scope === id ? 'bg-white text-primary shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
+      {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-2 p-3 rounded-xl bg-white border border-border">
-        <select value={squadFilter} onChange={event => setSquadFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
-          <option value="all">All squads</option>
-          {squads.map(squad => <option key={squad.id} value={squad.id}>{squad.name}</option>)}
-        </select>
+        {scope !== 'club' && (
+          <select value={squadFilter} onChange={event => setSquadFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
+            <option value="all">{scope === 'squad' ? 'Select a squad…' : 'All squads'}</option>
+            {squads.map(squad => <option key={squad.id} value={squad.id}>{squad.name}</option>)}
+          </select>
+        )}
         <select value={strokeFilter} onChange={event => setStrokeFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
-          <option value="all">All strokes</option>
-          <option value="freestyle">Freestyle</option>
-          <option value="breaststroke">Breaststroke</option>
-          <option value="backstroke">Backstroke</option>
-          <option value="butterfly">Butterfly</option>
-          <option value="general">General</option>
+          {STROKE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        <select value={rangeFilter} onChange={event => setRangeFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
+          {RANGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
       </div>
 
@@ -266,35 +396,66 @@ export default function SwimmerTrends() {
           <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
           <span className="text-sm text-muted-foreground">Loading swimmer trends...</span>
         </div>
-      ) : trendData.visible.length === 0 ? (
-        <div className="p-10 rounded-xl bg-white border border-border text-center">
-          <Waves className="w-9 h-9 text-muted-foreground mx-auto mb-3 opacity-50" />
-          <div className="text-sm font-semibold text-foreground">No finalised reports yet</div>
-          <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
-            Add swimmers, upload videos, complete coach review, and finalise reports to unlock trends.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {trendData.visible.map(item => (
-            <TrendCard
-              key={item.swimmer.id}
-              swimmer={item.swimmer}
-              squad={item.squad}
-              reports={item.reports}
-              findings={findings}
-            />
-          ))}
-        </div>
-      )}
+      ) : scope === 'individual' ? (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Metric icon={FileText} label="Finalised reports" value={data.completedCount} />
+            <Metric icon={Users} label="Swimmers with data" value={data.individualVisible.length} />
+            <Metric icon={TrendingUp} label="Score trends ready" value={data.scoredWithTrend} />
+            <Metric icon={Target} label="Common focus areas" value={data.focusLabels.length} />
+          </div>
 
-      {trendData.noReports.length > 0 && (
-        <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
-          <p className="text-[10px] text-amber-800 leading-relaxed">
-            {trendData.noReports.length} swimmer{trendData.noReports.length !== 1 ? 's' : ''} in this filter have no finalised reports yet.
-          </p>
-        </div>
+          {data.individualVisible.length === 0 ? (
+            <div className="p-10 rounded-xl bg-white border border-border text-center">
+              <Waves className="w-9 h-9 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <div className="text-sm font-semibold text-foreground">No finalised reports in this view</div>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
+                Add swimmers, upload videos, complete coach review, and finalise reports to unlock trends. Try widening the date range or clearing filters.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {data.individualVisible.map(item => (
+                <TrendCard key={item.swimmer.id} swimmer={item.swimmer} squad={item.squad} reports={item.reports} findings={findings} />
+              ))}
+            </div>
+          )}
+
+          {data.individualNoReports.length > 0 && (
+            <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
+              <p className="text-[10px] text-amber-800 leading-relaxed">
+                {data.individualNoReports.length} swimmer{data.individualNoReports.length !== 1 ? 's' : ''} in this filter have no finalised reports yet.
+              </p>
+            </div>
+          )}
+        </>
+      ) : scope === 'squad' ? (
+        squadFilter === 'all' ? (
+          <div className="p-10 rounded-xl bg-white border border-border text-center">
+            <Users className="w-9 h-9 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <div className="text-sm font-semibold text-foreground">Select a squad</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Choose a squad above to view its aggregate progress.
+              {squads.length === 0 && ' No squads exist yet — create squads in Club Settings.'}
+            </p>
+          </div>
+        ) : (
+          <AggregateTrend
+            scopeLabel="squad"
+            reports={data.squadReports}
+            findings={findings}
+            swimmerCount={data.squadSwimmerCount}
+            membershipNote="Squad trends are based on current squad membership, not historical membership."
+          />
+        )
+      ) : (
+        <AggregateTrend
+          scopeLabel="club"
+          reports={data.clubReports}
+          findings={findings}
+          swimmerCount={swimmers.length}
+        />
       )}
     </div>
   );

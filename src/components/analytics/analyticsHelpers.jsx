@@ -155,3 +155,46 @@ export function buildScoreSeries(reports = []) {
       stroke: reportStroke(report),
     }));
 }
+
+// ── Aggregate helpers for scope trends (squad / club) — real data only ──────────
+
+export function scoredReports(reports = []) {
+  return reports.filter(report =>
+    report.overall_score !== null &&
+    report.overall_score !== undefined &&
+    !Number.isNaN(Number(report.overall_score))
+  );
+}
+
+export function reportsWithinDays(reports = [], days) {
+  if (!days) return reports;
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  return reports.filter(report => {
+    const date = parseDate(reportDate(report));
+    return date ? date.getTime() >= cutoff : false;
+  });
+}
+
+export function buildAvgScoreSeries(reports = []) {
+  // Aggregate scored reports into a monthly average-score series (chronological).
+  const byMonth = new Map();
+  scoredReports(reports).forEach(report => {
+    const date = parseDate(reportDate(report));
+    if (!date) return;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    if (!byMonth.has(key)) {
+      byMonth.set(key, {
+        sortKey: date.getFullYear() * 12 + date.getMonth(),
+        label: date.toLocaleDateString('en-AU', { month: 'short', year: '2-digit' }),
+        sum: 0,
+        count: 0,
+      });
+    }
+    const bucket = byMonth.get(key);
+    bucket.sum += Number(report.overall_score);
+    bucket.count += 1;
+  });
+  return Array.from(byMonth.values())
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .map(bucket => ({ label: bucket.label, score: Math.round(bucket.sum / bucket.count), count: bucket.count }));
+}
