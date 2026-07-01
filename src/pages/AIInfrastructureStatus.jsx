@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ClipboardCheck, Server, ShieldAlert } from 'lucide-react';
+import { Activity, ClipboardCheck, ShieldAlert } from 'lucide-react';
 import { FeatureReadinessCard } from '@/components/admin/FeatureReadinessCard';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
