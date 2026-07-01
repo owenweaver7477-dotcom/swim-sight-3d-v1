@@ -8,12 +8,11 @@ import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Brain,
-  ShieldAlert, Activity, TrendingUp, BookOpen, BarChart3, ClipboardCheck, Server
+  ShieldAlert, Activity, TrendingUp, BarChart3, ClipboardCheck, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   getRoleLabel,
-  isAdminRole,
   isCoachAppRole,
   isPilotRole,
   normalizeRole,
@@ -36,12 +35,13 @@ const NAV_CLUB = [
   { to: '/club-settings',   label: 'Club Settings',   icon: Settings },
 ];
 
-// Admin-only — all advanced/debug tools collapsed under single section
-const NAV_ADMIN = [
+// Platform/internal tools — app-level admin only (user.role === 'admin'), not club owners/coaches.
+// NOTE: the Footage Checklist (/footage-checklist) and Reference Library (/reference-library) routes
+// and pages still exist in App.jsx and remain reachable directly / via Settings; they are only
+// removed from this sidebar's display.
+const NAV_INTERNAL = [
   { to: '/ai-calibration', label: 'AI Calibration', icon: BarChart3 },
-  { to: '/footage-checklist', label: 'Footage Checklist', icon: ClipboardCheck },
   { to: '/ai-infrastructure-status', label: 'AI Infrastructure', icon: Server },
-  { to: '/reference-library',   label: 'Reference Library',   icon: BookOpen },
   { to: '/ai-jobs',       label: 'AI Job Monitor',  icon: Activity },
   { to: '/roadmap',       label: 'Roadmap',         icon: Map },
 ];
@@ -69,7 +69,7 @@ export default function Sidebar() {
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + '/');
   const memberRole = normalizeRole(club?._memberRole || getActiveRole());
   const rawMemberRole = club?._rawMemberRole || club?._memberRole || memberRole;
-  const isAdmin = isAdminRole(memberRole) || user?.role === 'admin';
+  const isPlatformAdmin = user?.role === 'admin';
   const canUseCoachApp = isCoachAppRole(memberRole) || user?.role === 'admin';
   const canUsePilot = isPilotRole(memberRole) || user?.role === 'admin';
 
@@ -231,20 +231,20 @@ export default function Sidebar() {
           </>
         )}
 
-        {/* Internal operational tools are owner/admin only. */}
-        {isAdmin && (
+        {/* Platform/internal tools — app-level admin only (not club owners/coaches). */}
+        {isPlatformAdmin && (
           <div className="mt-3 border-t border-slate-100 pt-2">
             <button
               onClick={() => setAdminOpen(!adminOpen)}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all"
             >
               <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="flex-1 text-left font-semibold uppercase tracking-widest text-[10px]">Admin</span>
+              <span className="flex-1 text-left font-semibold uppercase tracking-widest text-[10px]">Internal Tools</span>
               {adminOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
             </button>
             {adminOpen && (
               <div className="ml-2 pl-3 border-l border-slate-200 mt-0.5 space-y-0.5">
-                {NAV_ADMIN.map(item => <NavItem key={item.to} item={item} />)}
+                {NAV_INTERNAL.map(item => <NavItem key={item.to} item={item} />)}
               </div>
             )}
           </div>
