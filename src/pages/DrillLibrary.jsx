@@ -22,7 +22,7 @@ import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const STROKES = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'Starts', 'Turns', 'General'];
+const STROKES = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 'Starts', 'Turns', 'Underwater', 'General'];
 const PHASES = ['All', 'Body Line', 'Catch', 'Pull', 'Recovery', 'Breathing', 'Kick Recovery',
   'Kick Drive', 'Glide', 'Timing', 'Rotation', 'Entry', 'Turn', 'Underwater', 'Breakout', 'Start',
   'Set Position', 'Reaction and Entry', 'Streamline', 'Underwater Breakout', 'Approach', 'Wall Contact',
@@ -88,7 +88,8 @@ const STROKE_SECTIONS = [
   { key: 'Backstroke',   label: 'Backstroke',                strokes: ['Backstroke'],                  accent: 'Backstroke' },
   { key: 'Butterfly',    label: 'Butterfly',                 strokes: ['Butterfly'],                   accent: 'Butterfly' },
   { key: 'StartsTurns',  label: 'Starts & Turns',            strokes: ['Starts', 'Turns'],             accent: 'Starts' },
-  { key: 'General',      label: 'General bodyline / core',   strokes: ['General', 'Underwater', 'IM'], accent: 'General' },
+  { key: 'Underwater',   label: 'Underwater',                strokes: ['Underwater'],                  accent: 'Underwater' },
+  { key: 'General',      label: 'General bodyline / core',   strokes: ['General', 'IM'],               accent: 'General' },
 ];
 
 const DRILL_PACKS = getDefaultDrillPacks();

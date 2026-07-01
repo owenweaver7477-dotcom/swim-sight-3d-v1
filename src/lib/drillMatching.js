@@ -113,6 +113,20 @@ function ruleBoost({ findingText, drillText, stroke, drill }) {
       drill: ['3-3-3', 'single-arm butterfly', 'rhythm'],
       score: 7,
     },
+    // New backstroke/butterfly drills. Finding terms below are real faults the
+    // system already produces (backstroke catch/rotation/body-line; butterfly
+    // rhythm/second-kick/breath). No starts/turns/underwater matching is added
+    // because the worker does not detect those.
+    {
+      finding: ['backstroke catch', 'dropped elbow', 'shallow catch', 'straight-arm', 'short extension', 'flat shoulders', 'late rotation'],
+      drill: ['catch scull setup', 'catch scull', 'hip-rotation connect', 'single-arm backstroke', 'backstroke catch', 'rotation'],
+      score: 8,
+    },
+    {
+      finding: ['butterfly rhythm', 'body wave', 'late second kick', 'weak second kick', 'second kick', 'high breath', 'head lift', 'dropped hips'],
+      drill: ['two-kick connect', 'pull keyhole', 'press back to the hips', 'relaxed recovery', 'single-arm butterfly', 'kick-pull-kick'],
+      score: 8,
+    },
   ];
 
   rules.forEach(rule => {
