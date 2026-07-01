@@ -78,51 +78,7 @@ function MiniCard({ icon: Icon, title, description, dark = false }) {
   );
 }
 
-function HeroPreview() {
-  return (
-    <div
-      className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-4 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl"
-      role="img"
-      aria-label="Coach Studio preview with a timestamped breaststroke key moment and drill recommendation"
-    >
-      <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200">Coach Studio</div>
-            <div className="mt-1 text-lg font-bold text-white">Breaststroke review</div>
-          </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-300/10 text-cyan-200">
-            <PlayCircle className="h-5 w-5" />
-          </div>
-        </div>
-        <div className="grid gap-4 p-5">
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-800 to-slate-950 p-4">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>Side view clip</span>
-              <span>0:03.42</span>
-            </div>
-            <div className="mt-5 h-24 rounded-2xl border border-cyan-200/20 bg-[linear-gradient(90deg,rgba(14,165,233,0.1)_1px,transparent_1px),linear-gradient(rgba(14,165,233,0.1)_1px,transparent_1px)] bg-[length:24px_24px]">
-              <div className="mx-auto mt-10 h-1 w-48 rounded-full bg-cyan-200/70 shadow-lg shadow-cyan-300/30" />
-              <div className="mx-auto mt-3 h-1 w-28 rounded-full bg-white/30" />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Key moment</div>
-              <div className="mt-2 text-sm font-semibold text-white">Kick setup · 0:03.42</div>
-              <p className="mt-2 text-xs leading-6 text-slate-400">Knees widen during heel recovery.</p>
-            </div>
-            <div className="rounded-2xl border border-cyan-200/20 bg-cyan-300/[0.06] p-4">
-              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-200">Report output</div>
-              <div className="mt-2 text-sm font-semibold text-white">Narrow kick drill</div>
-              <p className="mt-2 text-xs leading-6 text-slate-300">Next focus: hold line after kick drive.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Hero visual is now the cinematic photo background rendered in the hero section below.
 
 export default function HomePage() {
   usePublicMeta(publicSeoMetadata.home);
@@ -130,40 +86,83 @@ export default function HomePage() {
   return (
     <PublicLayout>
       <StructuredData data={homeStructuredData()} />
-      <section className="relative overflow-hidden border-b border-slate-800 bg-slate-950 px-4 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(14,165,233,0.28),transparent_30%),radial-gradient(circle_at_80%_18%,rgba(34,211,238,0.12),transparent_28%)]" />
-        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'linear-gradient(90deg,#ffffff 1px,transparent 1px),linear-gradient(#ffffff 1px,transparent 1px)', backgroundSize: '56px 56px' }} />
-        <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-10 py-16 md:grid-cols-[1fr_0.92fr] md:py-20">
-          <div>
-            <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
-              <Waves className="h-3.5 w-3.5" />
-              AI suggests. Coaches decide.
-            </div>
-            <h1 className="reveal mt-6 max-w-4xl text-4xl font-bold tracking-tight text-white md:text-6xl">
-              AI-assisted swim video review for coaches.
-            </h1>
-            <p className="reveal mt-6 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-              Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers.
-            </p>
-            <p className="reveal mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-              It supports the coach — it does not replace the coach.
-            </p>
-            <div className="reveal mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition-colors hover:bg-cyan-100">
-                View Sample Report <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-              <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
-                Log in
-              </Link>
-              <Link to="/coach-approved-ai" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
-                How AI works
-              </Link>
-              <a href="#how-it-works" className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-300 transition-colors hover:text-white">
+      <section className="relative -mt-16 overflow-hidden border-b border-slate-900 bg-[#05070d] text-white">
+        {/* Cinematic photo hero — decorative background, pulled up behind the sticky nav */}
+        <div className="relative">
+          <img
+            src="/hero/hero-desktop.jpg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
+          />
+          {/* Legibility scrims: overall darken on mobile, dark-left on desktop, top/bottom depth */}
+          <div aria-hidden="true" className="absolute inset-0 bg-black/65 md:bg-transparent" />
+          <div aria-hidden="true" className="absolute inset-0 md:bg-gradient-to-r md:from-[#04060c] md:via-[#04060c]/70 md:to-transparent" />
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#04060c] via-transparent to-[#04060c]/40" />
+
+          <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-7xl items-center px-4 pb-16 pt-24 md:pt-20">
+            <div className="max-w-xl">
+              <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
+                <Waves className="h-3.5 w-3.5" />
+                AI suggests. Coaches decide.
+              </div>
+              <h1 className="reveal mt-6 text-5xl font-extrabold leading-[1.02] tracking-tight drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-7xl">
+                AI-assisted{' '}
+                <br className="hidden sm:block" />
+                swim video{' '}
+                <br className="hidden sm:block" />
+                review for{' '}
+                <br className="hidden sm:block" />
+                <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">coaches.</span>
+              </h1>
+              <p className="reveal mt-6 max-w-md text-base leading-8 text-slate-200 md:text-lg">
+                Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers.
+              </p>
+              <p className="reveal mt-4 flex items-center gap-2 text-sm text-slate-300">
+                <ShieldCheck className="h-4 w-4 flex-shrink-0 text-cyan-300" />
+                It supports the coach — it does not replace the coach.
+              </p>
+              <div className="reveal mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-sky-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-sky-500/30 transition-colors hover:bg-sky-400">
+                  View Sample Report <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                <Link to="/coach-approved-ai" className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-7 py-4 text-base font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20">
+                  How AI Works
+                </Link>
+                <Link to="/login" className="inline-flex items-center justify-center rounded-full px-4 py-4 text-sm font-semibold text-slate-200 transition-colors hover:text-white">
+                  Log in
+                </Link>
+              </div>
+              <a href="#how-it-works" className="reveal mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-200 transition-colors hover:text-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/5 text-white backdrop-blur-sm">
+                  <PlayCircle className="h-4 w-4" />
+                </span>
                 See how it works
               </a>
             </div>
           </div>
-          <HeroPreview />
+        </div>
+
+        {/* Trust strip — solid dark band below the photo (legible), honest value props */}
+        <div className="relative border-t border-white/10 bg-[#05070d]">
+          <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-6 px-4 py-7 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [ShieldCheck, 'Private & secure', 'Videos stay private and are never shared.'],
+              [Target, 'Actionable insights', 'Clear cues and drills a coach can use.'],
+              [Waves, 'Built for swimming', 'Stroke-specific review, not a generic tool.'],
+              [Users, 'Coach-first', 'AI assists; the coach approves every finding.'],
+            ].map(([Icon, title, desc]) => (
+              <div key={title} className="reveal flex items-center gap-3">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-cyan-300 ring-1 ring-white/10">
+                  <Icon className="h-4 w-4" strokeWidth={1.5} />
+                </span>
+                <div>
+                  <div className="text-sm font-bold text-sky-100">{title}</div>
+                  <div className="text-[11px] leading-4 text-slate-400">{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

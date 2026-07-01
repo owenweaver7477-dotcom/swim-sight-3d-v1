@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Waves } from 'lucide-react';
 
 export default function PublicFooter() {
   return (
@@ -8,9 +7,13 @@ export default function PublicFooter() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-[1.5fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-300/10 text-cyan-200">
-              <Waves className="h-5 w-5" />
-            </span>
+            <img
+              src="/brand/swim-sight-logo.png"
+              alt="Swim Sight 3D"
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-full bg-white object-contain"
+            />
             <div>
               <div className="text-sm font-bold text-white">Swim Sight 3D</div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">AI suggests. Coaches decide.</div>
