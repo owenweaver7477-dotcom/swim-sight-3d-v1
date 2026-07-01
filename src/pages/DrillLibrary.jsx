@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Search, X, Dumbbell, Tag, ChevronRight,
-  BookOpen, Filter, Package, List, Building2
+  BookOpen, Filter, Package, List, Building2, Waves
 } from 'lucide-react';
 import DrillDetailModal from '@/components/drills/DrillDetailModal';
 import DrillPackModal from '@/components/drills/DrillPackModal';
@@ -68,6 +68,28 @@ const DIFF_COLORS = {
   Advanced:     'bg-orange-100 text-orange-700',
   Elite:        'bg-red-100 text-red-700',
 };
+
+// Solid stroke accents for section headers and card edge stripes.
+const STROKE_ACCENT = {
+  Freestyle:    'bg-blue-500',
+  Breaststroke: 'bg-cyan-500',
+  Backstroke:   'bg-emerald-500',
+  Butterfly:    'bg-purple-500',
+  Starts:       'bg-amber-500',
+  Turns:        'bg-rose-500',
+  Underwater:   'bg-teal-500',
+  General:      'bg-slate-400',
+};
+
+// "All Drills" is grouped into these stroke sections (from the existing drill.stroke field).
+const STROKE_SECTIONS = [
+  { key: 'Breaststroke', label: 'Breaststroke',              strokes: ['Breaststroke'],                accent: 'Breaststroke' },
+  { key: 'Freestyle',    label: 'Freestyle',                 strokes: ['Freestyle'],                   accent: 'Freestyle' },
+  { key: 'Backstroke',   label: 'Backstroke',                strokes: ['Backstroke'],                  accent: 'Backstroke' },
+  { key: 'Butterfly',    label: 'Butterfly',                 strokes: ['Butterfly'],                   accent: 'Butterfly' },
+  { key: 'StartsTurns',  label: 'Starts & Turns',            strokes: ['Starts', 'Turns'],             accent: 'Starts' },
+  { key: 'General',      label: 'General bodyline / core',   strokes: ['General', 'Underwater', 'IM'], accent: 'General' },
+];
 
 const DRILL_PACKS = getDefaultDrillPacks();
 
@@ -183,64 +205,88 @@ function DrillPackCard({ pack, drillCount, onOpen }) {
 
 // ── Individual Drill Card ─────────────────────────────────────────────────────
 
+function StrokeSectionHeader({ label, accentKey, count }) {
+  return (
+    <div className="mb-3 flex items-center gap-2.5">
+      <span className={`h-6 w-1.5 flex-shrink-0 rounded-full ${STROKE_ACCENT[accentKey] || STROKE_ACCENT.General}`} />
+      <h2 className="text-sm font-bold text-slate-900">{label}</h2>
+      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STROKE_COLORS[accentKey] || STROKE_COLORS.General}`}>
+        {count} drill{count === 1 ? '' : 's'}
+      </span>
+    </div>
+  );
+}
+
 function DrillCard({ drill, onOpen, assignMode, onAssignDrill }) {
+  const accent = STROKE_ACCENT[drill.stroke] || STROKE_ACCENT.General;
+  const cue = (drill.coaching_cue || drill.coaching_cues || '').split('|')[0].trim();
   return (
     <div
-      className="bg-white rounded-xl border border-slate-200 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group"
+      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.03] transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
       onClick={() => onOpen(drill)}
     >
-      <div className="p-4">
-        {/* Badges row */}
-        <div className="flex items-center gap-1.5 flex-wrap mb-2">
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${STROKE_COLORS[drill.stroke] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-            {drill.stroke}
-          </span>
+      <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} aria-hidden="true" />
+      <div className="p-4 pl-5">
+        {/* Badges */}
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STROKE_COLORS[drill.stroke] || STROKE_COLORS.General}`}>{drill.stroke}</span>
           {drill.phase && drill.phase !== 'General' && (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-medium">{drill.phase}</span>
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">{drill.phase}</span>
           )}
           {drill.difficulty && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${DIFF_COLORS[drill.difficulty] || 'bg-slate-100 text-slate-500'}`}>{drill.difficulty}</span>
+            <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${DIFF_COLORS[drill.difficulty] || 'bg-slate-100 text-slate-500'}`}>{drill.difficulty}</span>
           )}
-          {drill.equipment && drill.equipment !== 'none' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">{drill.equipment}</span>
-          )}
-          <ChevronRight className="w-3 h-3 text-slate-300 group-hover:text-primary ml-auto transition-colors flex-shrink-0" />
+          <ChevronRight className="ml-auto h-3 w-3 flex-shrink-0 text-slate-300 transition-colors group-hover:text-primary" />
         </div>
 
         {/* Title */}
-        <h3 className="text-sm font-bold text-slate-900 mb-1 leading-tight">{drill.title}</h3>
-
-        {/* Fault tags */}
-        {drill.fault_tags && (
-          <div className="flex items-center gap-1 mb-1.5">
-            <Tag className="w-3 h-3 text-amber-400 flex-shrink-0" />
-            <span className="text-[10px] text-slate-400 line-clamp-1">{drill.fault_tags}</span>
-          </div>
-        )}
+        <h3 className="text-sm font-bold leading-tight text-slate-900">{drill.title}</h3>
 
         {/* Purpose */}
-        {drill.purpose && (
-          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{drill.purpose}</p>
-        )}
+        {drill.purpose && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500">{drill.purpose}</p>}
 
-        {/* Cue preview */}
-        {drill.coaching_cues && (
-          <div className="mt-2 text-[10px] text-primary font-medium italic line-clamp-1">
-            "{drill.coaching_cues.split('|')[0].trim()}"
+        {/* Fault it helps fix */}
+        {drill.fault_tags && (
+          <div className="mt-2 flex items-start gap-1.5">
+            <Tag className="mt-0.5 h-3 w-3 flex-shrink-0 text-amber-500" />
+            <span className="line-clamp-1 text-[10px] text-slate-500"><span className="text-slate-400">Fixes:</span> {drill.fault_tags}</span>
           </div>
         )}
 
-        {/* Duration + assign */}
-        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100">
-          {drill.duration_or_reps ? (
-            <span className="text-[10px] text-slate-400 flex items-center gap-1">
-              <Dumbbell className="w-3 h-3" /> {drill.duration_or_reps}
-            </span>
-          ) : <span />}
+        {/* Coaching cue */}
+        {cue && (
+          <div className="mt-1.5 line-clamp-1 rounded-lg border border-primary/10 bg-primary/5 px-2.5 py-1.5 text-[10px] font-medium italic text-primary">
+            &ldquo;{cue}&rdquo;
+          </div>
+        )}
+
+        {/* Pool setup + equipment */}
+        {(drill.setup || (drill.equipment && drill.equipment !== 'none')) && (
+          <div className="mt-2 space-y-1 text-[10px] text-slate-500">
+            {drill.setup && (
+              <div className="flex items-start gap-1.5">
+                <Waves className="mt-0.5 h-3 w-3 flex-shrink-0 text-cyan-500" />
+                <span className="line-clamp-1"><span className="text-slate-400">Pool setup:</span> {drill.setup}</span>
+              </div>
+            )}
+            {drill.equipment && drill.equipment !== 'none' && (
+              <div className="flex items-start gap-1.5">
+                <Dumbbell className="mt-0.5 h-3 w-3 flex-shrink-0 text-slate-400" />
+                <span className="line-clamp-1"><span className="text-slate-400">Equipment:</span> {drill.equipment}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer: duration + assign */}
+        <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2">
+          {drill.duration_or_reps
+            ? <span className="flex items-center gap-1 text-[10px] text-slate-400"><Dumbbell className="h-3 w-3" /> {drill.duration_or_reps}</span>
+            : <span />}
           {assignMode && (
             <Button
               size="sm"
-              className="h-6 text-[10px] px-2 bg-primary text-white hover:bg-primary/90"
+              className="h-6 bg-primary px-2 text-[10px] text-white hover:bg-primary/90"
               onClick={e => { e.stopPropagation(); onAssignDrill(drill); }}
             >
               Assign
@@ -332,6 +378,21 @@ export default function DrillLibrary({
       return matchSearch && matchStroke && matchPhase && matchDiff && matchEquip;
     });
   }, [drills, search, strokeFilter, phaseFilter, diffFilter, equipFilter]);
+
+  // Group the filtered drills into stroke sections for the "All Drills" tab (existing data only).
+  const groupedSections = useMemo(() => {
+    const buckets = {};
+    STROKE_SECTIONS.forEach(sec => { buckets[sec.key] = []; });
+    const other = [];
+    filtered.forEach(d => {
+      const sec = STROKE_SECTIONS.find(s => s.strokes.includes(d.stroke));
+      if (sec) buckets[sec.key].push(d);
+      else other.push(d);
+    });
+    // Fold any unmatched strokes into the General / core section so nothing is hidden.
+    buckets.General = [...buckets.General, ...other];
+    return buckets;
+  }, [filtered]);
 
   const hasActiveFilters = strokeFilter !== 'All' || phaseFilter !== 'All' || diffFilter !== 'All' || equipFilter !== 'All';
 
@@ -593,16 +654,27 @@ export default function DrillLibrary({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {filtered.map(drill => (
-                <DrillCard
-                  key={drill.id}
-                  drill={drill}
-                  onOpen={setSelectedDrill}
-                  assignMode={assignMode}
-                  onAssignDrill={onAssignDrill}
-                />
-              ))}
+            <div className="space-y-6">
+              {STROKE_SECTIONS.map(sec => {
+                const list = groupedSections[sec.key] || [];
+                if (list.length === 0) return null;
+                return (
+                  <section key={sec.key}>
+                    <StrokeSectionHeader label={sec.label} accentKey={sec.accent} count={list.length} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {list.map(drill => (
+                        <DrillCard
+                          key={drill.id}
+                          drill={drill}
+                          onOpen={setSelectedDrill}
+                          assignMode={assignMode}
+                          onAssignDrill={onAssignDrill}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>
