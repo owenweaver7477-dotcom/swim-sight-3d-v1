@@ -1000,7 +1000,7 @@ export const DEFAULT_DRILLS = [
     common_mistakes: 'Jumping upward instead of forward|Hands separating|Lifting the head before entry',
     progression: 'Add timed 10 m starts only after entry shape is repeatable.',
     duration_or_reps: '4 starts with full recovery',
-    difficulty: 'Competitive',
+    difficulty: 'Advanced',
     when_to_use: 'Use when the reaction and entry look disconnected or the swimmer loses line before water entry.',
     safety_notes: 'Qualified coach supervision is required for block starts.',
   }),
@@ -1018,7 +1018,7 @@ export const DEFAULT_DRILLS = [
     common_mistakes: 'Kicking before streamline is set|Looking forward|Hands opening on entry',
     progression: 'Add the planned kick count and breakout timing.',
     duration_or_reps: '4 x entry plus streamline',
-    difficulty: 'Competitive',
+    difficulty: 'Advanced',
     when_to_use: 'Use when the swimmer creates a good entry but loses shape before the underwater phase.',
   }),
   drill({
@@ -1120,7 +1120,7 @@ export const DEFAULT_DRILLS = [
     common_mistakes: 'Opening arms early|Looking forward|Breathing immediately',
     progression: 'Add race-tempo swimming after the breakout.',
     duration_or_reps: '6 x 10–15 m',
-    difficulty: 'Competitive',
+    difficulty: 'Advanced',
     when_to_use: 'Use when the turn is quick but the swimmer loses speed between push-off and first stroke.',
   }),
   drill({
