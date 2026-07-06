@@ -1226,13 +1226,28 @@ export default function AIReportPage() {
                 seekRequest={studioSeekRequest}
                 drawRequest={studioDrawRequest}
                 findings={findings.filter(finding => finding.approval_status !== 'rejected')}
+                keyStamps={videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame')}
+                drillOptions={drillOptions}
                 onCaptureTimestamp={(timestampSeconds) => {
                   setManualTimestamp(timestampSeconds);
                   if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
                 }}
-                onStartFindingFromMoment={(timestampSeconds) => {
+                onStartFindingFromMoment={(timestampSeconds, drill, phaseLabel) => {
                   setManualTimestamp(timestampSeconds);
-                  if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
+                  // Map the fullscreen phase label (e.g. "Catch setup") to the manual form's
+                  // studio-phase key (e.g. "catch_setup") so the select prefills correctly.
+                  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+                  const wanted = norm(phaseLabel);
+                  const matchedPhase = wanted
+                    ? (studioPhases.find(k => norm(labelFromKey(k)) === wanted || norm(k) === wanted)
+                        || studioPhases.find(k => norm(labelFromKey(k)).includes(wanted) || wanted.includes(norm(k))))
+                    : null;
+                  if (matchedPhase) setManualPhase(matchedPhase);
+                  else if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
+                  if (drill) {
+                    setManualLinkedDrill(drill);
+                    setManualDrill(drill.title || '');
+                  }
                   goToStudioStep('findings');
                 }}
                 onSaveMarker={(payload) => createStudioMarker.mutateAsync(payload)}

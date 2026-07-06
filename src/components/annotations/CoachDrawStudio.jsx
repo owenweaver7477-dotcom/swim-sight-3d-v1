@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AnnotationCanvas from './AnnotationCanvas';
 import { formatTimestamp } from '@/lib/annotationRender';
+import { DEFAULT_DRILLS } from '@/lib/defaultDrills';
+import { suggestDrillsForFinding } from '@/lib/drillMatching';
 import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 import {
   BookmarkPlus,
@@ -20,7 +22,7 @@ import {
   X,
 } from 'lucide-react';
 
-const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1];
+const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 const APPROX_FRAME_STEP = 1 / 30;
 const THUMBNAIL_MAX_WIDTH = 480;
 const QUICK_LABELS_BY_STROKE = {
@@ -29,6 +31,22 @@ const QUICK_LABELS_BY_STROKE = {
   backstroke: ['Rotation', 'Catch setup', 'Pull', 'Recovery', 'Body line'],
   butterfly: ['Catch setup', 'Pull', 'Breath', 'Kick timing', 'Recovery'],
 };
+
+// Reuse existing default drill data (no schema change) to suggest drills for the
+// selected stroke + phase. Falls back to stroke-only, then to any drills.
+function recommendedDrillsFor(stroke, phase) {
+  const s = String(stroke || '').toLowerCase();
+  const p = String(phase || '').toLowerCase();
+  const byStroke = DEFAULT_DRILLS.filter((d) => String(d.stroke || '').toLowerCase() === s);
+  const pool = byStroke.length ? byStroke : DEFAULT_DRILLS;
+  if (!p) return pool.slice(0, 8);
+  const words = p.split(/\s+/).filter((w) => w.length > 2);
+  const matched = pool.filter((d) => {
+    const hay = `${d.phase || ''} ${d.fault_tags || ''}`.toLowerCase();
+    return words.some((w) => hay.includes(w));
+  });
+  return (matched.length ? matched : pool).slice(0, 8);
+}
 
 function estimateFps(video = {}) {
   const value = Number(video?.fps || video?.video_fps || video?.metadata?.fps || video?.review_context?.fps);
@@ -64,6 +82,8 @@ export default function CoachDrawStudio({
   drawRequest,
   savingMarker,
   findings = [],
+  keyStamps = [],
+  drillOptions = [],
   canEdit = true,
   saving,
 }) {
@@ -85,6 +105,20 @@ export default function CoachDrawStudio({
   const fps = estimateFps(video);
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
   const quickLabels = QUICK_LABELS_BY_STROKE[String(video?.stroke_type || '').toLowerCase()] || ['Key frame', 'Catch', 'Breath', 'Body line', 'Turn', 'Breakout'];
+  const [selectedDrill, setSelectedDrill] = useState(null);
+  const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
+  const draftFindingForDrills = { stroke_phase: markerLabel, phase: markerLabel, observation: markerNote, coach_sees: markerNote, fault_tag: markerNote };
+  const suggestedDrills = suggestDrillsForFinding(drillPool, draftFindingForDrills, video?.stroke_type, 8);
+  const fullscreenDrills = suggestedDrills.length ? suggestedDrills : recommendedDrillsFor(video?.stroke_type, markerLabel);
+  // Key moments come from saved key_frame annotations (which carry a captured thumbnail),
+  // not from findings — so the strip shows real screenshots.
+  const keyMoments = (keyStamps || []).map((a) => ({
+    id: a.id,
+    seconds: Number(a.timestamp_seconds ?? 0) || 0,
+    phase: a.title || a.frame_label || 'Key moment',
+    note: a.coach_note || '',
+    thumb: (typeof a.thumbnail_data_url === 'string' && a.thumbnail_data_url.startsWith('data:image/')) ? a.thumbnail_data_url : null,
+  }));
 
   useEffect(() => {
     [inlineVideoRef.current, fullscreenVideoRef.current].forEach(current => {
@@ -158,7 +192,7 @@ export default function CoachDrawStudio({
 
   const startFindingFromMoment = () => {
     const currentTime = pauseAndCapture();
-    onStartFindingFromMoment?.(currentTime);
+    onStartFindingFromMoment?.(currentTime, selectedDrill, markerLabel);
     if (fullscreenOpen) {
       if (inlineVideoRef.current) {
         inlineVideoRef.current.currentTime = currentTime;
@@ -429,66 +463,164 @@ export default function CoachDrawStudio({
       )}
 
       {fullscreenOpen && (
-        <div className="fixed inset-0 z-[80] bg-slate-950 text-white p-4 sm:p-6 overflow-y-auto">
-          <div className="max-w-7xl mx-auto space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="fixed inset-0 z-[80] overflow-y-auto bg-slate-950 p-4 text-white sm:p-6">
+          <div className="mx-auto max-w-[1600px] space-y-4">
+            {/* Header */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-cyan-300 font-bold">Fullscreen Review</div>
-                <h3 className="text-lg font-semibold">Mark the exact coaching moment</h3>
-                <p className="text-xs text-slate-300">Use slow playback, approximate frame stepping, key stamps, and Coach Draw before creating a coach finding.</p>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Fullscreen Review</div>
+                <h3 className="text-lg font-semibold sm:text-xl">Mark the exact coaching moment</h3>
+                <p className="text-xs text-slate-300">Use slow playback and key moments to mark, draw, and add your coaching findings.</p>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="text-xs font-mono text-cyan-200 bg-cyan-400/10 border border-cyan-300/20 rounded-lg px-3 py-1.5">
-                  {formatTimestamp(timestamp)}
-                </div>
-                <div className="text-xs font-mono text-slate-200 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
-                  Approx frame ~{approxFrame}
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-1.5 font-mono text-sm text-cyan-200">{formatTimestamp(timestamp)}</div>
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-sm text-slate-200">{playbackRate}x</div>
                 <Button size="sm" variant="outline" className="h-12 px-4 text-sm font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={closeFullscreen}>
-                  <X className="w-4 h-4 mr-1.5" /> Exit (Esc)
+                  <X className="mr-1.5 h-4 w-4" /> Exit (Esc)
                 </Button>
               </div>
             </div>
 
-            {renderVideoSurface(fullscreenVideoRef, true)}
+            {/* Main: video (left) + Mark this Moment panel (right) */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="space-y-3">
+                {renderVideoSurface(fullscreenVideoRef, true)}
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Speed</span>
+                      {PLAYBACK_SPEEDS.map((speed) => (
+                        <button
+                          key={speed}
+                          type="button"
+                          onClick={() => setPlaybackRate(speed)}
+                          className={`h-11 min-w-[3rem] rounded-md px-2 text-xs font-semibold transition-colors ${playbackRate === speed ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-slate-200 hover:bg-white/10'}`}
+                        >
+                          {speed}x
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-11 px-3 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(-1)} disabled={!signedVideoUrl}>
+                        <Rewind className="mr-1 h-4 w-4" /> 1s
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-11 px-3 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(1)} disabled={!signedVideoUrl}>
+                        <FastForward className="mr-1 h-4 w-4" /> 1s
+                      </Button>
+                      <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-xs text-slate-200">Frame ~{approxFrame}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-3">
-              {controlButtons(true)}
-              {actionButtons}
-              {onSaveMarker && (
-                <div className="grid grid-cols-1 xl:grid-cols-[1fr_2fr_auto] gap-3 items-start">
-                  <div className="flex flex-wrap gap-2">
-                    {quickLabels.map(label => (
+              <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-bold uppercase tracking-wider">Mark this moment</div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-slate-300">1. Select stroke phase</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {quickLabels.map((label) => (
                       <button
                         key={label}
                         type="button"
                         onClick={() => setMarkerLabel(label)}
-                        className={`h-9 rounded-full border px-3 text-[10px] font-semibold ${
-                          markerLabel === label
-                            ? 'bg-cyan-300 text-slate-950 border-cyan-300'
-                            : 'bg-white/5 text-slate-200 border-white/15 hover:border-cyan-300/50'
-                        }`}
+                        className={`min-h-12 rounded-lg border px-3 text-xs font-semibold transition-colors ${markerLabel === label ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
                       >
                         {label}
                       </button>
                     ))}
                   </div>
-                  <Input
-                    value={markerNote}
-                    onChange={e => setMarkerNote(e.target.value)}
-                    className="h-11 text-sm bg-white text-slate-950 md:text-xs"
-                    placeholder="Optional note for this key stamp"
-                  />
-                  <label className="flex min-h-11 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={markerIncludeInReport}
-                      onChange={e => setMarkerIncludeInReport(e.target.checked)}
-                    />
-                    Include in report
-                  </label>
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-slate-300">2. Coach tools</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button size="sm" variant="outline" className="min-h-12 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={startDrawing} disabled={!signedVideoUrl || !canEdit}>
+                      <PencilLine className="mr-1.5 h-4 w-4 text-cyan-300" /> Coach Draw
+                    </Button>
+                    {onSaveMarker && (
+                      <Button size="sm" variant="outline" className="min-h-12 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={saveMarker} disabled={!signedVideoUrl || !canEdit || savingMarker}>
+                        <BookmarkPlus className="mr-1.5 h-4 w-4 text-cyan-300" /> {savingMarker ? 'Saving…' : 'Save Key Stamp'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold text-slate-300">3. Optional note</div>
+                  <Textarea
+                    value={markerNote}
+                    onChange={(e) => setMarkerNote(e.target.value)}
+                    maxLength={150}
+                    className="min-h-[72px] bg-white text-sm text-slate-950"
+                    placeholder="Add a quick coaching note…"
+                  />
+                  <div className="text-right text-[10px] text-slate-400">{markerNote.length}/150</div>
+                </div>
+
+                <div className="space-y-1">
+                  <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300" onClick={startFindingFromMoment} disabled={!signedVideoUrl || !canEdit}>
+                    <Plus className="mr-1.5 h-5 w-5" /> Add Finding from this Moment
+                  </Button>
+                  <p className="text-center text-[10px] text-slate-400">You can edit the details after adding it.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom: recommended drills + key moments */}
+            <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-300">Recommended drills for this phase</div>
+                <select
+                  value={selectedDrill?.id || ''}
+                  onChange={(e) => setSelectedDrill(fullscreenDrills.find((d) => d.id === e.target.value) || null)}
+                  className="h-11 w-full max-w-md rounded-lg border border-white/15 bg-white px-3 text-sm text-slate-950"
+                >
+                  <option value="">Select recommended drill</option>
+                  {fullscreenDrills.map((d) => (
+                    <option key={d.id} value={d.id}>{d.title}</option>
+                  ))}
+                </select>
+                {selectedDrill && (
+                  <div className="text-xs text-cyan-200">
+                    Selected: {selectedDrill.title}
+                    {selectedDrill.report_summary ? ` — ${selectedDrill.report_summary}` : (selectedDrill.purpose ? ` — ${selectedDrill.purpose}` : '')}
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-400">The selected drill attaches to the next finding you add from this moment.</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-300">Key moments ({keyMoments.length})</div>
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {keyMoments.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => { const current = activeVideo(); if (current && Number.isFinite(m.seconds)) { current.currentTime = m.seconds; setTimestamp(m.seconds); } }}
+                      className="w-40 flex-shrink-0 rounded-lg border border-white/10 bg-white/5 p-2 text-left transition-colors hover:border-cyan-300/50"
+                    >
+                      {m.thumb ? (
+                        <img src={m.thumb} alt={m.phase} className="mb-2 aspect-video w-full rounded bg-slate-800 object-cover" />
+                      ) : (
+                        <div className="mb-2 flex aspect-video items-center justify-center rounded bg-slate-800 text-[10px] text-slate-500">No thumbnail</div>
+                      )}
+                      <div className="font-mono text-xs text-cyan-200">{formatTimestamp(m.seconds)}</div>
+                      <div className="truncate text-xs font-semibold text-white">{m.phase}</div>
+                      {m.note && <div className="truncate text-[10px] text-slate-400">{m.note}</div>}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={startFindingFromMoment}
+                    disabled={!signedVideoUrl || !canEdit}
+                    className="flex w-40 flex-shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/20 bg-white/5 p-2 text-slate-300 transition-colors hover:border-cyan-300/50 disabled:opacity-50"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span className="text-xs font-semibold">Add moment</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
