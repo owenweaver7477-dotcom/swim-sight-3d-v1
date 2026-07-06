@@ -60,13 +60,13 @@ export default function AnnotationToolbar({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {visibleTools.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => onToolChange(id)}
-            className={`min-h-11 rounded-md border px-1.5 py-1 text-[9px] font-semibold flex flex-col items-center justify-center gap-1 ${
+            className={`min-h-12 sm:min-h-11 rounded-md border px-2 py-1.5 text-[10px] sm:text-[9px] font-semibold flex flex-col items-center justify-center gap-1 ${
               tool === id ? 'bg-cyan-500 text-slate-950 border-cyan-300' : 'bg-white/5 text-slate-200 border-white/10'
             }`}
           >

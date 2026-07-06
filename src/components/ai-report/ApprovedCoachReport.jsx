@@ -140,14 +140,14 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
                 )}
 
                 {f.drill && (
-                  <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50 border border-blue-100 rounded px-2.5 py-2">
                     <Dumbbell className="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-600" />
                     <span><strong className="text-blue-700">Recommended drill:</strong> {f.drill}</span>
                   </div>
                 )}
 
                 {f.next_focus && (
-                  <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/50 rounded px-2 py-1.5">
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground bg-secondary/50 rounded px-2.5 py-2">
                     <Target className="w-3 h-3 flex-shrink-0 mt-0.5 text-primary" />
                     <span>{f.next_focus}</span>
                   </div>

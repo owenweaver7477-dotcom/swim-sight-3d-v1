@@ -10,7 +10,7 @@ import {
   RefreshCw, AlertTriangle, Info
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
-import AIJobStatusBadge from './AIJobStatusBadge';
+import AIJobStatusBadge, { JOB_STATUS_CONFIG } from './AIJobStatusBadge';
 import { AI_CREDIT_COPY } from '@/lib/plans/featureGates';
 import RecoveryActionCard from '@/components/status/RecoveryActionCard';
 import { isCoachAppRole } from '@/lib/permissions';
@@ -134,9 +134,9 @@ function getCoachStatusSummary({
   if (isTimedOut) {
     return {
       tone: 'warning',
-      label: 'AI review timed out',
-      detail: 'The uploaded video is still saved. Retry AI Review or continue in Coach Studio.',
-      action: 'Retry AI or continue manual review',
+      label: 'AI review did not complete',
+      detail: 'The video is still available. You can retry AI review or continue with manual Coach Studio review.',
+      action: 'Retry AI review or open Coach Studio',
     };
   }
   if (['cancel_requested', 'cancelled'].includes(queueStatus) || jobStatus === 'cancelled') {
@@ -150,36 +150,40 @@ function getCoachStatusSummary({
   if (status === 'error' || jobStatus === 'failed' || jobStatus === 'retry_available') {
     return {
       tone: 'warning',
-      label: 'AI retry available',
-      detail: 'AI Review did not complete cleanly. The video remains available for retry or manual review.',
-      action: 'Retry AI Review or continue manual review',
+      label: 'AI review did not complete',
+      detail: 'The video is still available. You can retry AI review or continue with manual Coach Studio review.',
+      action: 'Retry AI review or open Coach Studio',
     };
   }
   if (ACTIVE_PROCESSING_STATUSES.includes(status) || ['queued', 'dispatching', 'dispatched', 'processing'].includes(queueStatus)) {
-    const queued = status === 'pending_ai' || status === 'queued_ai' || queueStatus === 'queued' || jobStatus === 'queued';
+    // Reflect the LIVE job, not the stale video.processing_status (which lingers at
+    // 'pending_ai' after the worker has accepted/started). Only "queued" when the live
+    // job says so, or when there is no live job yet.
+    const queued = jobStatus === 'queued' || queueStatus === 'queued'
+      || (!queueStatus && !jobStatus && (status === 'pending_ai' || status === 'queued_ai'));
     return {
       tone: 'info',
-      label: queued ? 'AI queued' : 'AI processing',
+      label: queued ? 'AI review queued' : 'AI review in progress',
       detail: queued
-        ? 'The video is waiting for the AI worker. Coach Studio remains available while it waits.'
-        : 'AI Review is processing. Coach Studio remains available if the coach wants to continue manually.',
-      action: queued ? 'Wait or open Coach Studio' : 'Wait for AI result',
+        ? 'This video is waiting for the AI worker. You can leave this page and come back later.'
+        : 'The AI worker has accepted this video and is processing it in the background.',
+      action: queued ? 'Open Coach Studio' : 'Continue manual review',
     };
   }
   if (status === 'completed' && linkedReport) {
     return {
       tone: 'success',
-      label: 'AI review needs coach approval',
-      detail: 'Open Coach Studio to verify, edit, approve, or reject findings before sharing.',
-      action: 'Review AI findings',
+      label: 'AI review ready',
+      detail: 'Review the AI-suggested findings before sharing.',
+      action: 'Review findings',
     };
   }
   if (isUnreliable) {
     return {
       tone: 'warning',
-      label: 'Manual review available',
-      detail: 'AI evidence was limited or not requested. Coach Studio can still create a complete report.',
-      action: 'Continue in Coach Studio',
+      label: 'Manual review recommended',
+      detail: 'The AI could not confidently detect enough body landmarks. Coach review is recommended.',
+      action: 'Open Coach Studio or upload a clearer clip',
     };
   }
   return {
@@ -415,10 +419,13 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
     }
 
     if (isAiActive) {
-      const isQueuedForAI = status === 'pending_ai'
-        || status === 'queued_ai'
+      // Derive queued/label from the LIVE job, not the stale video.processing_status.
+      const isQueuedForAI = jobStatus === 'queued'
         || queueStatus === 'queued'
-        || job?.status === 'queued';
+        || (!job && (status === 'pending_ai' || status === 'queued_ai'));
+      const liveAiLabel = job
+        ? (JOB_STATUS_CONFIG[jobStatus]?.label || 'AI Processing…')
+        : (isQueuedForAI ? 'Queued for AI Review' : 'AI Processing…');
       return (
         <div className="space-y-1.5">
           <Button size="sm" className="w-full h-8 text-xs" variant="outline" disabled>
@@ -426,7 +433,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
               ? <Clock className="w-3 h-3 mr-1.5" />
               : <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
             }
-            {isQueuedForAI ? 'Queued for AI Review' : 'AI Processing...'}
+            {liveAiLabel}
           </Button>
           {isQueuedForAI && (
             <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
@@ -579,9 +586,6 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           </div>
         )}
 
-        {status === 'error' && upload.ai_error_message && (
-          <div className="text-[10px] text-destructive leading-relaxed line-clamp-2">{upload.ai_error_message}</div>
-        )}
 
         {isUnreliable && (
           <div className="space-y-1">
@@ -658,6 +662,7 @@ export default function VideoLibrary({ clubId, swimmerId, swimmers = [], memberR
     queryFn: () => entities.AIProcessingJob.filter({ club_id: clubId }, '-created_date', 50),
     enabled: !!clubId,
     staleTime: 5 * 1000,
+    refetchOnWindowFocus: true, // live AI job state should refresh when the coach returns to the tab
     refetchInterval: (query) => getAIJobPollingInterval(uploads, query?.state?.data || []),
   });
 

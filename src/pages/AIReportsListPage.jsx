@@ -186,7 +186,7 @@ export default function AIReportsListPage() {
 
   const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled: !!club?.id, staleTime: 5 * 60 * 1000 });
   const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 30 * 1000, refetchInterval: 20 * 1000 });
-  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 10 * 1000, refetchInterval: 10 * 1000 });
+  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 10 * 1000, refetchInterval: 10 * 1000, refetchOnWindowFocus: true });
   const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 15 * 1000, refetchInterval: 15 * 1000 });
 
   const swimmerMap = Object.fromEntries(swimmers.map(s => [s.id, s]));

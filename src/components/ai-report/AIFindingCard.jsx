@@ -354,7 +354,7 @@ export default function AIFindingCard({
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
                     Why reject this AI draft?
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {REJECTION_REASONS.map(reason => (
                       <button
                         key={reason.value}

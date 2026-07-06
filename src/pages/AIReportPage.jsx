@@ -20,7 +20,6 @@ import {
 import { format } from 'date-fns';
 import WorkflowStepper from '@/components/ai-report/WorkflowStepper';
 import ReportNavActions from '@/components/ai-report/ReportNavActions';
-import PlaceholderWarningBanner from '@/components/ai-report/PlaceholderWarningBanner';
 import PoseEvidencePanel from '@/components/ai-report/PoseEvidencePanel';
 import ReviewChecklist from '@/components/ai-report/ReviewChecklist';
 import FinaliseQualityGate from '@/components/ai-report/FinaliseQualityGate';
@@ -34,7 +33,6 @@ import KeyStampGallery from '@/components/annotations/KeyStampGallery';
 import { formatTimestamp } from '@/lib/annotationRender';
 import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
 import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
-import RecoveryActionCard from '@/components/status/RecoveryActionCard';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
 import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
 import { isCoachAppRole, isPilotRole } from '@/lib/permissions';
@@ -437,6 +435,7 @@ export default function AIReportPage() {
     queryFn: () => entities.AIProcessingJob.filter({ id: report.ai_processing_job_id }),
     enabled: !!report?.ai_processing_job_id,
     staleTime: 10 * 1000,
+    refetchOnWindowFocus: true, // refresh live AI job status when the coach returns to the tab
     refetchInterval: 10 * 1000,
   });
   const aiJob = jobArr[0] || null;
@@ -833,8 +832,6 @@ export default function AIReportPage() {
     || report?.real_pose_detected === false;
   const activeAIJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
   const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing', 'cancel_requested'].includes(aiJob?.queue_status);
-  const aiJobStartedAt = aiJob?.started_at || aiJob?.accepted_at || aiJob?.queued_at || aiJob?.created_date;
-  const isAIJobSlow = Boolean(isAIJobActive && aiJobStartedAt && Date.now() - new Date(aiJobStartedAt).getTime() >= 30 * 1000);
   const isAIJobUnavailable = ['error', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.status)
     || ['failed', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.queue_status)
     || report?.analysis_mode === 'error';
@@ -1053,101 +1050,105 @@ export default function AIReportPage() {
                 sharedLinks={sharedLinks}
               />
 
-              <PlaceholderWarningBanner
-                analysisMode={report.analysis_mode}
-                aiErrorMessage={report.ai_error_message}
-                realPoseDetected={report.real_pose_detected}
-              />
-
               <PoseEvidencePanel report={report} />
 
-              {aiJob && (
-                <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-                  <div className="flex items-center justify-between gap-3">
+              {(aiJob || ['placeholder', 'error', 'manual_review', 'unreliable_pose'].includes(report?.analysis_mode)) && (() => {
+                // One consolidated coach-facing status card per state (no stacked warnings).
+                const analysisMode = report?.analysis_mode;
+                const s = aiJob?.status;
+                const q = aiJob?.queue_status;
+                const stg = aiJob?.stage;
+                let card;
+                if (s === 'completed' || (analysisMode === 'real_pose' && !isAIJobActive && !isAIJobUnavailable)) {
+                  card = {
+                    tone: 'success',
+                    title: 'AI review ready',
+                    text: 'Review the AI-suggested findings before sharing.',
+                    primary: { label: 'Review findings', onClick: () => goToStudioStep('findings') },
+                  };
+                } else if (['manual_review', 'manual_review_recommended', 'unreliable_pose'].includes(s)
+                    || ['manual_review', 'unreliable_pose', 'placeholder'].includes(analysisMode)) {
+                  card = {
+                    tone: 'warning',
+                    title: 'Manual review recommended',
+                    text: 'The AI could not confidently detect enough body landmarks. Coach review is recommended.',
+                    primary: { label: 'Open Coach Studio', onClick: () => goToStudioStep('video') },
+                    secondary: { label: 'Upload a clearer clip', onClick: () => navigate('/analyse') },
+                  };
+                } else if (analysisMode === 'error' || isAIJobUnavailable
+                    || stg === 'worker_acceptance_delayed' || stg === 'callback_failed'
+                    || ['error', 'timed_out', 'failed', 'retry_available', 'cancelled'].includes(s)
+                    || ['failed', 'timed_out', 'retry_available', 'cancelled'].includes(q)) {
+                  card = {
+                    tone: 'warning',
+                    title: 'AI review did not complete',
+                    text: 'The video is still available. You can retry AI review or continue with manual Coach Studio review.',
+                    primary: { label: 'Retry AI review', onClick: () => navigate('/analyse') },
+                    secondary: { label: 'Open Coach Studio', onClick: () => goToStudioStep('video') },
+                  };
+                } else if (q === 'queued' && stg !== 'worker_acceptance_delayed') {
+                  card = {
+                    tone: 'info',
+                    title: 'AI review queued',
+                    text: 'This video is waiting for the AI worker. You can leave this page and come back later.',
+                    primary: { label: 'Open Coach Studio', onClick: () => goToStudioStep('video') },
+                    secondary: { label: cancellingAI ? 'Requesting cancellation…' : 'Cancel AI review', onClick: handleCancelAI, disabled: !aiJob?.id || cancellingAI },
+                  };
+                } else {
+                  card = {
+                    tone: 'info',
+                    title: 'AI review in progress',
+                    text: 'The AI worker has accepted this video and is processing it in the background.',
+                    primary: { label: 'Continue manual review', onClick: () => goToStudioStep('video') },
+                    secondary: { label: 'Refresh status', onClick: () => queryClient.invalidateQueries({ queryKey: ['ai-job-for-report', report?.ai_processing_job_id] }) },
+                  };
+                }
+                const toneClass = card.tone === 'success' ? 'border-green-200 bg-green-50'
+                  : card.tone === 'warning' ? 'border-amber-200 bg-amber-50'
+                  : 'border-blue-200 bg-blue-50';
+                return (
+                  <div className={`p-4 rounded-xl border ${toneClass} space-y-3`}>
                     <div>
-                      <div className="text-xs font-semibold text-foreground">AI Review status</div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        AI-assisted evidence supports coach review. Coach approval is required before sharing.
-                      </p>
+                      <div className="text-sm font-bold text-foreground">{card.title}</div>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{card.text}</p>
                     </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button size="sm" className="min-h-10 flex-1 text-xs bg-primary text-primary-foreground sm:flex-none" onClick={card.primary.onClick} disabled={card.primary.disabled}>
+                        {card.primary.label}
+                      </Button>
+                      {card.secondary && (
+                        <Button size="sm" variant="outline" className="min-h-10 flex-1 text-xs sm:flex-none" onClick={card.secondary.onClick} disabled={card.secondary.disabled}>
+                          {card.secondary.label}
+                        </Button>
+                      )}
+                    </div>
+                    {cancelAIMessage && <p className="text-[10px] leading-4 text-amber-700" role="status">{cancelAIMessage}</p>}
+                    {aiJob && (
+                      <details className="rounded-lg border border-border bg-secondary/30">
+                        <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Technical status
+                        </summary>
+                        <div className="space-y-2 px-3 pb-3">
+                          <div className="grid grid-cols-2 gap-3 text-[10px] sm:grid-cols-4">
+                            <div><span className="text-muted-foreground">Stage</span><div className="font-medium text-foreground">{aiJob.stage || 'Complete'}</div></div>
+                            <div><span className="text-muted-foreground">Job status</span><div className="font-medium text-foreground">{aiJob.status}</div></div>
+                            <div><span className="text-muted-foreground">Pose reliability</span><div className="font-medium text-foreground">{aiJob.pose_reliability || 'Not provided'}</div></div>
+                            <div><span className="text-muted-foreground">Detection ratio</span><div className="font-medium text-foreground">{formatDetectionRatio(aiJob.detection_ratio)}</div></div>
+                            <div><span className="text-muted-foreground">Frames processed</span><div className="font-medium text-foreground">{aiJob.frame_count_processed ?? 'Not provided'}</div></div>
+                          </div>
+                          {asQualityFlags(aiJob.quality_flags).length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {asQualityFlags(aiJob.quality_flags).map(flag => (
+                                <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">{flag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    )}
                   </div>
-                  <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
-                    {qualityMeta.detail}
-                  </div>
-                  {(isAIJobActive || isAIJobUnavailable) && (
-                    <RecoveryActionCard
-                      title={isAIJobUnavailable
-                        ? 'AI Review is unavailable for this attempt'
-                        : isAIJobSlow
-                          ? 'AI processing is taking longer than expected'
-                          : 'AI Review is still processing'}
-                      message={isAIJobUnavailable
-                        ? 'The private video and report remain available. Continue manual coach review now, or return to Analyse and retry later.'
-                        : 'You can continue manual coach review now. Any later AI-assisted draft will still require coach approval.'}
-                      primaryLabel="Continue manual coach review"
-                      onPrimary={() => goToStudioStep('video')}
-                      secondaryLabel={isAIJobUnavailable ? 'Return to Analyse' : cancellingAI ? 'Requesting cancellation…' : 'Cancel AI review'}
-                      onSecondary={isAIJobUnavailable ? () => navigate('/analyse') : handleCancelAI}
-                      secondaryDisabled={!isAIJobUnavailable && (!aiJob?.id || cancellingAI)}
-                      secondaryHint={!isAIJobUnavailable && !aiJob?.id ? 'The active job could not be identified. Manual coach review remains available.' : undefined}
-                    />
-                  )}
-                  {cancelAIMessage && <p className="text-[10px] leading-4 text-amber-700" role="status">{cancelAIMessage}</p>}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
-                    <div>
-                      <span className="text-muted-foreground">Stage</span>
-                      <div className="font-medium text-foreground">{aiJob.stage || 'Complete'}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Job status</span>
-                      <div className="font-medium text-foreground">{aiJob.status}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Pose reliability</span>
-                      <div className="font-medium text-foreground">{aiJob.pose_reliability || 'Not provided'}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Detection ratio</span>
-                      <div className="font-medium text-foreground">{formatDetectionRatio(aiJob.detection_ratio)}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Frames processed</span>
-                      <div className="font-medium text-foreground">{aiJob.frame_count_processed ?? 'Not provided'}</div>
-                    </div>
-                  </div>
-                  {aiJob.callback_summary && (
-                    <div className="grid grid-cols-3 gap-2 text-[10px]">
-                      <div className="p-2 rounded-lg bg-secondary/40 border border-border">
-                        <span className="text-muted-foreground">Returned</span>
-                        <div className="font-semibold text-foreground">{aiJob.callback_summary.findings_count ?? 0}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-secondary/40 border border-border">
-                        <span className="text-muted-foreground">Accepted</span>
-                        <div className="font-semibold text-foreground">{aiJob.callback_summary.actionable_findings_count ?? (report.real_pose_detected ? findings.filter(f => f.source === 'ai').length : 0)}</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-secondary/40 border border-border">
-                        <span className="text-muted-foreground">Filtered</span>
-                        <div className="font-semibold text-foreground">{aiJob.callback_summary.filtered_findings_count ?? 0}</div>
-                      </div>
-                    </div>
-                  )}
-                  {asQualityFlags(aiJob.quality_flags).length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {asQualityFlags(aiJob.quality_flags).map(flag => (
-                        <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
-                          {flag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {aiJob.recommended_next_action && (
-                    <div className="text-[10px] text-muted-foreground">
-                      <span className="font-semibold text-foreground">Recommended next action: </span>
-                      {aiJob.recommended_next_action}
-                    </div>
-                  )}
-                </div>
-              )}
+                );
+              })()}
 
               <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
                 <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 flex-shrink-0 mt-0.5" />

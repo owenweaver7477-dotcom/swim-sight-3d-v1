@@ -105,6 +105,13 @@ export default function CoachDrawStudio({
   }, [fullscreenOpen, playbackRate, signedVideoUrl]);
 
   useEffect(() => {
+    if (!fullscreenOpen) return undefined;
+    const onKeyDown = (e) => { if (e.key === 'Escape') setFullscreenOpen(false); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [fullscreenOpen]);
+
+  useEffect(() => {
     if (!seekRequest || !Number.isFinite(Number(seekRequest.timestampSeconds))) return;
     const current = activeVideo();
     if (!current) return;
@@ -422,7 +429,7 @@ export default function CoachDrawStudio({
       )}
 
       {fullscreenOpen && (
-        <div className="fixed inset-0 z-[80] bg-slate-950 text-white p-3 sm:p-5 overflow-y-auto">
+        <div className="fixed inset-0 z-[80] bg-slate-950 text-white p-4 sm:p-6 overflow-y-auto">
           <div className="max-w-7xl mx-auto space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -437,8 +444,8 @@ export default function CoachDrawStudio({
                 <div className="text-xs font-mono text-slate-200 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
                   Approx frame ~{approxFrame}
                 </div>
-                <Button size="sm" variant="outline" className="h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={closeFullscreen}>
-                  <X className="w-3.5 h-3.5 mr-1.5" /> Exit
+                <Button size="sm" variant="outline" className="h-12 px-4 text-sm font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={closeFullscreen}>
+                  <X className="w-4 h-4 mr-1.5" /> Exit (Esc)
                 </Button>
               </div>
             </div>
