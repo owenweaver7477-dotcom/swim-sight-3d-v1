@@ -145,9 +145,11 @@
     visibility: visible !important;
   }
 
-  /* Position the report area to fill the page */
+  /* Position the report area to fill the page.
+     Use absolute (not fixed) so multi-page reports paginate instead of
+     clipping to page 1 in print/PDF. Matches the components' own print:absolute. */
   #printable-report-area {
-    position: fixed !important;
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;

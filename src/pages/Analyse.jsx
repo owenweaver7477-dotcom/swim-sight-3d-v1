@@ -439,7 +439,7 @@ export default function Analyse() {
 
   // ── Step 1: Video upload ─────────────────────────────────────────────────
   const validateFile = (f) => {
-    if (!f.type.startsWith('video/') && !f.name.match(/\.(mp4|mov|webm)$/i)) return 'Unsupported format. Use MP4, MOV, or WebM.';
+    if (!f.type.startsWith('video/') && !f.name.match(/\.(mp4|mov|m4v|webm)$/i)) return 'Unsupported format. Use MP4, MOV, M4V, or WebM.';
     if (f.size > MAX_SIZE_MB * 1024 * 1024) return `File too large. Max ${MAX_SIZE_MB} MB.`;
     return null;
   };
@@ -1297,7 +1297,7 @@ export default function Analyse() {
                 <Upload className="w-10 h-10 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium mb-1">Drag & drop or click to select</div>
-                  <div className="text-xs text-muted-foreground">MP4, MOV, WebM · Max {MAX_SIZE_MB} MB · 5-15 seconds recommended</div>
+                  <div className="text-xs text-muted-foreground">MP4, MOV, M4V, WebM · Max {MAX_SIZE_MB} MB · 5-15 seconds recommended</div>
                 </div>
               </div>
             )}

@@ -305,6 +305,7 @@ export default function DrillLibrary({
   assignMode = false,
   findingStroke,
   findingPhase,
+  // eslint-disable-next-line unused-imports/no-unused-vars -- reserved for fault-tag drill matching (not yet wired)
   findingFaultTags,
   onAssignDrill,
   assignedDrillTitle,
@@ -318,7 +319,6 @@ export default function DrillLibrary({
   const urlFaults    = urlParams.get('faults') || '';
   const urlContext   = urlParams.get('context') || ''; // e.g. finding name / report title
   const urlReportId  = urlParams.get('report_id') || '';
-  const urlFindingId = urlParams.get('finding_id') || '';
 
   const mapStroke = (s) => STROKES.find(st => st.toLowerCase() === s?.toLowerCase()) || 'All';
   const mapPhase  = (p) => PHASES.find(ph => ph.toLowerCase() === p?.toLowerCase()) || 'All';

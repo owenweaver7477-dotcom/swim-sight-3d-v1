@@ -52,6 +52,23 @@ export function fileSizeMb(fileOrBytes = 0) {
   return Number((bytes / BYTES_PER_MB).toFixed(2));
 }
 
+const EXTENSION_MIME_TYPES = {
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  webm: 'video/webm',
+};
+
+// Some browsers/OS combos return an empty File.type (common for .mov screen
+// recordings). Use the browser type when present, otherwise infer from the
+// file extension. Returns null when the type cannot be identified.
+export function resolveVideoMimeType(file) {
+  const fromFile = (file?.type || '').trim().toLowerCase();
+  if (fromFile.startsWith('video/')) return fromFile;
+  const ext = (file?.name || '').split('.').pop()?.toLowerCase() || '';
+  return EXTENSION_MIME_TYPES[ext] || null;
+}
+
 export async function readVideoDuration(file) {
   if (!file || typeof document === 'undefined' || typeof URL === 'undefined') return null;
 
@@ -105,6 +122,11 @@ export async function uploadPrivateVideo({
   if (!clubId) throw new Error('No active club selected.');
   if (!swimmer?.id) throw new Error('Select a swimmer before uploading a video.');
 
+  const resolvedMimeType = resolveVideoMimeType(file);
+  if (!resolvedMimeType) {
+    throw new Error('This video type could not be identified. Please upload MP4, MOV, M4V, or WEBM.');
+  }
+
   onStage?.('preparing_upload', { message: 'Creating private video record' });
 
   const videoUploadId = existingVideoUploadId || existingRecord?.id || crypto.randomUUID();
@@ -129,7 +151,7 @@ export async function uploadPrivateVideo({
     file_bucket: PRIVATE_VIDEO_BUCKET,
     file_path: filePath,
     original_filename: file.name,
-    content_type: file.type || 'video/mp4',
+    content_type: resolvedMimeType,
     file_size_bytes: file.size,
     upload_status: 'uploading',
     created_by: userId,
@@ -150,7 +172,7 @@ export async function uploadPrivateVideo({
     storage_bucket: PRIVATE_VIDEO_BUCKET,
     storage_path: filePath,
     original_filename: file.name,
-    mime_type: file.type || 'video/mp4',
+    mime_type: resolvedMimeType,
     file_size_bytes: file.size,
     file_size_mb: fileSizeMb(file),
     duration_seconds: durationSeconds,
@@ -190,7 +212,7 @@ export async function uploadPrivateVideo({
       .storage
       .from(PRIVATE_VIDEO_BUCKET)
       .upload(filePath, file, {
-        contentType: file.type || 'video/mp4',
+        contentType: resolvedMimeType,
         upsert: Boolean(existingVideoUploadId || currentExistingRecord?.id),
         signal: controller.signal,
       })

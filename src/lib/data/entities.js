@@ -236,8 +236,11 @@ function mapVideoUploadToDb(data) {
     storage_bucket: hasStorageInput ? (remaining.storage_bucket || remaining.file_bucket || storage.storage_bucket) : undefined,
     storage_path: hasStorageInput ? (remaining.storage_path || remaining.file_path || storage.storage_path) : undefined,
     original_filename: remaining.original_filename || file_name,
-    mime_type: remaining.mime_type || storage.mime_type,
-    file_size_bytes: fileSizeBytes,
+    // Never send null on partial updates: mime_type is NOT NULL in the DB, and a
+    // null here (from the storage normaliser fallback) fails the whole PATCH.
+    // undefined is stripped before the request, preserving the stored value.
+    mime_type: remaining.mime_type || storage.mime_type || undefined,
+    file_size_bytes: fileSizeBytes ?? undefined,
     file_size_mb: remaining.file_size_mb ?? (fileSizeBytes ? Number((fileSizeBytes / 1048576).toFixed(2)) : undefined),
     created_by: remaining.created_by || uploaded_by_user_id,
     stroke_type: remaining.stroke_type || stroke,
