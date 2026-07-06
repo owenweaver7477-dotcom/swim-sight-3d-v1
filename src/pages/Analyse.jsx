@@ -400,7 +400,7 @@ export default function Analyse() {
       setFile(null);
       queryClient.invalidateQueries({ queryKey: ['ai-reports', club?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-report', review.id] });
-      navigate(`/ai-review?report_id=${review.id}`);
+      navigate(`/ai-review?report_id=${review.id}&studio=1`);
     },
   });
 

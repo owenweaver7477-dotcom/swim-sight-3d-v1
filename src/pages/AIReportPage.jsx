@@ -335,6 +335,7 @@ export default function AIReportPage() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const reportId = urlParams.get('report_id');
+  const studioMode = urlParams.get('studio') === '1';
 
   const [finalising, setFinalising] = useState(false);
   const [showQualityGate, setShowQualityGate] = useState(false);
@@ -1228,6 +1229,9 @@ export default function AIReportPage() {
                 findings={findings.filter(finding => finding.approval_status !== 'rejected')}
                 keyStamps={videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame')}
                 drillOptions={drillOptions}
+                autoOpenFullscreen={studioMode}
+                swimmer={swimmer}
+                onFinalise={() => goToStudioStep('finalise')}
                 onCaptureTimestamp={(timestampSeconds) => {
                   setManualTimestamp(timestampSeconds);
                   if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
