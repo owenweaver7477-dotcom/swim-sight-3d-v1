@@ -129,9 +129,15 @@ export function sanitizePublicAnnotation(annotation = {}) {
   const canvasWidth = safeNumber(annotation.canvas_width, { min: 240, max: 4096 });
   const canvasHeight = safeNumber(annotation.canvas_height, { min: 180, max: 4096 });
   const thumbnail = safeThumbnail(annotation.thumbnail_data_url);
+  // Coach drawings (coach_draw/body_line) overlay their vector SVG on the captured frame:
+  // emit the SVG even when a thumbnail exists, with a transparent background so the frame
+  // shows through. Key frames keep their clean captured frame (no overlay). Without a
+  // thumbnail, the SVG keeps its own dark backdrop (standalone card). drawingToSvg escapes
+  // all coach text and validates colours/points, so the output is safe.
+  const isCoachDrawing = annotation.annotation_type === 'coach_draw' || annotation.annotation_type === 'body_line';
   const renderedSvg = safeRenderedSvg(annotation.rendered_svg)
-    || (!thumbnail && drawingData
-      ? drawingToSvg(drawingData, { width: canvasWidth, height: canvasHeight })
+    || (drawingData && (!thumbnail || isCoachDrawing)
+      ? drawingToSvg(drawingData, { width: canvasWidth, height: canvasHeight, background: thumbnail ? 'transparent' : undefined })
       : null);
   const annotationType = SAFE_ANNOTATION_TYPES.has(annotation.annotation_type)
     ? annotation.annotation_type

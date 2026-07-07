@@ -65,7 +65,15 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
       {safeThumbnail ? (
-        <img src={safeThumbnail} alt={annotation.title || label} className="w-full bg-slate-950 object-contain" />
+        <div className="relative bg-slate-950">
+          <img src={safeThumbnail} alt={annotation.title || label} className="w-full object-contain" />
+          {annotation.rendered_svg && (
+            <div
+              className="pointer-events-none absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
+              dangerouslySetInnerHTML={{ __html: annotation.rendered_svg }}
+            />
+          )}
+        </div>
       ) : (
         <div
           className="bg-slate-950"

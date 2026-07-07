@@ -310,6 +310,9 @@ export default function CoachDrawStudio({
     setTimestamp(current?.currentTime || 0);
     setPendingDrawing(null);
     setDrawing(true);
+    // Coach drawings are visual evidence for the report by default; the coach can still
+    // opt an individual mark out via the Include toggle before saving.
+    setIncludeInReport(true);
   };
 
   const handleCanvasSave = (drawingData) => {
@@ -329,6 +332,9 @@ export default function CoachDrawStudio({
       videoWidth: activeVideo()?.videoWidth || null,
       videoHeight: activeVideo()?.videoHeight || null,
       findingId: linkedFindingId || null,
+      // Marked-up screenshot: capture the paused video frame so the report can overlay
+      // the drawing on it. Falls back to null (SVG-on-card) if capture is blocked (CORS).
+      thumbnailDataUrl: captureVideoThumbnail(activeVideo()),
     });
     setPendingDrawing(null);
     setTitle('');

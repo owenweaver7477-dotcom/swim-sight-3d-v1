@@ -595,6 +595,7 @@ export default function AIReportPage() {
       videoWidth,
       videoHeight,
       findingId,
+      thumbnailDataUrl,
     }) => entities.VideoAnnotation.create({
       club_id: report.club_id,
       report_id: report.id,
@@ -611,6 +612,7 @@ export default function AIReportPage() {
       video_width: videoWidth,
       video_height: videoHeight,
       drawing_data: drawingData,
+      thumbnail_data_url: thumbnailDataUrl || null,
       title,
       coach_note: coachNote || null,
       include_in_report: includeInReport,
