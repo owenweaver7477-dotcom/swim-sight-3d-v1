@@ -110,6 +110,10 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
   const keyMoments = annotations.filter(annotation => annotation.annotation_type === 'key_frame');
   const coachAnnotations = annotations.filter(annotation => annotation.annotation_type !== 'key_frame');
   const weeklyPlan = buildWeeklyPlan(report, findings);
+  // The public payload carries no finding source/mode, so infer AI use from the
+  // AI-generated technical summary. Manual coach reviews have none, so the AI
+  // technical score and AI disclaimer are hidden for them.
+  const aiUsed = Boolean(report.technical_summary && String(report.technical_summary).trim());
   const annotationsByFindingTitle = new Map();
   coachAnnotations.forEach(annotation => {
     if (!annotation.linked_finding_title) return;
@@ -246,8 +250,8 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
         )}
       </div>
 
-      {/* Overall score */}
-      {report.overall_score != null && (
+      {/* Overall score — AI technical score, only when AI was actually used */}
+      {aiUsed && report.overall_score != null && report.overall_score > 0 && (
         <div className="px-4 py-6 border-b border-slate-200 sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex flex-col items-center justify-center text-white shadow-lg">
@@ -433,7 +437,9 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
       {/* Disclaimer */}
       <div className="mx-4 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200 sm:mx-8">
         <p className="text-[10px] text-slate-500 leading-relaxed text-center">
-          This report was reviewed and approved by a coach. AI-assisted suggestions may have been edited or rejected before sharing.
+          {aiUsed
+            ? 'This report was reviewed and approved by a coach. AI-assisted suggestions were coach-reviewed, and may have been edited or rejected, before sharing.'
+            : 'Prepared by the coach using Swim Sight 3D. Coach-created technical review.'}
         </p>
       </div>
 

@@ -141,6 +141,11 @@ export default function CoachDrawStudio({
   const [addedFindingCount, setAddedFindingCount] = useState(0);
   const [lastCapturedMomentId, setLastCapturedMomentId] = useState(null);
   const [finaliseFlow, setFinaliseFlow] = useState('idle'); // idle | confirm | saving | ready
+  const [drillMode, setDrillMode] = useState('suggested'); // 'suggested' | 'custom'
+  const [customDrillTitle, setCustomDrillTitle] = useState('');
+  const [customDrillSummary, setCustomDrillSummary] = useState('');
+  const [customDrillCue, setCustomDrillCue] = useState('');
+  const [customDrillWhy, setCustomDrillWhy] = useState('');
   const phaseSelected = Boolean(markerLabel) && markerLabel !== 'Key frame';
   const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
   const drillNoteText = expandNoteForDrills(markerNote);
@@ -268,16 +273,29 @@ export default function CoachDrawStudio({
     if (!onCreateFinding) { startFindingFromMoment(); return; }
     setSavingFinding(true);
     try {
+      const customDrill = (drillMode === 'custom' && customDrillTitle.trim())
+        ? {
+            title: customDrillTitle.trim(),
+            summary: customDrillSummary.trim(),
+            cue: customDrillCue.trim(),
+            why: customDrillWhy.trim(),
+          }
+        : null;
       await onCreateFinding({
         timestampSeconds: currentTime,
         phaseLabel: phaseSelected ? markerLabel : '',
         note: markerNote,
-        drill: selectedDrill,
+        drill: drillMode === 'suggested' ? selectedDrill : null,
+        customDrill,
         keyStampLinkId: lastCapturedMomentId || null,
       });
       setAddedFindingCount((n) => n + 1);
       setMarkerNote('');
       setSelectedDrill(null);
+      setCustomDrillTitle('');
+      setCustomDrillSummary('');
+      setCustomDrillCue('');
+      setCustomDrillWhy('');
       setLastCapturedMomentId(null);
     } catch (error) {
       console.warn('Finding was not saved.', error?.message || error);
@@ -751,26 +769,80 @@ export default function CoachDrawStudio({
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-300">Recommended drill</div>
-                    <select
-                      value={selectedDrill?.id || ''}
-                      onChange={(e) => setSelectedDrill(fullscreenDrills.find((d) => d.id === e.target.value) || null)}
-                      className="h-11 w-full rounded-lg border border-white/15 bg-white px-3 text-sm text-slate-950"
-                    >
-                      <option value="">Select recommended drill</option>
-                      {fullscreenDrills.map((d) => (
-                        <option key={d.id} value={d.id}>{d.title}</option>
-                      ))}
-                    </select>
-                    <div className="text-[10px] text-slate-400">
-                      {!phaseSelected
-                        ? `Showing ${video?.stroke_type || 'stroke'} drills — pick a phase above to refine.`
-                        : (markerNote.trim() ? 'Ranked by stroke, phase, and your note.' : 'Ranked by stroke and phase. Add a note to refine.')}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold text-slate-300">Recommended drill</div>
+                      <div className="flex gap-0.5 rounded-md bg-white/5 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setDrillMode('suggested')}
+                          className={`rounded px-2 py-1 text-[10px] font-semibold transition-colors ${drillMode === 'suggested' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300 hover:bg-white/10'}`}
+                        >
+                          Suggested
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDrillMode('custom')}
+                          className={`rounded px-2 py-1 text-[10px] font-semibold transition-colors ${drillMode === 'custom' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300 hover:bg-white/10'}`}
+                        >
+                          Custom drill
+                        </button>
+                      </div>
                     </div>
-                    {selectedDrill && (
-                      <div className="text-[11px] leading-snug text-cyan-200">
-                        {selectedDrill.title}
-                        {selectedDrill.report_summary ? ` — ${selectedDrill.report_summary}` : (selectedDrill.purpose ? ` — ${selectedDrill.purpose}` : '')}
+                    {drillMode === 'suggested' ? (
+                      <>
+                        <select
+                          value={selectedDrill?.id || ''}
+                          onChange={(e) => setSelectedDrill(fullscreenDrills.find((d) => d.id === e.target.value) || null)}
+                          className="h-11 w-full rounded-lg border border-white/15 bg-white px-3 text-sm text-slate-950"
+                        >
+                          <option value="">Select recommended drill</option>
+                          {fullscreenDrills.map((d) => (
+                            <option key={d.id} value={d.id}>{d.title}</option>
+                          ))}
+                        </select>
+                        <div className="text-[10px] text-slate-400">
+                          {!phaseSelected
+                            ? `Showing ${video?.stroke_type || 'stroke'} drills — pick a phase above to refine.`
+                            : (markerNote.trim() ? 'Ranked by stroke, phase, and your note.' : 'Ranked by stroke and phase. Add a note to refine.')}
+                        </div>
+                        {selectedDrill && (
+                          <div className="text-[11px] leading-snug text-cyan-200">
+                            {selectedDrill.title}
+                            {selectedDrill.report_summary ? ` — ${selectedDrill.report_summary}` : (selectedDrill.purpose ? ` — ${selectedDrill.purpose}` : '')}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <Input
+                          value={customDrillTitle}
+                          onChange={(e) => setCustomDrillTitle(e.target.value)}
+                          maxLength={120}
+                          className="h-11 bg-white text-sm text-slate-950"
+                          placeholder="Custom drill title (e.g. Narrow-knee band kick)"
+                        />
+                        <Textarea
+                          value={customDrillSummary}
+                          onChange={(e) => setCustomDrillSummary(e.target.value)}
+                          maxLength={400}
+                          className="min-h-[56px] bg-white text-sm text-slate-950"
+                          placeholder="How to do it / description"
+                        />
+                        <Input
+                          value={customDrillCue}
+                          onChange={(e) => setCustomDrillCue(e.target.value)}
+                          maxLength={160}
+                          className="h-11 bg-white text-sm text-slate-950"
+                          placeholder="Coaching cue (optional)"
+                        />
+                        <Input
+                          value={customDrillWhy}
+                          onChange={(e) => setCustomDrillWhy(e.target.value)}
+                          maxLength={200}
+                          className="h-11 bg-white text-sm text-slate-950"
+                          placeholder="Why this helps / focus (optional)"
+                        />
+                        <div className="text-[10px] text-slate-400">Your custom drill is saved on this finding and shown in the report.</div>
                       </div>
                     )}
                   </div>

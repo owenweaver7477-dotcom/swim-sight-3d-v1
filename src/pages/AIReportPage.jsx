@@ -689,6 +689,10 @@ export default function AIReportPage() {
       const linkedDrill = o.linkedDrill !== undefined ? o.linkedDrill : manualLinkedDrill;
       const drillTitle = o.drill !== undefined ? o.drill : manualDrill;
       const timestampValue = o.timestamp !== undefined ? o.timestamp : manualTimestamp;
+      // Explicit title/summary let a coach-written custom drill be stored on the finding
+      // (no library object). Falls back to the selected library drill when not provided.
+      const linkedDrillTitle = o.linkedDrillTitle !== undefined ? o.linkedDrillTitle : (linkedDrill?.title || drillTitle);
+      const linkedDrillSummary = o.linkedDrillSummary !== undefined ? o.linkedDrillSummary : (linkedDrill ? drillSummary(linkedDrill) : null);
       return entities.Finding.create({
         club_id: report.club_id,
         report_id: report.id,
@@ -704,8 +708,8 @@ export default function AIReportPage() {
         correction_cue: o.cue ?? manualCue,
         drill: drillTitle || null,
         linked_drill_id: linkedDrill?.id || null,
-        linked_drill_title: linkedDrill?.title || drillTitle || null,
-        linked_drill_summary: linkedDrill ? drillSummary(linkedDrill) : null,
+        linked_drill_title: linkedDrillTitle || null,
+        linked_drill_summary: linkedDrillSummary || null,
         next_focus: o.nextFocus ?? manualNextFocus,
         coach_notes: (o.coachNotes ?? manualCoachNotes) || null,
         raw_ai_payload: {
@@ -771,16 +775,27 @@ export default function AIReportPage() {
 
   // Save a coach finding directly from the fullscreen workspace, carrying the
   // timestamp, phase, note, and selected drill — without leaving fullscreen.
-  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, drill, keyStampLinkId }) => {
+  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, drill, customDrill, keyStampLinkId }) => {
     const phaseKey = mapPhaseLabelToKey(phaseLabel);
-    return createManualFinding.mutateAsync({
+    const override = {
       timestamp: timestampSeconds ?? null,
       phase: phaseKey || null,
       observation: (note || '').trim() || (phaseKey ? labelFromKey(phaseKey) : '') || 'Coach note',
-      drill: drill?.title || '',
-      linkedDrill: drill || null,
       keyStampLinkId: keyStampLinkId || null,
-    });
+    };
+    if (customDrill && customDrill.title) {
+      // Coach-written drill → stored on the finding's existing drill fields (no schema change).
+      override.drill = customDrill.title;
+      override.linkedDrill = null;
+      override.linkedDrillTitle = customDrill.title;
+      override.linkedDrillSummary = customDrill.summary || null;
+      if (customDrill.cue) override.cue = customDrill.cue;
+      if (customDrill.why) override.nextFocus = customDrill.why;
+    } else {
+      override.drill = drill?.title || '';
+      override.linkedDrill = drill || null;
+    }
+    return createManualFinding.mutateAsync(override);
   };
 
   useEffect(() => {
@@ -860,6 +875,11 @@ export default function AIReportPage() {
   const approvedCount = findings.filter(f => f.approval_status === 'approved').length;
   const rejectedCount = findings.filter(f => f.approval_status === 'rejected').length;
   const approvedFindings = findings.filter(f => f.approval_status === 'approved');
+  // Manual-vs-AI report mode is based on what content is actually IN the report:
+  // if any approved finding came from AI, the report shows AI content; otherwise it is
+  // a pure coach manual review. Drives the score, wording, and AI disclaimer.
+  const reportAiUsed = approvedFindings.some(finding => finding.source === 'ai');
+  const reportIsManual = !reportAiUsed;
   const includedAnnotations = videoAnnotations.filter(annotation => annotation.include_in_report && annotation.is_public);
   const keyStampCount = videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame').length;
   const coachDrawCount = videoAnnotations.filter(annotation => ['coach_draw', 'body_line'].includes(annotation.annotation_type)).length;
@@ -1362,6 +1382,8 @@ export default function AIReportPage() {
                 dragItems={[]}
                 share_link={null}
                 showPrintButton={false}
+                isManualReview={reportIsManual}
+                aiUsed={reportAiUsed}
               />
             </div>
           )}
@@ -1722,6 +1744,8 @@ export default function AIReportPage() {
               video={video}
               approvedFindings={approvedFindings}
               annotations={includedAnnotations}
+              isManualReview={reportIsManual}
+              aiUsed={reportAiUsed}
             />
             {/* Hidden printable version for PDF export */}
             <div id="printable-report-area" className="hidden print:block print:absolute print:top-0 print:left-0 print:w-full print:h-full print:bg-white print:z-50">
@@ -1739,6 +1763,8 @@ export default function AIReportPage() {
                 dragItems={dragAnalysisItems.filter(d => d.approval_status === 'approved' && d.included_in_report)}
                 share_link={null}
                 showPrintButton={false}
+                isManualReview={reportIsManual}
+                aiUsed={reportAiUsed}
               />
             </div>
           </div>

@@ -39,7 +39,7 @@ function AnnotationCard({ annotation, linkedFinding }) {
   );
 }
 
-export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings: inputFindings = [], annotations: inputAnnotations = [] }) {
+export default function ApprovedCoachReport({ report, swimmer, video, approvedFindings: inputFindings = [], annotations: inputAnnotations = [], isManualReview = false, aiUsed = false }) {
   const approvedFindings = sanitizePublicFindings(inputFindings);
   const annotations = sanitizePublicAnnotations(inputAnnotations);
   const approvedFindingIds = new Set(approvedFindings.map(finding => finding.id));
@@ -70,7 +70,7 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
       <div className="px-5 py-4 bg-green-900/20 border-b border-green-700/30">
         <div className="flex items-center gap-2 mb-1">
           <CheckCircle2 className="w-4 h-4 text-green-400" />
-          <span className="text-xs font-bold text-green-400 uppercase tracking-wider">Approved Coach Report</span>
+          <span className="text-xs font-bold text-green-400 uppercase tracking-wider">{isManualReview ? 'Coach Manual Review' : 'Approved Coach Report'}</span>
         </div>
         <div className="text-sm font-semibold text-foreground">{report.title || 'Technique Report'}</div>
         {swimmer && (
@@ -82,8 +82,8 @@ export default function ApprovedCoachReport({ report, swimmer, video, approvedFi
       </div>
 
       <div className="px-5 py-4 space-y-5">
-        {/* Score */}
-        {report.overall_score != null && (
+        {/* Score — AI technical score, only when AI was actually used */}
+        {aiUsed && report.overall_score != null && (
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center flex-shrink-0">
               <span className="text-base font-bold text-primary">{report.overall_score}</span>

@@ -73,7 +73,7 @@ function AnnotationPrintCard({ annotation, linkedFinding }) {
   );
 }
 
-export default function PrintableReport({ report, swimmer, club, video_meta, findings: inputFindings = [], annotations: inputAnnotations = [], share_link, showPrintButton = false }) {
+export default function PrintableReport({ report, swimmer, club, video_meta, findings: inputFindings = [], annotations: inputAnnotations = [], share_link, showPrintButton = false, isManualReview = false, aiUsed = false }) {
   const findings = sanitizePublicFindings(inputFindings);
   const annotations = sanitizePublicAnnotations(inputAnnotations);
   const dragItems = [];
@@ -122,7 +122,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                 </div>
                 <div>
                   <div className="text-xs font-semibold tracking-wider uppercase text-cyan-300 print:text-cyan-700">Swim Sight 3D</div>
-                  <div className="text-[10px] text-slate-300 print:text-slate-500">Coach-reviewed swim analysis</div>
+                  <div className="text-[10px] text-slate-300 print:text-slate-500">{isManualReview ? 'Coach Manual Review' : 'Coach-reviewed swim analysis'}</div>
                 </div>
               </div>
               <h1 className="text-2xl font-bold mb-1">{report.title || 'Swimmer Improvement Plan'}</h1>
@@ -211,8 +211,8 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           </div>
         )}
 
-        {/* Overall Score */}
-        {report.overall_score != null && (
+        {/* Overall Score — AI technical score, only when AI was actually used */}
+        {aiUsed && report.overall_score != null && (
           <div className="px-8 py-6 border-b border-slate-200 print:break-inside-avoid">
             <div className="flex items-center gap-5">
               <div className="flex-shrink-0">
@@ -238,8 +238,8 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           </div>
         )}
 
-        {/* Technical Summary */}
-        {report.technical_summary && (
+        {/* Technical Summary — AI-generated, only when AI was actually used */}
+        {aiUsed && report.technical_summary && (
           <div className="px-8 py-6 border-b border-slate-200 print:break-inside-avoid">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Technical Summary</h3>
             <p className="text-sm text-slate-700 leading-relaxed">{report.technical_summary}</p>
@@ -374,7 +374,9 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
 
         <div className="mx-8 mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
           <p className="text-center text-[10px] leading-relaxed text-slate-500">
-            This report was reviewed and approved by a coach. AI-assisted suggestions may have been edited or rejected before sharing.
+            {aiUsed
+              ? 'This report was reviewed and approved by a coach. AI-assisted suggestions were coach-reviewed, and may have been edited or rejected, before sharing.'
+              : 'Prepared by the coach using Swim Sight 3D. Coach-created technical review.'}
           </p>
         </div>
 
