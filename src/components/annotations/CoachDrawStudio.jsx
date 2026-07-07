@@ -10,6 +10,8 @@ import { createPortal } from 'react-dom';
 import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 import {
   BookmarkPlus,
+  CheckCircle2,
+  Download,
   FastForward,
   Gauge,
   Maximize2,
@@ -17,11 +19,25 @@ import {
   Plus,
   Rewind,
   Save,
+  Share2,
   SlidersHorizontal,
   SkipBack,
   SkipForward,
   X,
 } from 'lucide-react';
+
+// Lightweight, safe note-keyword boost for drill ranking. It only ENRICHES the text
+// used for matching (never the saved note), nudging obvious faults toward the right drills.
+function expandNoteForDrills(note = '') {
+  const t = String(note).toLowerCase();
+  const extra = [];
+  if (/\bwide\b/.test(t) && /\bkick\b/.test(t)) extra.push('narrow knees', 'wide knees', 'kick line', 'timing');
+  if ((/\blate\b/.test(t) || /\bearly\b/.test(t)) && /\btiming\b|\bkick\b|\bfoot\b/.test(t)) extra.push('timing', 'glide', 'late foot turn', 'two kicks');
+  if (/\bhead\b/.test(t) && (/\bearly\b/.test(t) || /\blift/.test(t) || /\bup\b/.test(t))) extra.push('breath timing', 'low breath', 'head lift', 'body line');
+  if (/\bpull\b/.test(t) && /\bwide\b/.test(t)) extra.push('narrow pull', 'catch', 'scull');
+  if (/\bhip|body line|drop/.test(t)) extra.push('body line', 'hips', 'streamline');
+  return extra.length ? `${note} ${extra.join(' ')}` : note;
+}
 
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 const APPROX_FRAME_STEP = 1 / 30;
@@ -86,6 +102,16 @@ export default function CoachDrawStudio({
   keyStamps = [],
   drillOptions = [],
   autoOpenFullscreen = false,
+  studioMode = false,
+  reviewMode = 'manual',
+  reportFinalised = false,
+  canFinalise = false,
+  onBackToAnalyse,
+  onReviewAISuggestions,
+  onCreateFinding,
+  onFinaliseReport,
+  onPrintReport,
+  shareLink,
   swimmer,
   onFinalise,
   canEdit = true,
@@ -93,6 +119,7 @@ export default function CoachDrawStudio({
 }) {
   const inlineVideoRef = useRef(null);
   const fullscreenVideoRef = useRef(null);
+  const autoOpenedRef = useRef(false);
   const [drawing, setDrawing] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [pendingDrawing, setPendingDrawing] = useState(null);
@@ -110,9 +137,14 @@ export default function CoachDrawStudio({
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
   const quickLabels = QUICK_LABELS_BY_STROKE[String(video?.stroke_type || '').toLowerCase()] || ['Key frame', 'Catch', 'Breath', 'Body line', 'Turn', 'Breakout'];
   const [selectedDrill, setSelectedDrill] = useState(null);
+  const [savingFinding, setSavingFinding] = useState(false);
+  const [addedFindingCount, setAddedFindingCount] = useState(0);
+  const [lastCapturedMomentId, setLastCapturedMomentId] = useState(null);
+  const [finaliseFlow, setFinaliseFlow] = useState('idle'); // idle | confirm | saving | ready
   const phaseSelected = Boolean(markerLabel) && markerLabel !== 'Key frame';
   const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
-  const draftFindingForDrills = { stroke_phase: markerLabel, phase: markerLabel, observation: markerNote, coach_sees: markerNote, fault_tag: markerNote };
+  const drillNoteText = expandNoteForDrills(markerNote);
+  const draftFindingForDrills = { stroke_phase: markerLabel, phase: markerLabel, observation: drillNoteText, coach_sees: drillNoteText, fault_tag: drillNoteText };
   const suggestedDrills = suggestDrillsForFinding(drillPool, draftFindingForDrills, video?.stroke_type, 8);
   const fullscreenDrills = suggestedDrills.length ? suggestedDrills : recommendedDrillsFor(video?.stroke_type, markerLabel);
   // Key moments come from saved key_frame annotations (which carry a captured thumbnail),
@@ -150,10 +182,15 @@ export default function CoachDrawStudio({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [fullscreenOpen]);
 
-  // Manual review enters straight into the fullscreen workspace.
+  // Manual review enters straight into the fullscreen workspace — but only once the
+  // private video source is ready, and only once, so exiting never bounces the coach
+  // back into fullscreen against their will.
   useEffect(() => {
-    if (autoOpenFullscreen) setFullscreenOpen(true);
-  }, [autoOpenFullscreen]);
+    if (autoOpenFullscreen && signedVideoUrl && !autoOpenedRef.current) {
+      autoOpenedRef.current = true;
+      setFullscreenOpen(true);
+    }
+  }, [autoOpenFullscreen, signedVideoUrl]);
 
   // True fullscreen: lock the background page scroll while the workspace is open,
   // and always restore it on exit/unmount so the coach is never trapped.
@@ -211,12 +248,41 @@ export default function CoachDrawStudio({
 
   const startFindingFromMoment = () => {
     const currentTime = pauseAndCapture();
-    onStartFindingFromMoment?.(currentTime, selectedDrill, markerLabel);
+    onStartFindingFromMoment?.(currentTime, selectedDrill, markerLabel, markerNote);
     if (fullscreenOpen) {
       if (inlineVideoRef.current) {
         inlineVideoRef.current.currentTime = currentTime;
       }
       setFullscreenOpen(false);
+    }
+  };
+
+  // Preferred path: save the coach finding inline (timestamp + phase + note + drill)
+  // WITHOUT leaving fullscreen. Falls back to the page form if no inline saver is wired.
+  const addFindingInline = async () => {
+    const current = activeVideo();
+    const currentTime = current?.currentTime || timestamp || 0;
+    current?.pause();
+    setTimestamp(currentTime);
+    onCaptureTimestamp?.(currentTime);
+    if (!onCreateFinding) { startFindingFromMoment(); return; }
+    setSavingFinding(true);
+    try {
+      await onCreateFinding({
+        timestampSeconds: currentTime,
+        phaseLabel: phaseSelected ? markerLabel : '',
+        note: markerNote,
+        drill: selectedDrill,
+        keyStampLinkId: lastCapturedMomentId || null,
+      });
+      setAddedFindingCount((n) => n + 1);
+      setMarkerNote('');
+      setSelectedDrill(null);
+      setLastCapturedMomentId(null);
+    } catch (error) {
+      console.warn('Finding was not saved.', error?.message || error);
+    } finally {
+      setSavingFinding(false);
     }
   };
 
@@ -253,22 +319,55 @@ export default function CoachDrawStudio({
     setLinkedFindingId('');
   };
 
-  const saveMarker = async () => {
-    if (!onSaveMarker) return;
+  const saveMarker = async ({ includeInReport = markerIncludeInReport } = {}) => {
+    if (!onSaveMarker) return null;
     const current = activeVideo();
     const currentTime = current?.currentTime || timestamp || 0;
-    await onSaveMarker({
+    const created = await onSaveMarker({
       timestampSeconds: currentTime,
       videoFrameTimeLabel: formatTimestamp(currentTime),
       approxFrame: Math.round(currentTime * fps),
       title: markerLabel || 'Key frame',
       coachNote: markerNote || null,
-      includeInReport: markerIncludeInReport,
+      includeInReport,
       thumbnailDataUrl: captureVideoThumbnail(current),
     });
-    setMarkerLabel('Key frame');
-    setMarkerNote('');
+    // Remember the captured moment so the next Add Finding can link it into the report.
+    if (created?.id) setLastCapturedMomentId(created.id);
     setMarkerIncludeInReport(false);
+    return created;
+  };
+
+  // Fullscreen "Capture Phase Moment" — always report-included so it reaches the PDF,
+  // and the phase/note are kept so the coach can add a finding from the same moment.
+  const capturePhaseMoment = () => saveMarker({ includeInReport: true });
+
+  const [shareCopied, setShareCopied] = useState(false);
+
+  // When the report becomes finalised (opened finalised, or finalised in-session),
+  // surface the fullscreen report-ready panel rather than the old dashboard.
+  useEffect(() => {
+    if (reportFinalised) setFinaliseFlow('ready');
+  }, [reportFinalised]);
+
+  const runFinalise = async () => {
+    if (!onFinaliseReport) { setFinaliseFlow('idle'); return; }
+    setFinaliseFlow('saving');
+    try {
+      await onFinaliseReport();
+      setFinaliseFlow('ready');
+    } catch (error) {
+      console.warn('Finalise did not complete.', error?.message || error);
+      setFinaliseFlow('idle');
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setShareCopied(true);
+    } catch { /* clipboard blocked — coach can copy from the share section */ }
   };
 
   const closeFullscreen = () => {
@@ -374,10 +473,10 @@ export default function CoachDrawStudio({
           size="sm"
           variant="outline"
           className="h-11 flex-1 text-xs sm:flex-none"
-          onClick={saveMarker}
+          onClick={() => saveMarker()}
           disabled={!signedVideoUrl || !canEdit || savingMarker}
         >
-          <BookmarkPlus className="w-3.5 h-3.5 mr-1.5" /> {savingMarker ? 'Saving...' : 'Save Key Stamp'}
+          <BookmarkPlus className="w-3.5 h-3.5 mr-1.5" /> {savingMarker ? 'Saving...' : 'Save Phase Moment'}
         </Button>
       )}
       <div className="w-full text-[10px] text-muted-foreground sm:w-auto">
@@ -436,6 +535,35 @@ export default function CoachDrawStudio({
 
   return (
     <div className="space-y-3">
+      {/* Manual direct mode: a calm banner that sits behind the fullscreen workspace.
+          It is the exit destination AND the re-entry point — never the busy AI dashboard. */}
+      {studioMode && !fullscreenOpen && (
+        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Manual Coach Review</div>
+            <h2 className="truncate text-sm font-bold text-foreground">
+              {swimmer?.name ? `${swimmer.name} · ` : ''}{video?.stroke_type || 'Manual review'}
+            </h2>
+            <p className="text-[10px] text-muted-foreground">
+              {signedVideoUrl ? 'Mark moments and add findings in the fullscreen workspace.' : 'Preparing the private video…'}
+            </p>
+          </div>
+          <div className="flex flex-shrink-0 flex-col gap-2 sm:flex-row">
+            <Button
+              className="h-11 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => setFullscreenOpen(true)}
+              disabled={!signedVideoUrl}
+            >
+              <Maximize2 className="mr-1.5 h-4 w-4" /> Resume Manual Review
+            </Button>
+            <Button variant="outline" className="h-11" onClick={() => onBackToAnalyse?.()}>
+              Back to Analyse
+            </Button>
+          </div>
+        </div>
+      )}
+      {!studioMode && (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-bold text-slate-900">Video-first review</span>
@@ -528,6 +656,8 @@ export default function CoachDrawStudio({
           </div>
         </div>
       )}
+        </>
+      )}
 
       {fullscreenOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden bg-slate-950 text-white">
@@ -582,6 +712,17 @@ export default function CoachDrawStudio({
                 <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
                   <div className="text-sm font-bold uppercase tracking-wider">Mark this moment</div>
 
+                  {reviewMode === 'ai' && findings.length > 0 && onReviewAISuggestions && (
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2">
+                      <div className="text-[11px] text-cyan-100">
+                        {findings.length} AI suggestion{findings.length > 1 ? 's' : ''} to review
+                      </div>
+                      <Button size="sm" variant="outline" className="h-8 flex-shrink-0 border-cyan-300/40 bg-white/5 text-[11px] text-white hover:bg-white/10" onClick={onReviewAISuggestions}>
+                        Review
+                      </Button>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-slate-300">Stroke phase</div>
                     <div className="grid grid-cols-2 gap-2">
@@ -611,56 +752,66 @@ export default function CoachDrawStudio({
 
                   <div className="space-y-1.5">
                     <div className="text-xs font-semibold text-slate-300">Recommended drill</div>
-                    {phaseSelected ? (
-                      <>
-                        <select
-                          value={selectedDrill?.id || ''}
-                          onChange={(e) => setSelectedDrill(fullscreenDrills.find((d) => d.id === e.target.value) || null)}
-                          className="h-11 w-full rounded-lg border border-white/15 bg-white px-3 text-sm text-slate-950"
-                        >
-                          <option value="">Select recommended drill</option>
-                          {fullscreenDrills.map((d) => (
-                            <option key={d.id} value={d.id}>{d.title}</option>
-                          ))}
-                        </select>
-                        {selectedDrill && (
-                          <div className="text-[11px] leading-snug text-cyan-200">
-                            {selectedDrill.title}
-                            {selectedDrill.report_summary ? ` — ${selectedDrill.report_summary}` : (selectedDrill.purpose ? ` — ${selectedDrill.purpose}` : '')}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">Select a phase to see recommended drills</div>
+                    <select
+                      value={selectedDrill?.id || ''}
+                      onChange={(e) => setSelectedDrill(fullscreenDrills.find((d) => d.id === e.target.value) || null)}
+                      className="h-11 w-full rounded-lg border border-white/15 bg-white px-3 text-sm text-slate-950"
+                    >
+                      <option value="">Select recommended drill</option>
+                      {fullscreenDrills.map((d) => (
+                        <option key={d.id} value={d.id}>{d.title}</option>
+                      ))}
+                    </select>
+                    <div className="text-[10px] text-slate-400">
+                      {!phaseSelected
+                        ? `Showing ${video?.stroke_type || 'stroke'} drills — pick a phase above to refine.`
+                        : (markerNote.trim() ? 'Ranked by stroke, phase, and your note.' : 'Ranked by stroke and phase. Add a note to refine.')}
+                    </div>
+                    {selectedDrill && (
+                      <div className="text-[11px] leading-snug text-cyan-200">
+                        {selectedDrill.title}
+                        {selectedDrill.report_summary ? ` — ${selectedDrill.report_summary}` : (selectedDrill.purpose ? ` — ${selectedDrill.purpose}` : '')}
+                      </div>
                     )}
                   </div>
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
-                    <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300" onClick={startFindingFromMoment} disabled={!signedVideoUrl || !canEdit}>
-                      <Plus className="mr-1.5 h-5 w-5" /> Add Finding
+                    <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={addFindingInline} disabled={!signedVideoUrl || !canEdit || savingFinding || (!markerNote.trim() && !phaseSelected)}>
+                      <Plus className="mr-1.5 h-5 w-5" /> {savingFinding ? 'Adding…' : 'Add Finding'}
                     </Button>
+                    {(!markerNote.trim() && !phaseSelected) ? (
+                      <p className="text-[10px] text-slate-400">Pick a phase or type a note to add a finding.</p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400">Saves a coach finding with this timestamp, phase, note, and drill.</p>
+                    )}
+                    {addedFindingCount > 0 && (
+                      <p className="text-[11px] font-semibold text-emerald-300">✓ {addedFindingCount} finding{addedFindingCount > 1 ? 's' : ''} added to this report.</p>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       {onSaveMarker && (
-                        <Button size="sm" variant="outline" className="min-h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={saveMarker} disabled={!signedVideoUrl || !canEdit || savingMarker}>
-                          <BookmarkPlus className="mr-1.5 h-4 w-4 text-cyan-300" /> {savingMarker ? 'Saving…' : 'Save Key Moment'}
+                        <Button size="sm" variant="outline" className="min-h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => capturePhaseMoment()} disabled={!signedVideoUrl || !canEdit || savingMarker}>
+                          <BookmarkPlus className="mr-1.5 h-4 w-4 text-cyan-300" /> {savingMarker ? 'Saving…' : 'Save Phase Moment'}
                         </Button>
                       )}
                       <Button size="sm" variant="outline" className="min-h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={startDrawing} disabled={!signedVideoUrl || !canEdit}>
                         <PencilLine className="mr-1.5 h-4 w-4 text-cyan-300" /> Coach Draw
                       </Button>
                     </div>
-                    <p className="text-[10px] text-slate-400">Findings and key moments are saved as you add them.</p>
                   </div>
                 </div>
               </div>
 
-              {/* Bottom: key moments + finalise */}
+              {/* Bottom: phase moments + finalise */}
               <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-300">Key moments ({keyMoments.length})</div>
-                  {onFinalise && (
-                    <Button size="sm" className="h-10 bg-white/10 px-4 text-xs font-semibold text-white hover:bg-white/20" onClick={() => { closeFullscreen(); onFinalise(); }}>
-                      Finalise manual report
+                  <div className="text-xs font-semibold text-slate-300">Phase moments ({keyMoments.length})</div>
+                  {(onFinaliseReport || onFinalise) && (
+                    <Button size="sm" className="h-10 bg-white/10 px-4 text-xs font-semibold text-white hover:bg-white/20" onClick={() => {
+                      if (reportFinalised) { setFinaliseFlow('ready'); return; }
+                      if (onFinaliseReport && canFinalise) { setFinaliseFlow('confirm'); return; }
+                      closeFullscreen(); onFinalise?.();
+                    }}>
+                      {reportFinalised ? 'View report' : 'Finalise Report'}
                     </Button>
                   )}
                 </div>
@@ -675,7 +826,7 @@ export default function CoachDrawStudio({
                       {m.thumb ? (
                         <img src={m.thumb} alt={m.phase} className="mb-2 aspect-video w-full rounded bg-slate-800 object-cover" />
                       ) : (
-                        <div className="mb-2 flex aspect-video items-center justify-center rounded bg-slate-800 text-[10px] text-slate-500">No thumbnail</div>
+                        <div className="mb-2 flex aspect-video items-center justify-center rounded bg-slate-800 text-[10px] text-slate-400">Phase moment</div>
                       )}
                       <div className="font-mono text-[10px] text-cyan-200">{formatTimestamp(m.seconds)}</div>
                       <div className="truncate text-xs font-semibold text-white">{m.phase}</div>
@@ -684,12 +835,12 @@ export default function CoachDrawStudio({
                   ))}
                   <button
                     type="button"
-                    onClick={startFindingFromMoment}
-                    disabled={!signedVideoUrl || !canEdit}
+                    onClick={() => capturePhaseMoment()}
+                    disabled={!signedVideoUrl || !canEdit || savingMarker}
                     className="flex w-36 flex-shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/20 bg-white/5 p-2 text-slate-300 transition-colors hover:border-cyan-300/50 disabled:opacity-50"
                   >
                     <Plus className="h-5 w-5" />
-                    <span className="text-xs font-semibold">Add moment</span>
+                    <span className="text-xs font-semibold">{savingMarker ? 'Saving…' : 'Capture moment'}</span>
                   </button>
                 </div>
               </div>
@@ -711,6 +862,65 @@ export default function CoachDrawStudio({
           {pendingDrawingBody}
         </div>
       ))}
+
+      {/* Finalise confirm — deliberate coach action before locking the report. */}
+      {finaliseFlow === 'confirm' && createPortal(
+        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-6 text-white">
+            <div>
+              <h2 className="text-base font-bold">Finalise report?</h2>
+              <p className="mt-1 text-xs text-slate-300">
+                This locks the coach report and makes it ready to print or share. You can still view it afterwards.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="h-11 flex-1 border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => setFinaliseFlow('idle')}>
+                Cancel
+              </Button>
+              <Button className="h-11 flex-1 bg-green-600 text-white hover:bg-green-500" onClick={runFinalise}>
+                Finalise Report
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Report-ready panel — fullscreen-first, never the old dashboard. */}
+      {(finaliseFlow === 'saving' || finaliseFlow === 'ready') && createPortal(
+        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-white">
+            <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-400" />
+            <div>
+              <h2 className="text-lg font-bold">{finaliseFlow === 'saving' ? 'Finalising…' : 'Report ready'}</h2>
+              <p className="mt-1 text-xs text-slate-300">
+                {finaliseFlow === 'saving'
+                  ? 'Saving the coach report.'
+                  : 'Your coach report is finalised — print it or share it with the swimmer.'}
+              </p>
+            </div>
+            {finaliseFlow === 'ready' && (
+              <div className="space-y-2">
+                <Button className="h-11 w-full bg-cyan-400 text-slate-950 hover:bg-cyan-300" onClick={() => onPrintReport?.()}>
+                  <Download className="mr-1.5 h-4 w-4" /> View / Print PDF
+                </Button>
+                {shareLink && (
+                  <Button variant="outline" className="h-11 w-full border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={copyShareLink}>
+                    <Share2 className="mr-1.5 h-4 w-4" /> {shareCopied ? 'Link copied' : 'Copy share link'}
+                  </Button>
+                )}
+                <Button variant="outline" className="h-11 w-full border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => setFinaliseFlow('idle')}>
+                  Continue editing
+                </Button>
+                <Button variant="ghost" className="h-11 w-full text-slate-300 hover:bg-white/10" onClick={() => onBackToAnalyse?.()}>
+                  Back to Analyse
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
 
       {video?.capture_source === 'swimpro_export' && (
         <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">

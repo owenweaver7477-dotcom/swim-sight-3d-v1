@@ -335,7 +335,7 @@ export default function AIReportPage() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const reportId = urlParams.get('report_id');
-  const studioMode = urlParams.get('studio') === '1';
+  const studioParam = urlParams.get('studio');
 
   const [finalising, setFinalising] = useState(false);
   const [showQualityGate, setShowQualityGate] = useState(false);
@@ -681,37 +681,46 @@ export default function AIReportPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] }),
   });
 
+  // Accepts an optional explicit payload (used by the fullscreen workspace to save a
+  // coach finding inline). With no override it reads the page form state exactly as before.
   const createManualFinding = useMutation({
-    mutationFn: () => entities.Finding.create({
-      club_id: report.club_id,
-      report_id: report.id,
-      swimmer_id: report.swimmer_id,
-      video_upload_id: report.video_upload_id,
-      source: 'coach',
-      approval_status: 'approved',
-      severity: manualSeverity,
-      stroke_phase: manualPhase || null,
-      timestamp_seconds: manualTimestamp,
-      observation: manualObservation,
-      why_it_matters: manualWhy || null,
-      correction_cue: manualCue,
-      drill: manualDrill || null,
-      linked_drill_id: manualLinkedDrill?.id || null,
-      linked_drill_title: manualLinkedDrill?.title || manualDrill || null,
-      linked_drill_summary: manualLinkedDrill ? drillSummary(manualLinkedDrill) : null,
-      next_focus: manualNextFocus,
-      coach_notes: manualCoachNotes || null,
-      raw_ai_payload: {
-        source: 'coach_studio',
-        fault_tag: manualFaultTag || null,
-        timestamp_seconds: manualTimestamp,
-      },
-      created_by: user?.id,
-    }),
-    onSuccess: async (createdFinding) => {
-      if (pendingKeyStampLinkId) {
+    mutationFn: (override) => {
+      const o = override || {};
+      const linkedDrill = o.linkedDrill !== undefined ? o.linkedDrill : manualLinkedDrill;
+      const drillTitle = o.drill !== undefined ? o.drill : manualDrill;
+      const timestampValue = o.timestamp !== undefined ? o.timestamp : manualTimestamp;
+      return entities.Finding.create({
+        club_id: report.club_id,
+        report_id: report.id,
+        swimmer_id: report.swimmer_id,
+        video_upload_id: report.video_upload_id,
+        source: 'coach',
+        approval_status: 'approved',
+        severity: o.severity ?? manualSeverity,
+        stroke_phase: (o.phase !== undefined ? o.phase : manualPhase) || null,
+        timestamp_seconds: timestampValue,
+        observation: o.observation !== undefined ? o.observation : manualObservation,
+        why_it_matters: (o.why ?? manualWhy) || null,
+        correction_cue: o.cue ?? manualCue,
+        drill: drillTitle || null,
+        linked_drill_id: linkedDrill?.id || null,
+        linked_drill_title: linkedDrill?.title || drillTitle || null,
+        linked_drill_summary: linkedDrill ? drillSummary(linkedDrill) : null,
+        next_focus: o.nextFocus ?? manualNextFocus,
+        coach_notes: (o.coachNotes ?? manualCoachNotes) || null,
+        raw_ai_payload: {
+          source: 'coach_studio',
+          fault_tag: (o.faultTag ?? manualFaultTag) || null,
+          timestamp_seconds: timestampValue,
+        },
+        created_by: user?.id,
+      });
+    },
+    onSuccess: async (createdFinding, override) => {
+      const linkId = override?.keyStampLinkId ?? pendingKeyStampLinkId;
+      if (linkId) {
         try {
-          await entities.VideoAnnotation.update(pendingKeyStampLinkId, {
+          await entities.VideoAnnotation.update(linkId, {
             finding_id: createdFinding.id,
             include_in_report: true,
             is_public: true,
@@ -721,29 +730,58 @@ export default function AIReportPage() {
         }
       }
       await logFeedback(createdFinding, 'manual_added', {
-        phase: manualPhase || createdFinding.stroke_phase || null,
+        phase: createdFinding.stroke_phase || null,
         fault_tag: createdFinding.fault_tag || null,
-        coach_final_observation: manualObservation,
-        coach_final_cue: manualCue,
-        coach_final_drill: manualDrill || null,
-        coach_edit_summary: manualCoachNotes || null,
+        coach_final_observation: createdFinding.observation || null,
+        coach_final_cue: createdFinding.correction_cue || null,
+        coach_final_drill: createdFinding.drill || null,
+        coach_edit_summary: createdFinding.coach_notes || null,
       });
-      setManualObservation('');
-      setManualPhase('');
-      setManualSeverity('medium');
-      setManualWhy('');
-      setManualCue('');
-      setManualDrill('');
-      setManualNextFocus('');
-      setManualCoachNotes('');
-      setManualTimestamp(null);
-      setManualFaultTag('');
-      setManualLinkedDrill(null);
+      // Only clear the page form when the coach used it (no override). Inline fullscreen
+      // saves keep their own state in the child component.
+      if (!override) {
+        setManualObservation('');
+        setManualPhase('');
+        setManualSeverity('medium');
+        setManualWhy('');
+        setManualCue('');
+        setManualDrill('');
+        setManualNextFocus('');
+        setManualCoachNotes('');
+        setManualTimestamp(null);
+        setManualFaultTag('');
+        setManualLinkedDrill(null);
+      }
       setPendingKeyStampLinkId(null);
       queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
       queryClient.invalidateQueries({ queryKey: ['video-annotations', reportId, report?.video_upload_id] });
     },
   });
+
+  // Map a fullscreen phase label (e.g. "Catch setup") to the studio-phase key
+  // (e.g. "catch_setup"); fall back to the raw label so a finding is never phase-less.
+  const mapPhaseLabelToKey = (phaseLabel) => {
+    const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+    const wanted = norm(phaseLabel);
+    if (!wanted) return '';
+    return studioPhases.find(k => norm(labelFromKey(k)) === wanted || norm(k) === wanted)
+      || studioPhases.find(k => norm(labelFromKey(k)).includes(wanted) || wanted.includes(norm(k)))
+      || phaseLabel;
+  };
+
+  // Save a coach finding directly from the fullscreen workspace, carrying the
+  // timestamp, phase, note, and selected drill — without leaving fullscreen.
+  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, drill, keyStampLinkId }) => {
+    const phaseKey = mapPhaseLabelToKey(phaseLabel);
+    return createManualFinding.mutateAsync({
+      timestamp: timestampSeconds ?? null,
+      phase: phaseKey || null,
+      observation: (note || '').trim() || (phaseKey ? labelFromKey(phaseKey) : '') || 'Coach note',
+      drill: drill?.title || '',
+      linkedDrill: drill || null,
+      keyStampLinkId: keyStampLinkId || null,
+    });
+  };
 
   useEffect(() => {
     if (!report) return;
@@ -831,6 +869,18 @@ export default function AIReportPage() {
     || report?.analysis_mode === 'placeholder'
     || report?.analysis_mode === 'manual_review'
     || report?.real_pose_detected === false;
+  // Unified fullscreen Coach Review workspace: AI and manual reports BOTH open the
+  // fullscreen workspace by default. Finalised reports keep the normal report/finalise
+  // view, and ?studio=0 forces the legacy dashboard/debug view.
+  const studioMode = studioParam !== '0';
+  // Auto-open the MARKING workspace only for in-review reports. A finalised report opens
+  // straight to the fullscreen report-ready panel instead (handled in CoachDrawStudio).
+  const autoOpenStudio = studioMode && !isReportFinalised;
+  const reviewMode = isManualReviewReport ? 'manual' : 'ai';
+  const canFinalise = canEdit && !isReportFinalised && pendingCount === 0;
+  const fullscreenShareLink = activeSharedLinks[0]?.token
+    ? `${window.location.origin}/shared-report/${activeSharedLinks[0].token}`
+    : null;
   const activeAIJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
   const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing', 'cancel_requested'].includes(aiJob?.queue_status);
   const isAIJobUnavailable = ['error', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.status)
@@ -965,6 +1015,10 @@ export default function AIReportPage() {
             </div>
           </PageHeader>
 
+          {/* Manual direct mode hides the busy AI/dashboard sections — the coach works
+              in the fullscreen manual workspace, not this page. */}
+          {!studioMode && (
+          <>
           <PilotReadinessWarning />
 
           <CoachStudioWorkflowPanel
@@ -1161,6 +1215,8 @@ export default function AIReportPage() {
               <HydrodynamicReviewPanel report={report} findings={findings} />
             </div>
           </details>
+          </>
+          )}
 
           {/* Coach summary / next focus */}
           {coachStudioStep === 'summary' && (
@@ -1201,8 +1257,9 @@ export default function AIReportPage() {
           )}
 
           {/* Video metadata */}
-          {video && ['video', 'stamps', 'draw', 'findings'].includes(coachStudioStep) && (
+          {video && (studioMode || ['video', 'stamps', 'draw', 'findings'].includes(coachStudioStep)) && (
             <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+              {!studioMode && (
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Coach Studio</div>
@@ -1217,6 +1274,7 @@ export default function AIReportPage() {
                   </div>
                 )}
               </div>
+              )}
               <CoachDrawStudio
                 signedVideoUrl={signedVideoUrl}
                 signedVideoError={signedVideoError}
@@ -1229,15 +1287,31 @@ export default function AIReportPage() {
                 findings={findings.filter(finding => finding.approval_status !== 'rejected')}
                 keyStamps={videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame')}
                 drillOptions={drillOptions}
-                autoOpenFullscreen={studioMode}
+                autoOpenFullscreen={autoOpenStudio}
+                studioMode={studioMode}
+                reviewMode={reviewMode}
+                reportFinalised={isReportFinalised}
+                canFinalise={canFinalise}
+                onFinaliseReport={handleFinaliseConfirmed}
+                onPrintReport={() => window.print()}
+                shareLink={fullscreenShareLink}
+                onReviewAISuggestions={() => navigate(`/ai-review?report_id=${reportId}&studio=0`)}
+                onCreateFinding={handleCreateFindingFromFullscreen}
+                onBackToAnalyse={() => navigate('/analyse')}
                 swimmer={swimmer}
-                onFinalise={() => goToStudioStep('finalise')}
+                onFinalise={() => {
+                  // Finalising is a deliberate exit from marking — drop studio mode so the
+                  // normal finalise/report flow is shown (not the fullscreen workspace).
+                  navigate(`/ai-review?report_id=${reportId}&studio=0`);
+                  goToStudioStep('finalise');
+                }}
                 onCaptureTimestamp={(timestampSeconds) => {
                   setManualTimestamp(timestampSeconds);
                   if (!manualPhase && studioPhases.length) setManualPhase(studioPhases[0]);
                 }}
-                onStartFindingFromMoment={(timestampSeconds, drill, phaseLabel) => {
+                onStartFindingFromMoment={(timestampSeconds, drill, phaseLabel, note) => {
                   setManualTimestamp(timestampSeconds);
+                  if (note) setManualObservation(note);
                   // Map the fullscreen phase label (e.g. "Catch setup") to the manual form's
                   // studio-phase key (e.g. "catch_setup") so the select prefills correctly.
                   const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -1267,6 +1341,28 @@ export default function AIReportPage() {
                 )}
                 {video.created_date && <span>Uploaded {format(new Date(video.created_date), 'dd MMM yyyy')}</span>}
               </div>
+            </div>
+          )}
+
+          {/* Fullscreen finalise path: printable report kept in the DOM (hidden on screen)
+              so View / Print PDF works from the fullscreen report-ready panel without the dashboard. */}
+          {studioMode && isReportFinalised && coachStudioStep !== 'finalise' && (
+            <div id="printable-report-area" className="hidden print:block print:absolute print:top-0 print:left-0 print:w-full print:h-full print:bg-white print:z-50">
+              <PrintableReport
+                report={report}
+                swimmer={swimmer}
+                club={club}
+                video_meta={{
+                  stroke_type: video?.stroke_type,
+                  analysis_type: video?.analysis_type,
+                  camera_angle: video?.camera_angle,
+                }}
+                findings={approvedFindings}
+                annotations={includedAnnotations}
+                dragItems={[]}
+                share_link={null}
+                showPrintButton={false}
+              />
             </div>
           )}
 
@@ -1781,7 +1877,7 @@ export default function AIReportPage() {
         </div>
 
         {/* ── RIGHT STICKY PANEL — desktop only ── */}
-        <div className="hidden lg:block w-80 flex-shrink-0 space-y-4 sticky top-6">
+        <div className={`${studioMode ? 'hidden' : 'hidden lg:block'} w-80 flex-shrink-0 space-y-4 sticky top-6`}>
           {/* Coach Review Assistant — above the 3D viewer */}
           <CoachReviewAssistantCard
             video={video}
