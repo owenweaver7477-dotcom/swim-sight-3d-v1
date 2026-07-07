@@ -18,7 +18,6 @@ import {
   PencilLine,
   Plus,
   Rewind,
-  Save,
   Share2,
   SlidersHorizontal,
   SkipBack,
@@ -115,14 +114,12 @@ export default function CoachDrawStudio({
   swimmer,
   onFinalise,
   canEdit = true,
-  saving,
 }) {
   const inlineVideoRef = useRef(null);
   const fullscreenVideoRef = useRef(null);
   const autoOpenedRef = useRef(false);
   const [drawing, setDrawing] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
-  const [pendingDrawing, setPendingDrawing] = useState(null);
   const [timestamp, setTimestamp] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [title, setTitle] = useState('');
@@ -146,6 +143,8 @@ export default function CoachDrawStudio({
   const [customDrillSummary, setCustomDrillSummary] = useState('');
   const [customDrillCue, setCustomDrillCue] = useState('');
   const [customDrillWhy, setCustomDrillWhy] = useState('');
+  const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
+  const [drawingSaving, setDrawingSaving] = useState(false);
   const phaseSelected = Boolean(markerLabel) && markerLabel !== 'Key frame';
   const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
   const drillNoteText = expandNoteForDrills(markerNote);
@@ -206,6 +205,13 @@ export default function CoachDrawStudio({
     return () => { document.body.style.overflow = previous; };
   }, [fullscreenOpen]);
 
+  // Auto-clear the transient success/error toast after a few seconds.
+  useEffect(() => {
+    if (!actionFeedback) return undefined;
+    const id = setTimeout(() => setActionFeedback(null), 3500);
+    return () => clearTimeout(id);
+  }, [actionFeedback]);
+
   useEffect(() => {
     if (!seekRequest || !Number.isFinite(Number(seekRequest.timestampSeconds))) return;
     const current = activeVideo();
@@ -223,7 +229,6 @@ export default function CoachDrawStudio({
       current.currentTime = Math.max(0, Number(drawRequest.timestampSeconds));
       syncTimestamp(current);
     }
-    setPendingDrawing(null);
     setDrawing(true);
   }, [drawRequest?.nonce]);
 
@@ -272,6 +277,7 @@ export default function CoachDrawStudio({
     onCaptureTimestamp?.(currentTime);
     if (!onCreateFinding) { startFindingFromMoment(); return; }
     setSavingFinding(true);
+    setActionFeedback(null);
     try {
       const customDrill = (drillMode === 'custom' && customDrillTitle.trim())
         ? {
@@ -290,6 +296,7 @@ export default function CoachDrawStudio({
         keyStampLinkId: lastCapturedMomentId || null,
       });
       setAddedFindingCount((n) => n + 1);
+      setActionFeedback({ type: 'success', msg: 'Finding added' });
       setMarkerNote('');
       setSelectedDrill(null);
       setCustomDrillTitle('');
@@ -299,6 +306,7 @@ export default function CoachDrawStudio({
       setLastCapturedMomentId(null);
     } catch (error) {
       console.warn('Finding was not saved.', error?.message || error);
+      setActionFeedback({ type: 'error', msg: 'Could not save the finding. Your note and drill are kept — please try again.' });
     } finally {
       setSavingFinding(false);
     }
@@ -308,58 +316,71 @@ export default function CoachDrawStudio({
     const current = activeVideo();
     current?.pause();
     setTimestamp(current?.currentTime || 0);
-    setPendingDrawing(null);
     setDrawing(true);
-    // Coach drawings are visual evidence for the report by default; the coach can still
-    // opt an individual mark out via the Include toggle before saving.
+    // Coach drawings are visual evidence for the report by default.
     setIncludeInReport(true);
   };
 
-  const handleCanvasSave = (drawingData) => {
-    setPendingDrawing(drawingData);
-    setDrawing(false);
-  };
-
-  const saveAnnotation = async () => {
-    if (!pendingDrawing) return;
-    await onSaveAnnotation({
-      drawingData: pendingDrawing,
-      timestampSeconds: timestamp,
-      videoFrameTimeLabel: formatTimestamp(timestamp),
-      title: title || 'Coach-created annotation',
-      coachNote,
-      includeInReport,
-      videoWidth: activeVideo()?.videoWidth || null,
-      videoHeight: activeVideo()?.videoHeight || null,
-      findingId: linkedFindingId || null,
-      // Marked-up screenshot: capture the paused video frame so the report can overlay
-      // the drawing on it. Falls back to null (SVG-on-card) if capture is blocked (CORS).
-      thumbnailDataUrl: captureVideoThumbnail(activeVideo()),
-    });
-    setPendingDrawing(null);
-    setTitle('');
-    setCoachNote('');
-    setIncludeInReport(false);
-    setLinkedFindingId('');
+  // Coach Draw saves in ONE step: "Save Drawing" persists the marked-up frame directly.
+  // On success the canvas closes and shows "Drawing saved"; on failure the marks are kept
+  // (the canvas stays open) so the coach can retry without redrawing.
+  const handleCanvasSave = async (drawingData) => {
+    if (!drawingData || !onSaveAnnotation) { setDrawing(false); return; }
+    setDrawingSaving(true);
+    setActionFeedback(null);
+    try {
+      await onSaveAnnotation({
+        drawingData,
+        timestampSeconds: timestamp,
+        videoFrameTimeLabel: formatTimestamp(timestamp),
+        title: title || 'Coach drawing',
+        coachNote,
+        includeInReport,
+        videoWidth: activeVideo()?.videoWidth || null,
+        videoHeight: activeVideo()?.videoHeight || null,
+        findingId: linkedFindingId || null,
+        // Marked-up screenshot: capture the paused frame so the report overlays the drawing.
+        thumbnailDataUrl: captureVideoThumbnail(activeVideo()),
+      });
+      setTitle('');
+      setCoachNote('');
+      setIncludeInReport(false);
+      setLinkedFindingId('');
+      setActionFeedback({ type: 'success', msg: 'Drawing saved' });
+      setDrawing(false);
+    } catch (error) {
+      console.warn('Drawing was not saved.', error?.message || error);
+      setActionFeedback({ type: 'error', msg: 'Drawing failed to save. Please try again.' });
+    } finally {
+      setDrawingSaving(false);
+    }
   };
 
   const saveMarker = async ({ includeInReport = markerIncludeInReport } = {}) => {
     if (!onSaveMarker) return null;
     const current = activeVideo();
     const currentTime = current?.currentTime || timestamp || 0;
-    const created = await onSaveMarker({
-      timestampSeconds: currentTime,
-      videoFrameTimeLabel: formatTimestamp(currentTime),
-      approxFrame: Math.round(currentTime * fps),
-      title: markerLabel || 'Key frame',
-      coachNote: markerNote || null,
-      includeInReport,
-      thumbnailDataUrl: captureVideoThumbnail(current),
-    });
-    // Remember the captured moment so the next Add Finding can link it into the report.
-    if (created?.id) setLastCapturedMomentId(created.id);
-    setMarkerIncludeInReport(false);
-    return created;
+    setActionFeedback(null);
+    try {
+      const created = await onSaveMarker({
+        timestampSeconds: currentTime,
+        videoFrameTimeLabel: formatTimestamp(currentTime),
+        approxFrame: Math.round(currentTime * fps),
+        title: markerLabel || 'Key frame',
+        coachNote: markerNote || null,
+        includeInReport,
+        thumbnailDataUrl: captureVideoThumbnail(current),
+      });
+      // Remember the captured moment so the next Add Finding can link it into the report.
+      if (created?.id) setLastCapturedMomentId(created.id);
+      setMarkerIncludeInReport(false);
+      setActionFeedback({ type: 'success', msg: 'Phase moment saved' });
+      return created;
+    } catch (error) {
+      console.warn('Phase moment was not saved.', error?.message || error);
+      setActionFeedback({ type: 'error', msg: 'Could not save the phase moment. Your phase and note are kept — please try again.' });
+      return null;
+    }
   };
 
   // Fullscreen "Capture Phase Moment" — always report-included so it reaches the PDF,
@@ -436,7 +457,7 @@ export default function CoachDrawStudio({
           timestampSeconds={timestamp}
           onSave={handleCanvasSave}
           onCancel={() => setDrawing(false)}
-          saving={saving}
+          saving={drawingSaving}
         />
       )}
     </div>
@@ -509,53 +530,6 @@ export default function CoachDrawStudio({
     </div>
   );
 
-  const pendingDrawingBody = (
-    <>
-      <div className="text-xs font-semibold text-foreground">Save annotation at {formatTimestamp(timestamp)} · Approx frame ~{approxFrame}</div>
-      <Input
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-        className="h-8 text-xs"
-        placeholder="Title, e.g. Body line at breath"
-      />
-      <Textarea
-        value={coachNote}
-        onChange={e => setCoachNote(e.target.value)}
-        className="text-xs min-h-[52px]"
-        placeholder="Coach note for this marked frame..."
-      />
-      {findings.length > 0 && (
-        <select
-          value={linkedFindingId}
-          onChange={e => setLinkedFindingId(e.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
-        >
-          <option value="">Leave as report annotation</option>
-          {findings.map(finding => (
-            <option key={finding.id} value={finding.id}>
-              Attach to: {finding.finding_name || finding.observation || 'Coach finding'}
-            </option>
-          ))}
-        </select>
-      )}
-      <label className="flex items-center gap-2 text-xs text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={includeInReport}
-          onChange={e => setIncludeInReport(e.target.checked)}
-        />
-        Include in final/shared report
-      </label>
-      <div className="flex gap-2">
-        <Button size="sm" className="h-8 text-xs" onClick={saveAnnotation} disabled={saving}>
-          <Save className="w-3.5 h-3.5 mr-1" />{saving ? 'Saving...' : 'Save Marked Frame'}
-        </Button>
-        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setPendingDrawing(null)}>
-          Discard
-        </Button>
-      </div>
-    </>
-  );
 
   return (
     <div className="space-y-3">
@@ -685,6 +659,15 @@ export default function CoachDrawStudio({
 
       {fullscreenOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden bg-slate-950 text-white">
+          {/* Action feedback toast — makes save success/failure obvious poolside. */}
+          {actionFeedback && (
+            <div
+              role="status"
+              className={`pointer-events-none fixed left-1/2 top-4 z-[130] -translate-x-1/2 rounded-lg px-4 py-2 text-sm font-semibold shadow-xl ${actionFeedback.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
+            >
+              {actionFeedback.type === 'success' ? '✓ ' : '⚠ '}{actionFeedback.msg}
+            </div>
+          )}
           {/* Top bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3 sm:px-6">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -848,7 +831,13 @@ export default function CoachDrawStudio({
                           className="h-11 bg-white text-sm text-slate-950"
                           placeholder="Why this helps / focus (optional)"
                         />
-                        <div className="text-[10px] text-slate-400">Your custom drill is saved on this finding and shown in the report.</div>
+                        {customDrillTitle.trim() ? (
+                          <div className="text-[10px] font-semibold text-emerald-300">✓ Custom drill ready: {customDrillTitle.trim()} — press Add Finding to attach it.</div>
+                        ) : (customDrillSummary.trim() || customDrillCue.trim() || customDrillWhy.trim()) ? (
+                          <div className="text-[10px] font-semibold text-amber-300">Add a custom drill title to attach this drill.</div>
+                        ) : (
+                          <div className="text-[10px] text-slate-400">Write your own drill — a title is required to attach it.</div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -927,19 +916,6 @@ export default function CoachDrawStudio({
         </div>,
         document.body
       )}
-
-      {pendingDrawing && (fullscreenOpen ? createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg space-y-2 overflow-y-auto rounded-xl border border-border bg-card p-4">
-            {pendingDrawingBody}
-          </div>
-        </div>,
-        document.body
-      ) : (
-        <div className="p-3 rounded-xl bg-card border border-border space-y-2">
-          {pendingDrawingBody}
-        </div>
-      ))}
 
       {/* Finalise confirm — deliberate coach action before locking the report. */}
       {finaliseFlow === 'confirm' && createPortal(
