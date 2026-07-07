@@ -36,13 +36,16 @@ function uniqueTruthy(items = []) {
 
 function buildWeeklyPlan(report, findings = []) {
   const cues = uniqueTruthy(findings.map(finding => finding.cue || finding.correction_cue));
-  const drills = uniqueTruthy(findings.map(finding => finding.linked_drill_title || finding.drill));
+  const drills = uniqueTruthy([
+    ...findings.map(finding => finding.linked_drill_title || finding.drill),
+    ...findings.flatMap(finding => Array.isArray(finding.extra_drills) ? finding.extra_drills.map(drill => drill.title) : []),
+  ]);
   const focus = report.next_focus || findings.find(finding => finding.next_focus)?.next_focus || '';
 
   return {
     focus,
     cues: cues.slice(0, 3),
-    drills: drills.slice(0, 3),
+    drills: drills.slice(0, 6),
     avoid: findings.length
       ? 'Rushing the correction before the swimmer can repeat it cleanly in the water.'
       : '',
@@ -387,6 +390,18 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
                           <div className="mt-2 rounded-lg bg-white/70 px-3 py-2">
                             <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Why it helps</div>
                             <p className="text-xs text-slate-600 leading-relaxed mt-1">{finding.linked_drill_summary}</p>
+                          </div>
+                        )}
+                        {Array.isArray(finding.extra_drills) && finding.extra_drills.length > 0 && (
+                          <div className="mt-2 rounded-lg bg-white/70 px-3 py-2">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Additional drills</div>
+                            <ul className="mt-1 space-y-0.5">
+                              {finding.extra_drills.map((drill, drillIndex) => (
+                                <li key={drillIndex} className="text-xs text-slate-700 leading-relaxed">
+                                  <span className="font-semibold">{drill.title}</span>{drill.summary ? ` — ${drill.summary}` : ''}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                       </div>

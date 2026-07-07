@@ -718,6 +718,10 @@ export default function AIReportPage() {
           source: 'coach_studio',
           fault_tag: (o.faultTag ?? manualFaultTag) || null,
           timestamp_seconds: timestampValue,
+          // Additional (secondary) drills — kept here so a coach can attach several drills
+          // to one finding with no schema change. The public sanitizer extracts only the
+          // safe title/summary of each; the rest of raw_ai_payload is never exposed.
+          ...(Array.isArray(o.extraDrills) && o.extraDrills.length ? { extra_drills: o.extraDrills } : {}),
         },
         created_by: user?.id,
       });
@@ -775,28 +779,33 @@ export default function AIReportPage() {
       || phaseLabel;
   };
 
-  // Save a coach finding directly from the fullscreen workspace, carrying the
-  // timestamp, phase, note, and selected drill — without leaving fullscreen.
-  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, drill, customDrill, keyStampLinkId }) => {
+  // Save a coach finding directly from the fullscreen workspace, carrying the timestamp,
+  // phase, note, and one or more selected drills — without leaving fullscreen. The first
+  // drill is the Primary Drill (stored on linked_drill_*); the rest become Additional
+  // Drills on raw_ai_payload.extra_drills (no schema change).
+  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, drills = [], keyStampLinkId }) => {
     const phaseKey = mapPhaseLabelToKey(phaseLabel);
+    const list = (Array.isArray(drills) ? drills : []).filter(drill => drill && drill.title);
+    const primary = list[0] || null;
+    const additional = list.slice(1);
     const override = {
       timestamp: timestampSeconds ?? null,
       phase: phaseKey || null,
       observation: (note || '').trim() || (phaseKey ? labelFromKey(phaseKey) : '') || 'Coach note',
       keyStampLinkId: keyStampLinkId || null,
+      drill: primary?.title || '',
+      // Library drills keep their id link; custom (coach-written) drills have no library id.
+      linkedDrill: primary && !primary.custom && primary.id ? { id: primary.id, title: primary.title } : null,
+      linkedDrillTitle: primary?.title || null,
+      linkedDrillSummary: primary?.summary || null,
+      extraDrills: additional.map(drill => ({
+        title: drill.title,
+        summary: drill.summary || null,
+        cue: drill.cue || null,
+      })),
     };
-    if (customDrill && customDrill.title) {
-      // Coach-written drill → stored on the finding's existing drill fields (no schema change).
-      override.drill = customDrill.title;
-      override.linkedDrill = null;
-      override.linkedDrillTitle = customDrill.title;
-      override.linkedDrillSummary = customDrill.summary || null;
-      if (customDrill.cue) override.cue = customDrill.cue;
-      if (customDrill.why) override.nextFocus = customDrill.why;
-    } else {
-      override.drill = drill?.title || '';
-      override.linkedDrill = drill || null;
-    }
+    if (primary?.cue) override.cue = primary.cue;
+    if (primary?.why) override.nextFocus = primary.why;
     return createManualFinding.mutateAsync(override);
   };
 
@@ -1298,6 +1307,7 @@ export default function AIReportPage() {
               </div>
               )}
               <CoachDrawStudio
+                persistKey={reportId}
                 signedVideoUrl={signedVideoUrl}
                 signedVideoError={signedVideoError}
                 video={video}

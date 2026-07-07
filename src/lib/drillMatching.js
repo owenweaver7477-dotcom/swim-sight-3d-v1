@@ -200,3 +200,32 @@ export function suggestDrillsForFinding(drills, finding, strokeType, limit = 4) 
     .slice(0, limit)
     .map(({ drill }) => drill);
 }
+
+// Search + rank drills for the coach drill picker. Free-text query filters across
+// title/stroke/phase/fault/summary/cue; the surviving pool is then ranked by the same
+// stroke + phase + note relevance used for suggestions. If the query matches nothing,
+// fall back to the full ranked pool so the coach always has options (weak-match fallback).
+export function searchAndRankDrills(drills, { query = '', finding = {}, strokeType = '', limit = 30 } = {}) {
+  const pool = Array.isArray(drills) ? drills : [];
+  const q = String(query || '').trim().toLowerCase();
+  let filtered = pool;
+  if (q) {
+    filtered = pool.filter((drill) => textBlob([
+      drill.title,
+      drill.stroke,
+      drill.phase,
+      drill.fault_tags,
+      drill.report_summary,
+      drill.purpose,
+      drill.coaching_cue,
+      drill.coaching_cues,
+      drill.instructions,
+    ]).includes(q));
+    if (!filtered.length) filtered = pool;
+  }
+  return filtered
+    .map((drill) => ({ drill, score: scoreDrillForFinding(drill, finding, strokeType) }))
+    .sort((a, b) => b.score - a.score || String(a.drill.title).localeCompare(String(b.drill.title)))
+    .slice(0, limit)
+    .map(({ drill }) => drill);
+}

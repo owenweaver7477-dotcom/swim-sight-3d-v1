@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AnnotationCanvas from './AnnotationCanvas';
 import { formatTimestamp } from '@/lib/annotationRender';
 import { DEFAULT_DRILLS } from '@/lib/defaultDrills';
-import { suggestDrillsForFinding } from '@/lib/drillMatching';
+import { searchAndRankDrills, drillSummary } from '@/lib/drillMatching';
 import { createPortal } from 'react-dom';
 import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 import {
@@ -18,6 +18,7 @@ import {
   PencilLine,
   Plus,
   Rewind,
+  Search,
   Share2,
   SlidersHorizontal,
   SkipBack,
@@ -41,12 +42,60 @@ function expandNoteForDrills(note = '') {
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 const APPROX_FRAME_STEP = 1 / 30;
 const THUMBNAIL_MAX_WIDTH = 480;
-const QUICK_LABELS_BY_STROKE = {
-  breaststroke: ['Catch', 'Breath', 'Kick setup', 'Kick drive', 'Line reset'],
-  freestyle: ['Entry', 'Catch setup', 'Pull', 'Breath', 'Recovery', 'Body line'],
-  backstroke: ['Rotation', 'Catch setup', 'Pull', 'Recovery', 'Body line'],
-  butterfly: ['Catch setup', 'Pull', 'Breath', 'Kick timing', 'Recovery'],
+
+// Rich, stroke-specific phase lists for the fullscreen phase picker. Coaches tap a phase
+// chip to tag the moment; the raw label is stored on the finding when no studio key matches.
+const STROKE_PHASES = {
+  breaststroke: ['Start / breakout', 'Entry', 'Catch', 'Pull', 'Breath', 'Hand recovery', 'Kick setup', 'Knee position', 'Foot turn', 'Kick drive', 'Kick finish', 'Glide', 'Body line', 'Turn', 'Finish'],
+  freestyle: ['Entry', 'Extension', 'Catch setup', 'Catch', 'Pull', 'Push', 'Exit', 'Recovery', 'Breath', 'Body rotation', 'Kick timing', 'Body line', 'Turn', 'Breakout', 'Finish'],
+  backstroke: ['Entry', 'Catch setup', 'Catch', 'Pull', 'Push', 'Exit', 'Recovery', 'Rotation', 'Kick timing', 'Head position', 'Body line', 'Turn', 'Breakout', 'Finish'],
+  butterfly: ['Entry', 'Catch', 'Pull', 'Push', 'Recovery', 'First kick', 'Second kick', 'Breath timing', 'Head position', 'Body line', 'Turn', 'Breakout', 'Finish'],
 };
+const DEFAULT_PHASE_LABELS = ['Entry', 'Catch', 'Pull', 'Breath', 'Recovery', 'Body line', 'Turn', 'Breakout', 'Finish'];
+// IM shows a stroke-segment selector first, then that segment's phase list.
+const IM_SEGMENTS = [
+  { key: 'butterfly', label: 'Fly' },
+  { key: 'backstroke', label: 'Back' },
+  { key: 'breaststroke', label: 'Breast' },
+  { key: 'freestyle', label: 'Free' },
+];
+
+function normStrokeKey(value) {
+  const t = String(value || '').toLowerCase();
+  if (t.includes('breast')) return 'breaststroke';
+  if (t.includes('back')) return 'backstroke';
+  if (t.includes('fly') || t.includes('butter')) return 'butterfly';
+  if (t.includes('free')) return 'freestyle';
+  if (t.includes('medley') || t.includes('individual') || t === 'im') return 'im';
+  return '';
+}
+
+// Draft persistence: keep the fullscreen workspace open-state and unsaved inputs in
+// sessionStorage so a tab switch, refetch, or iPad Safari tab-reload never loses coach work.
+function readStudioDraft(key) {
+  if (!key) return null;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function writeStudioDraft(key, value) {
+  if (!key) return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage unavailable (private mode / quota) — drafts just aren't persisted */
+  }
+}
+
+// Surface the real save error to the coach instead of only logging it.
+function readableError(error) {
+  if (!error) return 'Unknown error';
+  if (typeof error === 'string') return error;
+  return error.message || error.details || error.hint || error.code || 'Save failed';
+}
 
 // Reuse existing default drill data (no schema change) to suggest drills for the
 // selected stroke + phase. Falls back to stroke-only, then to any drills.
@@ -87,6 +136,7 @@ function captureVideoThumbnail(videoNode) {
 }
 
 export default function CoachDrawStudio({
+  persistKey,
   signedVideoUrl,
   signedVideoError,
   video,
@@ -117,7 +167,8 @@ export default function CoachDrawStudio({
 }) {
   const inlineVideoRef = useRef(null);
   const fullscreenVideoRef = useRef(null);
-  const autoOpenedRef = useRef(false);
+  const initedRef = useRef(false);
+  const storageKey = persistKey ? `ssd-studio-${persistKey}` : null;
   const [drawing, setDrawing] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [timestamp, setTimestamp] = useState(0);
@@ -132,8 +183,13 @@ export default function CoachDrawStudio({
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const fps = estimateFps(video);
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
-  const quickLabels = QUICK_LABELS_BY_STROKE[String(video?.stroke_type || '').toLowerCase()] || ['Key frame', 'Catch', 'Breath', 'Body line', 'Turn', 'Breakout'];
-  const [selectedDrill, setSelectedDrill] = useState(null);
+  const [selectedDrills, setSelectedDrills] = useState([]);
+  const [drillQuery, setDrillQuery] = useState('');
+  const [imSegment, setImSegment] = useState('butterfly');
+  const strokeKey = normStrokeKey(video?.stroke_type);
+  const isIM = strokeKey === 'im';
+  const phaseStrokeKey = isIM ? imSegment : strokeKey;
+  const quickLabels = STROKE_PHASES[phaseStrokeKey] || DEFAULT_PHASE_LABELS;
   const [savingFinding, setSavingFinding] = useState(false);
   const [addedFindingCount, setAddedFindingCount] = useState(0);
   const [lastCapturedMomentId, setLastCapturedMomentId] = useState(null);
@@ -149,8 +205,44 @@ export default function CoachDrawStudio({
   const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
   const drillNoteText = expandNoteForDrills(markerNote);
   const draftFindingForDrills = { stroke_phase: markerLabel, phase: markerLabel, observation: drillNoteText, coach_sees: drillNoteText, fault_tag: drillNoteText };
-  const suggestedDrills = suggestDrillsForFinding(drillPool, draftFindingForDrills, video?.stroke_type, 8);
-  const fullscreenDrills = suggestedDrills.length ? suggestedDrills : recommendedDrillsFor(video?.stroke_type, markerLabel);
+  // Ranked + searchable drill list for the fullscreen picker (shows well beyond 8).
+  const rankedDrills = searchAndRankDrills(drillPool, {
+    query: drillQuery,
+    finding: draftFindingForDrills,
+    strokeType: isIM ? phaseStrokeKey : video?.stroke_type,
+    limit: 40,
+  });
+  const drillListForPicker = rankedDrills.length ? rankedDrills : recommendedDrillsFor(isIM ? phaseStrokeKey : video?.stroke_type, markerLabel);
+  const isDrillSelected = (id) => selectedDrills.some((drill) => drill.id === id);
+  const addLibraryDrill = (drill) => {
+    if (!drill) return;
+    setSelectedDrills((prev) => (prev.some((item) => item.id === drill.id) ? prev : [...prev, {
+      id: drill.id,
+      title: drill.title,
+      summary: drillSummary(drill) || drill.report_summary || drill.purpose || '',
+      cue: drill.coaching_cue || '',
+      why: '',
+      custom: false,
+    }]));
+  };
+  const addCustomDrill = () => {
+    const title = customDrillTitle.trim();
+    if (!title) return;
+    const id = `custom-${title.toLowerCase()}`;
+    setSelectedDrills((prev) => (prev.some((item) => item.id === id) ? prev : [...prev, {
+      id,
+      title,
+      summary: customDrillSummary.trim(),
+      cue: customDrillCue.trim(),
+      why: customDrillWhy.trim(),
+      custom: true,
+    }]));
+    setCustomDrillTitle('');
+    setCustomDrillSummary('');
+    setCustomDrillCue('');
+    setCustomDrillWhy('');
+  };
+  const removeDrill = (id) => setSelectedDrills((prev) => prev.filter((drill) => drill.id !== id));
   // Key moments come from saved key_frame annotations (which carry a captured thumbnail),
   // not from findings — so the strip shows real screenshots.
   const keyMoments = (keyStamps || []).map((a) => ({
@@ -186,15 +278,36 @@ export default function CoachDrawStudio({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [fullscreenOpen]);
 
-  // Manual review enters straight into the fullscreen workspace — but only once the
-  // private video source is ready, and only once, so exiting never bounces the coach
-  // back into fullscreen against their will.
+  // Restore any saved draft once the private video is ready, and decide the open-state.
+  // Runs once: a stored `open:false` (coach pressed Exit) wins over auto-open so we never
+  // bounce the coach back into fullscreen; otherwise manual review opens straight in.
   useEffect(() => {
-    if (autoOpenFullscreen && signedVideoUrl && !autoOpenedRef.current) {
-      autoOpenedRef.current = true;
-      setFullscreenOpen(true);
+    if (initedRef.current || !signedVideoUrl) return;
+    initedRef.current = true;
+    const saved = readStudioDraft(storageKey);
+    if (saved) {
+      if (typeof saved.note === 'string') setMarkerNote(saved.note);
+      if (typeof saved.phase === 'string' && saved.phase) setMarkerLabel(saved.phase);
+      if (saved.drillMode === 'suggested' || saved.drillMode === 'custom') setDrillMode(saved.drillMode);
+      if (Array.isArray(saved.selectedDrills)) setSelectedDrills(saved.selectedDrills.filter((drill) => drill && drill.title));
+      if (typeof saved.imSegment === 'string') setImSegment(saved.imSegment);
     }
-  }, [autoOpenFullscreen, signedVideoUrl]);
+    const shouldOpen = saved && typeof saved.open === 'boolean' ? saved.open : autoOpenFullscreen;
+    if (shouldOpen) setFullscreenOpen(true);
+  }, [signedVideoUrl, autoOpenFullscreen, storageKey]);
+
+  // Persist the open-state and unsaved inputs so a tab switch / refetch / reload restores them.
+  useEffect(() => {
+    if (!initedRef.current) return;
+    writeStudioDraft(storageKey, {
+      open: fullscreenOpen,
+      note: markerNote,
+      phase: markerLabel,
+      drillMode,
+      selectedDrills,
+      imSegment,
+    });
+  }, [storageKey, fullscreenOpen, markerNote, markerLabel, drillMode, selectedDrills, imSegment]);
 
   // True fullscreen: lock the background page scroll while the workspace is open,
   // and always restore it on exit/unmount so the coach is never trapped.
@@ -205,10 +318,11 @@ export default function CoachDrawStudio({
     return () => { document.body.style.overflow = previous; };
   }, [fullscreenOpen]);
 
-  // Auto-clear the transient success/error toast after a few seconds.
+  // Auto-clear the transient toast. Errors linger longer so the coach can read the reason.
   useEffect(() => {
     if (!actionFeedback) return undefined;
-    const id = setTimeout(() => setActionFeedback(null), 3500);
+    const ms = actionFeedback.type === 'error' ? 9000 : 3000;
+    const id = setTimeout(() => setActionFeedback(null), ms);
     return () => clearTimeout(id);
   }, [actionFeedback]);
 
@@ -258,7 +372,7 @@ export default function CoachDrawStudio({
 
   const startFindingFromMoment = () => {
     const currentTime = pauseAndCapture();
-    onStartFindingFromMoment?.(currentTime, selectedDrill, markerLabel, markerNote);
+    onStartFindingFromMoment?.(currentTime, selectedDrills[0] || null, markerLabel, markerNote);
     if (fullscreenOpen) {
       if (inlineVideoRef.current) {
         inlineVideoRef.current.currentTime = currentTime;
@@ -279,26 +393,34 @@ export default function CoachDrawStudio({
     setSavingFinding(true);
     setActionFeedback(null);
     try {
-      const customDrill = (drillMode === 'custom' && customDrillTitle.trim())
-        ? {
-            title: customDrillTitle.trim(),
+      // Include any custom drill the coach typed but did not press "Add drill" on, so
+      // their work is never silently dropped. First drill is Primary; the rest Additional.
+      const typedCustom = customDrillTitle.trim();
+      const pendingCustom = typedCustom
+        ? [{
+            id: `custom-${typedCustom.toLowerCase()}`,
+            title: typedCustom,
             summary: customDrillSummary.trim(),
             cue: customDrillCue.trim(),
             why: customDrillWhy.trim(),
-          }
-        : null;
+            custom: true,
+          }]
+        : [];
+      const drillsToSend = [
+        ...selectedDrills,
+        ...pendingCustom.filter((pending) => !selectedDrills.some((drill) => drill.id === pending.id)),
+      ];
       await onCreateFinding({
         timestampSeconds: currentTime,
         phaseLabel: phaseSelected ? markerLabel : '',
         note: markerNote,
-        drill: drillMode === 'suggested' ? selectedDrill : null,
-        customDrill,
+        drills: drillsToSend,
         keyStampLinkId: lastCapturedMomentId || null,
       });
       setAddedFindingCount((n) => n + 1);
       setActionFeedback({ type: 'success', msg: 'Finding added' });
       setMarkerNote('');
-      setSelectedDrill(null);
+      setSelectedDrills([]);
       setCustomDrillTitle('');
       setCustomDrillSummary('');
       setCustomDrillCue('');
@@ -306,7 +428,7 @@ export default function CoachDrawStudio({
       setLastCapturedMomentId(null);
     } catch (error) {
       console.warn('Finding was not saved.', error?.message || error);
-      setActionFeedback({ type: 'error', msg: 'Could not save the finding. Your note and drill are kept — please try again.' });
+      setActionFeedback({ type: 'error', msg: `Could not save the finding: ${readableError(error)}. Your note and drills are kept — please try again.` });
     } finally {
       setSavingFinding(false);
     }
@@ -350,7 +472,7 @@ export default function CoachDrawStudio({
       setDrawing(false);
     } catch (error) {
       console.warn('Drawing was not saved.', error?.message || error);
-      setActionFeedback({ type: 'error', msg: 'Drawing failed to save. Please try again.' });
+      setActionFeedback({ type: 'error', msg: `Drawing failed to save: ${readableError(error)}. Your marks are kept — please try again.` });
     } finally {
       setDrawingSaving(false);
     }
@@ -378,7 +500,7 @@ export default function CoachDrawStudio({
       return created;
     } catch (error) {
       console.warn('Phase moment was not saved.', error?.message || error);
-      setActionFeedback({ type: 'error', msg: 'Could not save the phase moment. Your phase and note are kept — please try again.' });
+      setActionFeedback({ type: 'error', msg: `Could not save the phase moment: ${readableError(error)}. Your phase and note are kept — please try again.` });
       return null;
     }
   };
@@ -435,6 +557,7 @@ export default function CoachDrawStudio({
           src={signedVideoUrl}
           crossOrigin="anonymous"
           controls={!drawing}
+          playsInline
           className="w-full h-full object-contain"
           onTimeUpdate={(event) => syncTimestamp(event.currentTarget)}
           onLoadedMetadata={(event) => syncTimestamp(event.currentTarget)}
@@ -731,14 +854,31 @@ export default function CoachDrawStudio({
                   )}
 
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-slate-300">Stroke phase</div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold text-slate-300">Stroke phase</div>
+                      {phaseSelected && <span className="rounded-full bg-cyan-400/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">{markerLabel}</span>}
+                    </div>
+                    {isIM && (
+                      <div className="flex gap-1.5">
+                        {IM_SEGMENTS.map((segment) => (
+                          <button
+                            key={segment.key}
+                            type="button"
+                            onClick={() => setImSegment(segment.key)}
+                            className={`min-h-10 flex-1 rounded-lg border px-2 text-xs font-semibold transition-colors ${imSegment === segment.key ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                          >
+                            {segment.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex max-h-44 flex-wrap gap-2 overflow-y-auto pr-1">
                       {quickLabels.map((label) => (
                         <button
                           key={label}
                           type="button"
                           onClick={() => setMarkerLabel(label)}
-                          className={`min-h-12 rounded-lg border px-3 text-xs font-semibold transition-colors ${markerLabel === label ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                          className={`min-h-11 rounded-full border px-3.5 text-xs font-semibold transition-colors ${markerLabel === label ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
                         >
                           {label}
                         </button>
@@ -757,9 +897,9 @@ export default function CoachDrawStudio({
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs font-semibold text-slate-300">Recommended drill</div>
+                      <div className="text-xs font-semibold text-slate-300">Drills{selectedDrills.length > 0 ? ` (${selectedDrills.length})` : ''}</div>
                       <div className="flex gap-0.5 rounded-md bg-white/5 p-0.5">
                         <button
                           type="button"
@@ -777,30 +917,64 @@ export default function CoachDrawStudio({
                         </button>
                       </div>
                     </div>
+
+                    {/* Selected drills — the first is the Primary Drill, the rest Additional. */}
+                    {selectedDrills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedDrills.map((drill, drillIndex) => (
+                          <span key={drill.id} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 py-1 pl-2 pr-1 text-[11px] font-semibold text-cyan-100">
+                            <span className="rounded-sm bg-cyan-400/30 px-1 text-[9px] uppercase tracking-wide text-cyan-50">{drillIndex === 0 ? 'Primary' : `Drill ${drillIndex + 1}`}</span>
+                            <span className="max-w-[9rem] truncate">{drill.title}</span>
+                            <button type="button" onClick={() => removeDrill(drill.id)} className="flex h-5 w-5 items-center justify-center rounded-full text-cyan-100 hover:bg-cyan-400/30" aria-label={`Remove ${drill.title}`}>
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {drillMode === 'suggested' ? (
-                      <>
-                        <select
-                          value={selectedDrill?.id || ''}
-                          onChange={(e) => setSelectedDrill(fullscreenDrills.find((d) => d.id === e.target.value) || null)}
-                          className="h-11 w-full rounded-lg border border-white/15 bg-white px-3 text-sm text-slate-950"
-                        >
-                          <option value="">Select recommended drill</option>
-                          {fullscreenDrills.map((d) => (
-                            <option key={d.id} value={d.id}>{d.title}</option>
-                          ))}
-                        </select>
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            value={drillQuery}
+                            onChange={(e) => setDrillQuery(e.target.value)}
+                            className="h-11 bg-white pl-8 text-sm text-slate-950"
+                            placeholder="Search drills (e.g. narrow knee, timing, catch)"
+                          />
+                        </div>
+                        <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-slate-900/40 p-1">
+                          {drillListForPicker.length === 0 ? (
+                            <div className="px-2 py-3 text-center text-[11px] text-slate-400">No drills match — try another word.</div>
+                          ) : (
+                            drillListForPicker.map((drill) => {
+                              const active = isDrillSelected(drill.id);
+                              return (
+                                <button
+                                  key={drill.id}
+                                  type="button"
+                                  onClick={() => (active ? removeDrill(drill.id) : addLibraryDrill(drill))}
+                                  className={`flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors ${active ? 'bg-cyan-400/20' : 'hover:bg-white/5'}`}
+                                >
+                                  <span className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${active ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/25 text-transparent'}`}>✓</span>
+                                  <span className="min-w-0">
+                                    <span className="block text-xs font-semibold text-white">{drill.title}</span>
+                                    {(drill.report_summary || drill.purpose) && (
+                                      <span className="block truncate text-[10px] text-slate-400">{drill.report_summary || drill.purpose}</span>
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-400">
                           {!phaseSelected
-                            ? `Showing ${video?.stroke_type || 'stroke'} drills — pick a phase above to refine.`
-                            : (markerNote.trim() ? 'Ranked by stroke, phase, and your note.' : 'Ranked by stroke and phase. Add a note to refine.')}
+                            ? `Showing ${video?.stroke_type || 'stroke'} drills — pick a phase above to refine. Tap to add more than one.`
+                            : (markerNote.trim() ? 'Ranked by stroke, phase, and your note. Tap to add multiple.' : 'Ranked by stroke and phase. Add a note to refine. Tap to add multiple.')}
                         </div>
-                        {selectedDrill && (
-                          <div className="text-[11px] leading-snug text-cyan-200">
-                            {selectedDrill.title}
-                            {selectedDrill.report_summary ? ` — ${selectedDrill.report_summary}` : (selectedDrill.purpose ? ` — ${selectedDrill.purpose}` : '')}
-                          </div>
-                        )}
-                      </>
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         <Input
@@ -831,13 +1005,20 @@ export default function CoachDrawStudio({
                           className="h-11 bg-white text-sm text-slate-950"
                           placeholder="Why this helps / focus (optional)"
                         />
-                        {customDrillTitle.trim() ? (
-                          <div className="text-[10px] font-semibold text-emerald-300">✓ Custom drill ready: {customDrillTitle.trim()} — press Add Finding to attach it.</div>
-                        ) : (customDrillSummary.trim() || customDrillCue.trim() || customDrillWhy.trim()) ? (
-                          <div className="text-[10px] font-semibold text-amber-300">Add a custom drill title to attach this drill.</div>
-                        ) : (
-                          <div className="text-[10px] text-slate-400">Write your own drill — a title is required to attach it.</div>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-10 w-full border-cyan-300/40 bg-white/5 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
+                          onClick={addCustomDrill}
+                          disabled={!customDrillTitle.trim()}
+                        >
+                          <Plus className="mr-1.5 h-4 w-4" /> Add this drill
+                        </Button>
+                        <div className="text-[10px] text-slate-400">
+                          {customDrillTitle.trim()
+                            ? 'Press “Add this drill”, or just press Add Finding — it will be attached automatically.'
+                            : 'Write your own drill — a title is required. You can add several.'}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -849,7 +1030,7 @@ export default function CoachDrawStudio({
                     {(!markerNote.trim() && !phaseSelected) ? (
                       <p className="text-[10px] text-slate-400">Pick a phase or type a note to add a finding.</p>
                     ) : (
-                      <p className="text-[10px] text-slate-400">Saves a coach finding with this timestamp, phase, note, and drill.</p>
+                      <p className="text-[10px] text-slate-400">Saves a coach finding with this timestamp, phase, note, and drills.</p>
                     )}
                     {addedFindingCount > 0 && (
                       <p className="text-[11px] font-semibold text-emerald-300">✓ {addedFindingCount} finding{addedFindingCount > 1 ? 's' : ''} added to this report.</p>
@@ -913,6 +1094,52 @@ export default function CoachDrawStudio({
               </div>
             </div>
           </div>
+
+          {/* Sticky poolside action bar — always-visible primary actions for iPad. Hidden
+              while drawing so it never overlaps the annotation toolbar. */}
+          {!drawing && (
+            <div className="flex items-stretch gap-2 border-t border-white/10 bg-slate-950/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-6">
+              {onSaveMarker && (
+                <Button
+                  className="h-14 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
+                  onClick={() => capturePhaseMoment()}
+                  disabled={!signedVideoUrl || !canEdit || savingMarker}
+                >
+                  <BookmarkPlus className="h-5 w-5 text-cyan-300" />
+                  {savingMarker ? 'Saving…' : 'Phase Moment'}
+                </Button>
+              )}
+              <Button
+                className="h-14 flex-1 flex-col gap-0.5 rounded-xl bg-cyan-400 text-[11px] font-semibold leading-tight text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
+                onClick={addFindingInline}
+                disabled={!signedVideoUrl || !canEdit || savingFinding || (!markerNote.trim() && !phaseSelected)}
+              >
+                <Plus className="h-5 w-5" />
+                {savingFinding ? 'Adding…' : 'Add Finding'}
+              </Button>
+              <Button
+                className="h-14 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
+                onClick={startDrawing}
+                disabled={!signedVideoUrl || !canEdit}
+              >
+                <PencilLine className="h-5 w-5 text-cyan-300" />
+                Coach Draw
+              </Button>
+              {(onFinaliseReport || onFinalise) && (
+                <Button
+                  className="h-14 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10"
+                  onClick={() => {
+                    if (reportFinalised) { setFinaliseFlow('ready'); return; }
+                    if (onFinaliseReport && canFinalise) { setFinaliseFlow('confirm'); return; }
+                    closeFullscreen(); onFinalise?.();
+                  }}
+                >
+                  <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+                  {reportFinalised ? 'View' : 'Finalise'}
+                </Button>
+              )}
+            </div>
+          )}
         </div>,
         document.body
       )}

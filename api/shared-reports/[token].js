@@ -42,7 +42,10 @@ export default async function handler(req, res) {
       service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
       service
         .from('findings')
-        .select('id,severity,stroke_phase,timestamp_seconds,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,next_focus,approval_status')
+        // raw_ai_payload is fetched ONLY so the sanitizer can extract the coach's
+        // additional-drill titles/summaries from raw_ai_payload.extra_drills. The
+        // sanitizer never emits raw_ai_payload itself (it is an UNSAFE_PUBLIC_REPORT_KEY).
+        .select('id,severity,stroke_phase,timestamp_seconds,observation,why_it_matters,correction_cue,drill,linked_drill_title,linked_drill_summary,raw_ai_payload,next_focus,approval_status')
         .eq('report_id', report.id)
         .eq('approval_status', 'approved')
         .order('created_at', { ascending: true }),

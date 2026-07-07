@@ -93,6 +93,22 @@ export function sanitizePublicFinding(finding = {}) {
   const observation = observationOnly(finding.observation || finding.coach_sees || finding.finding_name);
   const cue = safeText(finding.correction_cue || finding.cue);
 
+  // Additional drills are stored on the finding's raw_ai_payload (which is otherwise
+  // stripped as unsafe). Extract ONLY the coach-authored title/summary here so the
+  // public/coach report can show them without ever emitting the raw payload.
+  const rawExtraDrills = Array.isArray(finding.extra_drills)
+    ? finding.extra_drills
+    : (finding.raw_ai_payload && Array.isArray(finding.raw_ai_payload.extra_drills)
+        ? finding.raw_ai_payload.extra_drills
+        : []);
+  const extraDrills = rawExtraDrills
+    .map(item => compactObject({
+      title: safeText(item && item.title, 120),
+      summary: safeText(item && item.summary, 400),
+    }))
+    .filter(item => item.title)
+    .slice(0, 6);
+
   return compactObject({
     id: safeText(finding.id, 100),
     approval_status: 'approved',
@@ -111,6 +127,7 @@ export function sanitizePublicFinding(finding = {}) {
     drill: safeText(finding.linked_drill_title || finding.drill),
     linked_drill_title: safeText(finding.linked_drill_title || finding.drill),
     linked_drill_summary: safeText(finding.linked_drill_summary),
+    extra_drills: extraDrills.length ? extraDrills : null,
     next_focus: safeText(finding.next_focus),
     linked_standard_title: safeText(finding.linked_standard_title),
   });

@@ -131,6 +131,9 @@ function FindingCard({ finding, index, image }) {
             <div className="space-y-2.5">
               {drillTitle && <Field label="Recommended Drill" strong>{drillTitle}</Field>}
               {finding.linked_drill_summary && <Field label="Why it helps" small>{finding.linked_drill_summary}</Field>}
+              {Array.isArray(finding.extra_drills) && finding.extra_drills.length > 0 && (
+                <Field label="Additional Drills" small>{finding.extra_drills.map(drill => drill.title).join(' · ')}</Field>
+              )}
               {finding.next_focus && <Field label="Next Focus">{finding.next_focus}</Field>}
             </div>
           </div>
@@ -201,13 +204,19 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
 
   const drillPlan = [];
   const drillSeen = new Set();
-  findings.forEach(finding => {
-    const title = finding.linked_drill_title || finding.drill;
+  const pushDrill = ({ title, summary, focus, cue }) => {
     if (!title) return;
     const key = title.toLowerCase();
     if (drillSeen.has(key)) return;
     drillSeen.add(key);
-    drillPlan.push({ title, summary: finding.linked_drill_summary || '', focus: finding.phase || '', cue: finding.cue || '' });
+    drillPlan.push({ title, summary: summary || '', focus: focus || '', cue: cue || '' });
+  };
+  findings.forEach(finding => {
+    // Primary drill first, then any additional drills the coach attached.
+    pushDrill({ title: finding.linked_drill_title || finding.drill, summary: finding.linked_drill_summary, focus: finding.phase, cue: finding.cue });
+    (Array.isArray(finding.extra_drills) ? finding.extra_drills : []).forEach(drill => {
+      pushDrill({ title: drill.title, summary: drill.summary, focus: finding.phase, cue: '' });
+    });
   });
 
   const handlePrint = () => {
