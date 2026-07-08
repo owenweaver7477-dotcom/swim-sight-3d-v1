@@ -167,8 +167,11 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
               </div>
             </div>
             <h1 className="text-2xl font-bold tracking-tight mb-2 sm:text-3xl">{report.title || 'Swimmer Improvement Plan'}</h1>
+            {club?.report_intro && (
+              <p className="max-w-2xl text-sm italic leading-6 text-slate-300 print:text-slate-600">{club.report_intro}</p>
+            )}
             {report.coach_summary && (
-              <p className="max-w-2xl text-sm leading-6 text-slate-300 print:text-slate-600">{report.coach_summary}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 print:text-slate-600">{report.coach_summary}</p>
             )}
           </div>
           <div className="flex w-fit items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-400/30 print:bg-green-50 print:border-green-300">
@@ -179,7 +182,10 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
         <div className="grid gap-4 pt-4 border-t border-white/10 print:border-slate-200 sm:grid-cols-3">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-slate-400 print:text-slate-500 mb-0.5">Club</div>
-            <div className="font-semibold">{club?.name || 'Swim Club'}</div>
+            <div className="flex items-center gap-2">
+              {club?.logo_url && <img src={club.logo_url} alt="" className="h-6 w-6 rounded object-contain bg-white/10 p-0.5" />}
+              <span className="font-semibold">{club?.name || 'Swim Club'}</span>
+            </div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-slate-400 print:text-slate-500 mb-0.5">Swimmer</div>
@@ -470,6 +476,15 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
 
       {/* Drag Risk Section — approved + included only, public-safe fields */}
       <DragRiskReportSection dragItems={dragItems} />
+
+      {/* Coach sign-off / closing note / contact (club branding) */}
+      {(club?.report_outro || club?.report_sign_off || club?.report_contact) && (
+        <div className="mx-4 mb-5 rounded-lg border border-slate-200 bg-white p-4 sm:mx-8">
+          {club.report_outro && <p className="text-sm text-slate-700 leading-relaxed">{club.report_outro}</p>}
+          {club.report_sign_off && <p className={`text-sm font-semibold text-slate-900 ${club.report_outro ? 'mt-2' : ''}`}>{club.report_sign_off}</p>}
+          {club.report_contact && <p className="mt-1 text-[11px] text-slate-500">{club.report_contact}</p>}
+        </div>
+      )}
 
       {/* Disclaimer */}
       <div className="mx-4 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200 sm:mx-8">

@@ -60,7 +60,7 @@ export default async function handler(req, res) {
 
     const [{ data: swimmer }, { data: club }, { data: findings }, annotations] = await Promise.all([
       service.from('swimmers').select('first_name,last_name').eq('id', report.swimmer_id).maybeSingle(),
-      service.from('clubs').select('name').eq('id', report.club_id).maybeSingle(),
+      service.from('clubs').select('name,logo_url,primary_color,accent_color,report_contact,report_sign_off,report_intro,report_outro').eq('id', report.club_id).maybeSingle(),
       service
         .from('findings')
         // raw_ai_payload is fetched ONLY so the sanitizer can extract the coach's

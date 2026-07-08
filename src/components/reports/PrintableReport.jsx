@@ -189,7 +189,11 @@ function DrillCard({ drill }) {
   );
 }
 
-export default function PrintableReport({ report, swimmer, club, video_meta, findings: inputFindings = [], annotations: inputAnnotations = [], showPrintButton = false, isManualReview = false, aiUsed = false }) {
+const DEFAULT_PRIMARY_COLOR = '#0ea5e9';
+const DEFAULT_ACCENT_COLOR = '#06b6d4';
+const isHexColor = (value) => typeof value === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(value.trim());
+
+export default function PrintableReport({ report, swimmer, club, video_meta, findings: inputFindings = [], annotations: inputAnnotations = [], showPrintButton = false, isManualReview = false, aiUsed = false, coachName = '' }) {
   const findings = sanitizePublicFindings(inputFindings);
   const annotations = sanitizePublicAnnotations(inputAnnotations);
   const reportDate = report.ai_completed_at || report.created_date;
@@ -215,6 +219,17 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
 
   const reportType = isManualReview ? 'Coach Manual Review' : 'Coach-Reviewed AI Analysis';
   const reportSubtitle = isManualReview ? 'Coach-created technical report' : 'Coach-reviewed AI analysis';
+
+  // Club branding (all optional; only applied when the coach has set it).
+  const brandColor = (isHexColor(club?.accent_color) && club.accent_color.trim().toLowerCase() !== DEFAULT_ACCENT_COLOR)
+    ? club.accent_color.trim()
+    : ((isHexColor(club?.primary_color) && club.primary_color.trim().toLowerCase() !== DEFAULT_PRIMARY_COLOR) ? club.primary_color.trim() : null);
+  const clubLogo = typeof club?.logo_url === 'string' && /^https:\/\//i.test(club.logo_url.trim()) ? club.logo_url.trim() : null;
+  const preparedBy = (coachName || '').trim() || club?.head_coach_name || club?.name || 'Coach';
+  const reportIntro = (club?.report_intro || '').trim();
+  const reportOutro = (club?.report_outro || '').trim();
+  const reportContact = (club?.report_contact || '').trim();
+  const reportSignOff = (club?.report_sign_off || '').trim();
 
   const focusAreas = uniqueTruthy(findings.map(finding => finding.next_focus || finding.finding_name)).slice(0, 4);
   const nextSessionFocus = report.next_focus || findings.find(finding => finding.next_focus)?.next_focus || '';
@@ -253,7 +268,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
 
       <div className="print-report max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden print:shadow-none print:rounded-none print:max-w-none text-slate-900">
         {/* Header */}
-        <div className="px-8 py-6 border-b-2 border-slate-900">
+        <div className="px-8 py-6 border-b-2 border-slate-900" style={brandColor ? { borderColor: brandColor } : undefined}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <img src={LOGO_SRC} alt="Swim Sight 3D" className="h-11 w-11 object-contain flex-shrink-0" />
@@ -266,6 +281,10 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
             <div className="flex-1 text-center">
               <h1 className="text-2xl font-black text-slate-900 leading-tight">{reportType}</h1>
               <div className="text-xs font-semibold text-blue-600">{reportSubtitle}</div>
+              <div className="mt-1 text-[10px] text-slate-500">
+                Prepared for <span className="font-semibold text-slate-700">{swimmer?.name || 'the swimmer'}</span>
+                {' · '}Prepared by <span className="font-semibold text-slate-700">{preparedBy}</span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -274,7 +293,11 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                 {club?.head_coach_name && <div className="text-[10px] text-slate-500">Head Coach: {club.head_coach_name}</div>}
                 <div className="text-[10px] text-slate-500">Date: {reportDate ? format(new Date(reportDate), 'dd MMMM yyyy') : '—'}</div>
               </div>
-              <div className="w-11 h-11 rounded-lg bg-slate-900 flex items-center justify-center text-white text-xs font-black flex-shrink-0">{clubInitials(club)}</div>
+              {clubLogo ? (
+                <img src={clubLogo} alt={club?.name || 'Club logo'} className="h-11 w-11 rounded-lg object-contain flex-shrink-0 bg-white border border-slate-200" />
+              ) : (
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0" style={{ backgroundColor: brandColor || '#0f172a' }}>{clubInitials(club)}</div>
+              )}
             </div>
           </div>
         </div>
@@ -294,6 +317,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           <SectionHeading icon={ClipboardCheck}>Coach Summary</SectionHeading>
           <div className="grid grid-cols-1 md:grid-cols-3 print:grid-cols-3 gap-6">
             <div className="md:col-span-2 print:col-span-2 space-y-3">
+              {reportIntro && <p className="text-sm italic text-slate-600 leading-relaxed">{reportIntro}</p>}
               <p className="text-sm text-slate-700 leading-relaxed">
                 {report.coach_summary || 'Coach review of the swimmer’s technique, with focus points and drills to work on in the next training block.'}
               </p>
@@ -393,6 +417,12 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
 
         {/* Footer */}
         <div className="border-t border-slate-200 bg-slate-50 px-8 py-5">
+          {(reportOutro || reportSignOff) && (
+            <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
+              {reportOutro && <p className="text-sm text-slate-700 leading-relaxed">{reportOutro}</p>}
+              {reportSignOff && <p className={`text-sm font-semibold text-slate-900 ${reportOutro ? 'mt-2' : ''}`}>{reportSignOff}</p>}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img src={LOGO_SRC} alt="Swim Sight 3D" className="h-9 w-9 object-contain flex-shrink-0" />
@@ -401,6 +431,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
                   {aiUsed ? 'AI-assisted suggestions were reviewed, edited, or approved by a coach before sharing.' : 'Prepared by the coach using Swim Sight 3D.'}
                 </div>
                 <div className="text-[10px] text-slate-500">{aiUsed ? 'Coach-reviewed AI analysis.' : 'Coach-created technical review.'}</div>
+                {reportContact && <div className="text-[10px] text-slate-500 mt-0.5">{reportContact}</div>}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

@@ -134,6 +134,12 @@ function ClubBrandingEditor({ club }) {
   const [initials, setInitials] = useState(club.initials || '');
   const [primaryColor, setPrimaryColor] = useState(club.primary_color || '#0ea5e9');
   const [accentColor, setAccentColor] = useState(club.accent_color || '#06b6d4');
+  const [logoUrl, setLogoUrl] = useState(club.logo_url || '');
+  const [reportIntro, setReportIntro] = useState(club.report_intro || '');
+  const [reportSignOff, setReportSignOff] = useState(club.report_sign_off || '');
+  const [reportOutro, setReportOutro] = useState(club.report_outro || '');
+  const [reportContact, setReportContact] = useState(club.report_contact || '');
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState('');
@@ -142,7 +148,42 @@ function ClubBrandingEditor({ club }) {
     setInitials(club.initials || '');
     setPrimaryColor(club.primary_color || '#0ea5e9');
     setAccentColor(club.accent_color || '#06b6d4');
+    setLogoUrl(club.logo_url || '');
+    setReportIntro(club.report_intro || '');
+    setReportSignOff(club.report_sign_off || '');
+    setReportOutro(club.report_outro || '');
+    setReportContact(club.report_contact || '');
   }, [club.id]);
+
+  // Upload a club logo to the club-branding bucket (owner/admin write per storage RLS),
+  // then save its public URL to clubs.logo_url.
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setMsg('');
+    try {
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+      const path = `${club.id}/logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('club-branding').upload(path, file, { upsert: true, contentType: file.type || undefined });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('club-branding').getPublicUrl(path);
+      const url = data?.publicUrl || '';
+      setLogoUrl(url);
+      await saveClub(club.id, { logo_url: url });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      setMsg(error.message || 'Could not upload the logo.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    setLogoUrl('');
+    try { await saveClub(club.id, { logo_url: null }); } catch (error) { setMsg(error.message || 'Could not remove the logo.'); }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -153,6 +194,10 @@ function ClubBrandingEditor({ club }) {
         initials: initials.trim().toUpperCase() || null,
         primary_color: primaryColor,
         accent_color: accentColor,
+        report_intro: reportIntro.trim() || null,
+        report_sign_off: reportSignOff.trim() || null,
+        report_outro: reportOutro.trim() || null,
+        report_contact: reportContact.trim() || null,
       });
       setMsg(warn);
       setSaved(true);
@@ -207,9 +252,47 @@ function ClubBrandingEditor({ club }) {
             </div>
           </div>
         </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Club logo (shown on reports)</Label>
+          <div className="mt-1 flex items-center gap-3">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Club logo" className="h-12 w-12 rounded-lg object-contain border border-border bg-white" />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-border text-[9px] text-muted-foreground">No logo</div>
+            )}
+            <div className="flex items-center gap-2">
+              <label className="cursor-pointer">
+                <span className="inline-flex h-8 items-center rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-secondary">{uploading ? 'Uploading…' : 'Upload logo'}</span>
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
+              </label>
+              {logoUrl && <button type="button" onClick={handleRemoveLogo} className="text-xs text-destructive hover:underline">Remove</button>}
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, WEBP or SVG. Shown beside “Powered by Swim Sight 3D”.</p>
+        </div>
+
+        <div className="space-y-3 border-t border-border pt-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Report defaults</div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Report intro (optional)</Label>
+            <Textarea value={reportIntro} onChange={e => setReportIntro(e.target.value)} placeholder="A short welcome line at the top of every report." className="mt-1 text-sm" rows={2} />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Report sign-off (optional)</Label>
+            <Input value={reportSignOff} onChange={e => setReportSignOff(e.target.value)} placeholder="e.g. Keep up the great work — Coach Owen" className="mt-1 h-8 text-sm" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Report closing note (optional)</Label>
+            <Textarea value={reportOutro} onChange={e => setReportOutro(e.target.value)} placeholder="A closing message shown near the report footer." className="mt-1 text-sm" rows={2} />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Report contact (optional)</Label>
+            <Input value={reportContact} onChange={e => setReportContact(e.target.value)} placeholder="e.g. coach@club.com · club.com" className="mt-1 h-8 text-sm" />
+          </div>
+        </div>
+
         <SaveButton saving={saving} saved={saved} />
         {msg && <div className={`text-xs ${msg.startsWith('Saved') || msg.startsWith('Run') ? 'text-amber-600' : 'text-destructive'}`}>{msg}</div>}
-        <p className="text-[10px] text-muted-foreground">A custom club logo image is coming later — see “Later / Not yet available”.</p>
       </form>
     </div>
   );

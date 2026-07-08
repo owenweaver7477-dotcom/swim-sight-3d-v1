@@ -63,6 +63,14 @@ function safeNumber(value, { min = -Infinity, max = Infinity } = {}) {
   return Math.min(max, Math.max(min, number));
 }
 
+// Only accept a hex colour — these values are rendered into inline styles, so anything
+// else (e.g. CSS with url()/expression) must be rejected.
+function safeHexColor(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(text) ? text : null;
+}
+
 function safeThumbnail(value) {
   if (typeof value !== 'string' || value.length > 750_000) return null;
   return SAFE_IMAGE_DATA_URL.test(value) ? value : null;
@@ -214,6 +222,12 @@ export function sanitizePublicReportPayload(payload = {}) {
     club: payload.club ? compactObject({
       name: safeText(payload.club.name, 180),
       logo_url: safeText(payload.club.logo_url, 500),
+      primary_color: safeHexColor(payload.club.primary_color),
+      accent_color: safeHexColor(payload.club.accent_color),
+      report_contact: safeText(payload.club.report_contact, 200),
+      report_sign_off: safeText(payload.club.report_sign_off, 300),
+      report_intro: safeText(payload.club.report_intro, 600),
+      report_outro: safeText(payload.club.report_outro, 600),
     }) : null,
     findings: sanitizePublicFindings(payload.findings),
     annotations: sanitizePublicAnnotations(payload.annotations),

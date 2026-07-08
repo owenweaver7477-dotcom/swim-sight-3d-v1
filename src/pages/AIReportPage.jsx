@@ -1432,6 +1432,7 @@ export default function AIReportPage() {
                 report={report}
                 swimmer={swimmer}
                 club={club}
+                coachName={user?.full_name || ''}
                 video_meta={{
                   stroke_type: video?.stroke_type,
                   analysis_type: video?.analysis_type,
@@ -1813,6 +1814,7 @@ export default function AIReportPage() {
                 report={report}
                 swimmer={swimmer}
                 club={club}
+                coachName={user?.full_name || ''}
                 video_meta={{
                   stroke_type: video?.stroke_type,
                   analysis_type: video?.analysis_type,
