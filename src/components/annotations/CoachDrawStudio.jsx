@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -167,25 +167,37 @@ export default function CoachDrawStudio({
 }) {
   const inlineVideoRef = useRef(null);
   const fullscreenVideoRef = useRef(null);
-  const initedRef = useRef(false);
   const storageKey = persistKey ? `ssd-studio-${persistKey}` : null;
+  // Restore any saved draft SYNCHRONOUSLY via lazy state initialisers. Doing this in an
+  // effect (the old approach) left a one-render "defaults" window that raced with the
+  // persist effect and clobbered the saved phase/drills/note. Lazy init also means the
+  // workspace restores instantly on tab-return — no waiting on signedVideoUrl.
+  const savedDraft = useMemo(() => readStudioDraft(storageKey) || {}, [storageKey]);
   const [drawing, setDrawing] = useState(false);
-  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(
+    () => (typeof savedDraft.open === 'boolean' ? savedDraft.open : autoOpenFullscreen),
+  );
   const [timestamp, setTimestamp] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [title, setTitle] = useState('');
   const [coachNote, setCoachNote] = useState('');
   const [includeInReport, setIncludeInReport] = useState(false);
   const [linkedFindingId, setLinkedFindingId] = useState('');
-  const [markerLabel, setMarkerLabel] = useState('Key frame');
-  const [markerNote, setMarkerNote] = useState('');
+  // Empty string = no phase selected (no "Key frame" sentinel). A legacy 'Key frame'
+  // value from an older draft is treated as no selection.
+  const [markerLabel, setMarkerLabel] = useState(
+    () => (typeof savedDraft.phase === 'string' && savedDraft.phase !== 'Key frame' ? savedDraft.phase : ''),
+  );
+  const [markerNote, setMarkerNote] = useState(() => (typeof savedDraft.note === 'string' ? savedDraft.note : ''));
   const [markerIncludeInReport, setMarkerIncludeInReport] = useState(false);
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const fps = estimateFps(video);
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
-  const [selectedDrills, setSelectedDrills] = useState([]);
+  const [selectedDrills, setSelectedDrills] = useState(
+    () => (Array.isArray(savedDraft.selectedDrills) ? savedDraft.selectedDrills.filter((drill) => drill && drill.title) : []),
+  );
   const [drillQuery, setDrillQuery] = useState('');
-  const [imSegment, setImSegment] = useState('butterfly');
+  const [imSegment, setImSegment] = useState(() => (typeof savedDraft.imSegment === 'string' ? savedDraft.imSegment : 'butterfly'));
   const strokeKey = normStrokeKey(video?.stroke_type);
   const isIM = strokeKey === 'im';
   const phaseStrokeKey = isIM ? imSegment : strokeKey;
@@ -194,14 +206,14 @@ export default function CoachDrawStudio({
   const [addedFindingCount, setAddedFindingCount] = useState(0);
   const [lastCapturedMomentId, setLastCapturedMomentId] = useState(null);
   const [finaliseFlow, setFinaliseFlow] = useState('idle'); // idle | confirm | saving | ready
-  const [drillMode, setDrillMode] = useState('suggested'); // 'suggested' | 'custom'
+  const [drillMode, setDrillMode] = useState(() => (savedDraft.drillMode === 'custom' ? 'custom' : 'suggested')); // 'suggested' | 'custom'
   const [customDrillTitle, setCustomDrillTitle] = useState('');
   const [customDrillSummary, setCustomDrillSummary] = useState('');
   const [customDrillCue, setCustomDrillCue] = useState('');
   const [customDrillWhy, setCustomDrillWhy] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
   const [drawingSaving, setDrawingSaving] = useState(false);
-  const phaseSelected = Boolean(markerLabel) && markerLabel !== 'Key frame';
+  const phaseSelected = Boolean(markerLabel && markerLabel.trim());
   const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
   const drillNoteText = expandNoteForDrills(markerNote);
   const draftFindingForDrills = { stroke_phase: markerLabel, phase: markerLabel, observation: drillNoteText, coach_sees: drillNoteText, fault_tag: drillNoteText };
@@ -243,6 +255,14 @@ export default function CoachDrawStudio({
     setCustomDrillWhy('');
   };
   const removeDrill = (id) => setSelectedDrills((prev) => prev.filter((drill) => drill.id !== id));
+  // Clicking a phase selects it; clicking the selected phase again clears it.
+  const togglePhase = (label) => setMarkerLabel((prev) => (prev === label ? '' : label));
+  // Switching IM segment clears the phase if it isn't valid for the new segment.
+  const selectImSegment = (key) => {
+    setImSegment(key);
+    const nextPhases = STROKE_PHASES[key] || DEFAULT_PHASE_LABELS;
+    setMarkerLabel((prev) => (prev && nextPhases.includes(prev) ? prev : ''));
+  };
   // Key moments come from saved key_frame annotations (which carry a captured thumbnail),
   // not from findings — so the strip shows real screenshots.
   const keyMoments = (keyStamps || []).map((a) => ({
@@ -278,27 +298,9 @@ export default function CoachDrawStudio({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [fullscreenOpen]);
 
-  // Restore any saved draft once the private video is ready, and decide the open-state.
-  // Runs once: a stored `open:false` (coach pressed Exit) wins over auto-open so we never
-  // bounce the coach back into fullscreen; otherwise manual review opens straight in.
+  // Persist the open-state and unsaved inputs so a tab switch / refetch / reload restores
+  // them (restore itself is done via lazy state initialisers above — no effect race).
   useEffect(() => {
-    if (initedRef.current || !signedVideoUrl) return;
-    initedRef.current = true;
-    const saved = readStudioDraft(storageKey);
-    if (saved) {
-      if (typeof saved.note === 'string') setMarkerNote(saved.note);
-      if (typeof saved.phase === 'string' && saved.phase) setMarkerLabel(saved.phase);
-      if (saved.drillMode === 'suggested' || saved.drillMode === 'custom') setDrillMode(saved.drillMode);
-      if (Array.isArray(saved.selectedDrills)) setSelectedDrills(saved.selectedDrills.filter((drill) => drill && drill.title));
-      if (typeof saved.imSegment === 'string') setImSegment(saved.imSegment);
-    }
-    const shouldOpen = saved && typeof saved.open === 'boolean' ? saved.open : autoOpenFullscreen;
-    if (shouldOpen) setFullscreenOpen(true);
-  }, [signedVideoUrl, autoOpenFullscreen, storageKey]);
-
-  // Persist the open-state and unsaved inputs so a tab switch / refetch / reload restores them.
-  useEffect(() => {
-    if (!initedRef.current) return;
     writeStudioDraft(storageKey, {
       open: fullscreenOpen,
       note: markerNote,
@@ -550,7 +552,7 @@ export default function CoachDrawStudio({
   };
 
   const renderVideoSurface = (ref, isFullscreen = false) => (
-    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[45vh] lg:min-h-[62vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
+    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[46vh] lg:min-h-[68vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
       {signedVideoUrl ? (
         <video
           ref={ref}
@@ -558,7 +560,9 @@ export default function CoachDrawStudio({
           crossOrigin="anonymous"
           controls={!drawing}
           playsInline
-          className="w-full h-full object-contain"
+          // While drawing, the video must not intercept pointer/touch/stylus events —
+          // on iPad the native video layer otherwise swallows them before the canvas.
+          className={`w-full h-full object-contain ${drawing ? 'pointer-events-none' : ''}`}
           onTimeUpdate={(event) => syncTimestamp(event.currentTarget)}
           onLoadedMetadata={(event) => syncTimestamp(event.currentTarget)}
           onSeeked={(event) => syncTimestamp(event.currentTarget)}
@@ -807,7 +811,7 @@ export default function CoachDrawStudio({
           {/* Scrollable workspace body */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="mx-auto max-w-[1600px] space-y-4">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
                 {/* LEFT: video + playback */}
                 <div className="space-y-3">
                   {renderVideoSurface(fullscreenVideoRef, true)}
@@ -838,8 +842,8 @@ export default function CoachDrawStudio({
                   </div>
                 </div>
 
-                {/* RIGHT: Mark this moment */}
-                <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                {/* RIGHT: Mark this moment (compact so the video stays the hero) */}
+                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
                   <div className="text-sm font-bold uppercase tracking-wider">Mark this moment</div>
 
                   {reviewMode === 'ai' && findings.length > 0 && onReviewAISuggestions && (
@@ -856,7 +860,11 @@ export default function CoachDrawStudio({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-xs font-semibold text-slate-300">Stroke phase</div>
-                      {phaseSelected && <span className="rounded-full bg-cyan-400/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">{markerLabel}</span>}
+                      {phaseSelected && (
+                        <button type="button" onClick={() => setMarkerLabel('')} className="text-[10px] font-semibold text-cyan-300 hover:text-cyan-200">
+                          Clear phase
+                        </button>
+                      )}
                     </div>
                     {isIM && (
                       <div className="flex gap-1.5">
@@ -864,7 +872,7 @@ export default function CoachDrawStudio({
                           <button
                             key={segment.key}
                             type="button"
-                            onClick={() => setImSegment(segment.key)}
+                            onClick={() => selectImSegment(segment.key)}
                             className={`min-h-10 flex-1 rounded-lg border px-2 text-xs font-semibold transition-colors ${imSegment === segment.key ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
                           >
                             {segment.label}
@@ -872,13 +880,13 @@ export default function CoachDrawStudio({
                         ))}
                       </div>
                     )}
-                    <div className="flex max-h-44 flex-wrap gap-2 overflow-y-auto pr-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {quickLabels.map((label) => (
                         <button
                           key={label}
                           type="button"
-                          onClick={() => setMarkerLabel(label)}
-                          className={`min-h-11 rounded-full border px-3.5 text-xs font-semibold transition-colors ${markerLabel === label ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                          onClick={() => togglePhase(label)}
+                          className={`min-h-10 rounded-full border px-3 text-xs font-semibold transition-colors ${markerLabel === label ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
                         >
                           {label}
                         </button>
@@ -944,7 +952,7 @@ export default function CoachDrawStudio({
                             placeholder="Search drills (e.g. narrow knee, timing, catch)"
                           />
                         </div>
-                        <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-slate-900/40 p-1">
+                        <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-slate-900/40 p-1">
                           {drillListForPicker.length === 0 ? (
                             <div className="px-2 py-3 text-center text-[11px] text-slate-400">No drills match — try another word.</div>
                           ) : (
@@ -969,11 +977,7 @@ export default function CoachDrawStudio({
                             })
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400">
-                          {!phaseSelected
-                            ? `Showing ${video?.stroke_type || 'stroke'} drills — pick a phase above to refine. Tap to add more than one.`
-                            : (markerNote.trim() ? 'Ranked by stroke, phase, and your note. Tap to add multiple.' : 'Ranked by stroke and phase. Add a note to refine. Tap to add multiple.')}
-                        </div>
+                        <div className="text-[10px] text-slate-400">Tap to add one or more drills.</div>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -1014,11 +1018,6 @@ export default function CoachDrawStudio({
                         >
                           <Plus className="mr-1.5 h-4 w-4" /> Add this drill
                         </Button>
-                        <div className="text-[10px] text-slate-400">
-                          {customDrillTitle.trim()
-                            ? 'Press “Add this drill”, or just press Add Finding — it will be attached automatically.'
-                            : 'Write your own drill — a title is required. You can add several.'}
-                        </div>
                       </div>
                     )}
                   </div>
@@ -1027,10 +1026,8 @@ export default function CoachDrawStudio({
                     <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={addFindingInline} disabled={!signedVideoUrl || !canEdit || savingFinding || (!markerNote.trim() && !phaseSelected)}>
                       <Plus className="mr-1.5 h-5 w-5" /> {savingFinding ? 'Adding…' : 'Add Finding'}
                     </Button>
-                    {(!markerNote.trim() && !phaseSelected) ? (
+                    {(!markerNote.trim() && !phaseSelected) && (
                       <p className="text-[10px] text-slate-400">Pick a phase or type a note to add a finding.</p>
-                    ) : (
-                      <p className="text-[10px] text-slate-400">Saves a coach finding with this timestamp, phase, note, and drills.</p>
                     )}
                     {addedFindingCount > 0 && (
                       <p className="text-[11px] font-semibold text-emerald-300">✓ {addedFindingCount} finding{addedFindingCount > 1 ? 's' : ''} added to this report.</p>
@@ -1098,10 +1095,10 @@ export default function CoachDrawStudio({
           {/* Sticky poolside action bar — always-visible primary actions for iPad. Hidden
               while drawing so it never overlaps the annotation toolbar. */}
           {!drawing && (
-            <div className="flex items-stretch gap-2 border-t border-white/10 bg-slate-950/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-6">
+            <div className="flex items-stretch gap-2 border-t border-white/10 bg-slate-950/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
               {onSaveMarker && (
                 <Button
-                  className="h-14 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
+                  className="h-12 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
                   onClick={() => capturePhaseMoment()}
                   disabled={!signedVideoUrl || !canEdit || savingMarker}
                 >
@@ -1127,7 +1124,7 @@ export default function CoachDrawStudio({
               </Button>
               {(onFinaliseReport || onFinalise) && (
                 <Button
-                  className="h-14 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10"
+                  className="h-12 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10"
                   onClick={() => {
                     if (reportFinalised) { setFinaliseFlow('ready'); return; }
                     if (onFinaliseReport && canFinalise) { setFinaliseFlow('confirm'); return; }
