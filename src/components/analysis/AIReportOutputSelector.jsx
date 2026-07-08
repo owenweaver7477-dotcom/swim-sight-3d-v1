@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Check, Info, LockKeyhole, Scale, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Check, ChevronDown, Info, LockKeyhole, Scale, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -72,6 +72,32 @@ export default function AIReportOutputSelector({
   }), [athleteProfile, stroke, cameraAngle, videoDurationSeconds, features]);
   const plan = useMemo(() => buildReportOutputPlan({ selectedOutputIds, readiness }), [selectedOutputIds, readiness]);
 
+  // Feature-flag keys that are OFF in this deployment. Outputs that require one of
+  // these can never be enabled here, so they are hidden for the pilot instead of
+  // rendering as permanently locked cards.
+  const disabledFeatureKeys = useMemo(
+    () => Object.keys(features).filter((key) => features[key] === false),
+    [features],
+  );
+  const isPermanentlyLocked = (output) => {
+    const availability = getReportOutputState(output, readiness);
+    return availability.missing.some((key) => disabledFeatureKeys.includes(key));
+  };
+
+  // Default to the basic technical scan once, so a coach can upload -> send for AI
+  // review without studying the output list. Coach can still change preset/outputs.
+  const defaultedRef = useRef(false);
+  useEffect(() => {
+    if (defaultedRef.current) return;
+    if (selectedOutputIds.length > 0 || (selectedPreset && selectedPreset !== '')) { defaultedRef.current = true; return; }
+    const basic = AI_REPORT_PRESETS.find((preset) => preset.id === 'basic_technical_scan');
+    if (!basic) return;
+    defaultedRef.current = true;
+    onSelectedPresetChange?.(basic.id);
+    onSelectedOutputIdsChange?.(basic.outputIds.filter((id) => getReportOutputState(id, readiness).selectable));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOutputIds, selectedPreset, readiness]);
+
   const updateProfile = (key, value) => onAthleteProfileChange?.({ ...athleteProfile, [key]: value });
   const toggleOutput = (id) => {
     const active = selectedOutputIds.includes(id);
@@ -99,14 +125,18 @@ export default function AIReportOutputSelector({
         </div>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <div className="flex items-start gap-2">
-          <Scale className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-700" aria-hidden="true" />
-          <div>
-            <h4 className="text-xs font-bold text-slate-900">Athlete profile readiness</h4>
-            <p className="mt-1 text-[11px] leading-5 text-slate-600">Some advanced estimate-only metrics need athlete profile inputs such as body mass and scale calibration. These inputs are used only to decide whether the estimate can be calculated and should not appear in public reports.</p>
+      {/* Advanced athlete profile — collapsed by default: it only unlocks estimate-only
+          metrics, most of which are behind deployment feature flags. */}
+      <details className="group rounded-lg border border-slate-200 bg-slate-50">
+        <summary className="flex cursor-pointer list-none items-center gap-2 p-3">
+          <Scale className="h-4 w-4 flex-shrink-0 text-slate-700" aria-hidden="true" />
+          <div className="flex-1">
+            <h4 className="text-xs font-bold text-slate-900">Advanced: athlete profile (optional)</h4>
+            <p className="mt-0.5 text-[11px] leading-4 text-slate-600">Only needed for estimate-only metrics such as body-mass-based calculations. Not shown on public reports.</p>
           </div>
-        </div>
+          <ChevronDown className="h-4 w-4 flex-shrink-0 text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="space-y-3 border-t border-slate-200 p-3">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label htmlFor="analysis-body-mass" className="text-[11px] text-slate-700">Body mass / weight (kg)</Label>
@@ -164,7 +194,8 @@ export default function AIReportOutputSelector({
           <input type="checkbox" className="mt-0.5 h-4 w-4" checked={athleteProfile.calibration_available === true} onChange={(event) => updateProfile('calibration_available', event.target.checked)} />
           <span><strong>Known scale confirmed.</strong> The selected pool length or lane reference is visible and appropriate for internal estimate eligibility.</span>
         </label>
-      </div>
+        </div>
+      </details>
 
       <div>
         <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Report presets</div>
@@ -178,11 +209,16 @@ export default function AIReportOutputSelector({
         <p className="mt-2 text-[10px] leading-4 text-slate-500">A preset selects only outputs currently eligible for this clip. Preview-only items remain locked and visible below.</p>
       </div>
 
-      {AI_REPORT_OUTPUT_CATEGORIES.map((category) => (
+      {AI_REPORT_OUTPUT_CATEGORIES.map((category) => {
+        // Hide outputs whose only path to availability is a feature flag that is off in
+        // this deployment — they would render as permanently locked noise for the pilot.
+        const visibleOutputs = AI_REPORT_OUTPUTS.filter((output) => output.category === category.id && !isPermanentlyLocked(output));
+        if (!visibleOutputs.length) return null;
+        return (
         <div key={category.id}>
           <h4 className="mb-2 text-xs font-bold text-slate-900">{category.label}</h4>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {AI_REPORT_OUTPUTS.filter((output) => output.category === category.id).map((output) => {
+            {visibleOutputs.map((output) => {
               const availability = getReportOutputState(output, readiness);
               const selected = selectedOutputIds.includes(output.id);
               return (
@@ -203,7 +239,8 @@ export default function AIReportOutputSelector({
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-950">
         <div className="flex items-start gap-2">

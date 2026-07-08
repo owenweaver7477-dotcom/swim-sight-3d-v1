@@ -30,6 +30,60 @@ const EMPTY_FORM = {
   notification_preference: 'in_app',
 };
 
+// Shared swimmer form fields — used by both the Add and Edit dialogs so the two
+// stay in sync. Squad creation stays Add-only (children prop).
+function SwimmerFormFields({ form, setForm, squads, squadExtra = null }) {
+  return (
+    <>
+      <div>
+        <Label className="text-xs text-muted-foreground">Name</Label>
+        <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" className="bg-secondary border-border mt-1" />
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Squad</Label>
+        <Select value={form.squad_id || 'unassigned'} onValueChange={v => setForm(p => ({ ...p, squad_id: v === 'unassigned' ? '' : v }))}>
+          <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select squad" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {squadExtra}
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Main Strokes</Label>
+        <Input value={form.main_strokes} onChange={e => setForm(p => ({ ...p, main_strokes: e.target.value }))} placeholder="e.g. Breaststroke, IM" className="bg-secondary border-border mt-1" />
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Coach Notes</Label>
+        <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Technical notes, injury flags..." className="bg-secondary border-border mt-1" rows={2} />
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Swimmer Email (optional)</Label>
+        <Input value={form.swimmer_email} onChange={e => setForm(p => ({ ...p, swimmer_email: e.target.value }))} placeholder="swimmer@email.com" className="bg-secondary border-border mt-1" />
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Parent Email (optional)</Label>
+        <Input value={form.parent_email} onChange={e => setForm(p => ({ ...p, parent_email: e.target.value }))} placeholder="parent@email.com" className="bg-secondary border-border mt-1" />
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Report Delivery Preference</Label>
+        <Select value={form.notification_preference} onValueChange={v => setForm(p => ({ ...p, notification_preference: v }))}>
+          <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="in_app">Manual secure link</SelectItem>
+            <SelectItem value="email">Email when connected</SelectItem>
+            <SelectItem value="none">Do not notify</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Email delivery only sends a secure report link when a real email provider is connected.
+        </p>
+      </div>
+    </>
+  );
+}
+
 export default function Swimmers() {
   const { club, memberRole } = useClubContext();
   const { user } = useAuth();
@@ -37,6 +91,8 @@ export default function Swimmers() {
   const [selected, setSelected] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // swimmer to confirm delete
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [squadFilter, setSquadFilter] = useState('all');
   const [newSquadName, setNewSquadName] = useState('');
   const queryClient = useQueryClient();
@@ -111,8 +167,23 @@ export default function Swimmers() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['swimmers', club?.id] });
       setSelected(updated);
+      setEditOpen(false);
     },
   });
+
+  const openEditDialog = () => {
+    if (!selected) return;
+    setEditForm({
+      name: selected.name || '',
+      squad_id: selected.squad_id || '',
+      main_strokes: selected.main_strokes || '',
+      notes: selected.notes || '',
+      swimmer_email: selected.swimmer_email || '',
+      parent_email: selected.parent_email || '',
+      notification_preference: selected.notification_preference || 'in_app',
+    });
+    setEditOpen(true);
+  };
 
   const handleStartReview = (swimmer) => {
     setReviewSession(null);
@@ -184,6 +255,33 @@ export default function Swimmers() {
             <Button size="sm" className="w-full mt-4 bg-primary text-primary-foreground text-xs" onClick={() => handleStartReview(selected)}>
               <Video className="w-3.5 h-3.5 mr-1" /> Start New Review
             </Button>
+            {canManageSwimmers && (
+              <Button size="sm" variant="outline" className="w-full mt-2 text-xs" onClick={openEditDialog}>
+                Edit Details
+              </Button>
+            )}
+            {canManageSwimmers && (
+              <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle>Edit Swimmer</DialogTitle></DialogHeader>
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      updateSwimmer.mutate({
+                        id: selected.id,
+                        patch: { ...editForm, squad_id: editForm.squad_id || null },
+                      });
+                    }}
+                    className="space-y-3"
+                  >
+                    <SwimmerFormFields form={editForm} setForm={setEditForm} squads={squads} />
+                    <Button type="submit" className="w-full" disabled={!editForm.name.trim() || updateSwimmer.isPending}>
+                      {updateSwimmer.isPending ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           {/* Stats */}
@@ -228,68 +326,31 @@ export default function Swimmers() {
               <DialogContent className="bg-card border-border">
                 <DialogHeader><DialogTitle>Add Swimmer</DialogTitle></DialogHeader>
                 <form onSubmit={e => { e.preventDefault(); addSwimmer.mutate({ ...form, club_id: club.id, created_by: user?.id }); }} className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Name</Label>
-                    <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" className="bg-secondary border-border mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Squad</Label>
-                    <Select value={form.squad_id || 'unassigned'} onValueChange={v => setForm(p => ({ ...p, squad_id: v === 'unassigned' ? '' : v }))}>
-                      <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select squad" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <div className="mt-2 flex gap-2">
-                      <Input
-                        value={newSquadName}
-                        onChange={e => setNewSquadName(e.target.value)}
-                        placeholder="Create squad, e.g. Junior Performance"
-                        className="h-8 bg-secondary border-border text-xs"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs flex-shrink-0"
-                        disabled={!newSquadName.trim() || createSquad.isPending}
-                        onClick={() => createSquad.mutate(newSquadName)}
-                      >
-                        {createSquad.isPending ? 'Adding...' : 'Add Squad'}
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Main Strokes</Label>
-                    <Input value={form.main_strokes} onChange={e => setForm(p => ({ ...p, main_strokes: e.target.value }))} placeholder="e.g. Breaststroke, IM" className="bg-secondary border-border mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Coach Notes</Label>
-                    <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Technical notes, injury flags..." className="bg-secondary border-border mt-1" rows={2} />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Swimmer Email (optional)</Label>
-                    <Input value={form.swimmer_email} onChange={e => setForm(p => ({ ...p, swimmer_email: e.target.value }))} placeholder="swimmer@email.com" className="bg-secondary border-border mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Parent Email (optional)</Label>
-                    <Input value={form.parent_email} onChange={e => setForm(p => ({ ...p, parent_email: e.target.value }))} placeholder="parent@email.com" className="bg-secondary border-border mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Report Delivery Preference</Label>
-                    <Select value={form.notification_preference} onValueChange={v => setForm(p => ({ ...p, notification_preference: v }))}>
-                      <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="in_app">Manual secure link</SelectItem>
-                        <SelectItem value="email">Email when connected</SelectItem>
-                        <SelectItem value="none">Do not notify</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Email delivery only sends a secure report link when a real email provider is connected.
-                    </p>
-                  </div>
+                  <SwimmerFormFields
+                    form={form}
+                    setForm={setForm}
+                    squads={squads}
+                    squadExtra={(
+                      <div className="mt-2 flex gap-2">
+                        <Input
+                          value={newSquadName}
+                          onChange={e => setNewSquadName(e.target.value)}
+                          placeholder="Create squad, e.g. Junior Performance"
+                          className="h-8 bg-secondary border-border text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs flex-shrink-0"
+                          disabled={!newSquadName.trim() || createSquad.isPending}
+                          onClick={() => createSquad.mutate(newSquadName)}
+                        >
+                          {createSquad.isPending ? 'Adding...' : 'Add Squad'}
+                        </Button>
+                      </div>
+                    )}
+                  />
                   <Button type="submit" className="w-full" disabled={!form.name.trim() || addSwimmer.isPending}>
                     {addSwimmer.isPending ? 'Adding...' : 'Add Swimmer'}
                   </Button>

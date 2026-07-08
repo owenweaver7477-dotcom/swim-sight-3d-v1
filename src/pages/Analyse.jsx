@@ -1112,33 +1112,6 @@ export default function Analyse() {
         </div>
       </div>
 
-      {step !== 2 && (
-        <div className="mb-6">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-primary">AI setup preview</div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                This is the list of what the AI-assisted review can be asked to look for before you submit a clip.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs"
-              onClick={() => videoLibraryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            >
-              Use existing video
-            </Button>
-          </div>
-          <SafeAnalyseSection name="Analysis focus checklist">
-            <AnalysisFocusChecklist
-              value={reviewContext.analysis_focus_areas}
-              onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
-            />
-          </SafeAnalyseSection>
-        </div>
-      )}
-
       {/* STEP 0 — Select swimmer */}
       {step === 0 && (
         <div>
@@ -1352,16 +1325,6 @@ export default function Analyse() {
                   <div className="mt-1 text-[10px] text-green-700">Next: configure the review, send for AI Review, or open Coach Studio for manual review.</div>
                 </div>
               </div>
-              {/* Review Setup Panel — appears after successful upload */}
-              <SafeAnalyseSection name="Review setup">
-                <ReviewSetupPanel
-                  videoUploadId={videoUploadId}
-                  value={reviewContext}
-                  onChange={setReviewContext}
-                  stroke={stroke}
-                  cameraAngle={angle}
-                />
-              </SafeAnalyseSection>
               {uploadedUrl && (
                 <div className="rounded-lg overflow-hidden bg-black" style={{ aspectRatio: '16/9' }}>
                   <video src={uploadedUrl} controls className="w-full h-full object-contain" />
@@ -1487,22 +1450,6 @@ export default function Analyse() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Capture Source</Label>
-              <Select value={captureSource} onValueChange={setCaptureSource}>
-                <SelectTrigger className="bg-card border-border mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CAPTURE_SOURCES.map(source => (
-                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {captureSource === 'swimpro_export' && (
-                <p className="text-[10px] text-muted-foreground mt-1.5">
-                  Supports SwimPro-exported footage through coach-uploaded files as part of a standard export workflow.
-                </p>
-              )}
-            </div>
-            <div>
               <Label className="text-xs text-muted-foreground">Analysis Type</Label>
               <Select value={sessionType} onValueChange={setSessionType}>
                 <SelectTrigger className="bg-card border-border mt-1"><SelectValue /></SelectTrigger>
@@ -1539,6 +1486,28 @@ export default function Analyse() {
               <Label className="text-xs text-muted-foreground">Pre-session Notes (optional)</Label>
               <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder="What are you focusing on today?" className="bg-card border-border mt-1" rows={3} />
             </div>
+            {/* Advanced options — rarely changed; capture source defaults to coach recording. */}
+            <details className="rounded-xl border border-border bg-card">
+              <summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-muted-foreground">
+                Advanced options
+              </summary>
+              <div className="border-t border-border px-4 py-3">
+                <Label className="text-xs text-muted-foreground">Capture Source</Label>
+                <Select value={captureSource} onValueChange={setCaptureSource}>
+                  <SelectTrigger className="bg-card border-border mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CAPTURE_SOURCES.map(source => (
+                      <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {captureSource === 'swimpro_export' && (
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    Supports SwimPro-exported footage through coach-uploaded files as part of a standard export workflow.
+                  </p>
+                )}
+              </div>
+            </details>
             {startAiMessage && (
               <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-700 space-y-2">
                 <div>{startAiMessage}</div>
@@ -1575,7 +1544,6 @@ export default function Analyse() {
                 estimatedCredits={reportOutputPlan.estimatedCredits}
                 mode="ai"
               />
-              <AICreditIndicator selectedFocusCount={0} mode="manual" compact />
             </SafeAnalyseSection>
             {!consentState.canStartAI && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
