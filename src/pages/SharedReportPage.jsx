@@ -64,12 +64,17 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
     ? annotation.thumbnail_data_url
     : null;
   const label = annotation.annotation_type === 'key_frame' ? 'Coach-selected key moment' : 'Coach annotation';
+  // Bound image height so portrait screenshots never overflow, and keep the exact frame
+  // aspect so the drawing SVG overlay stays aligned (same approach as the coach PDF).
+  const cw = Number(annotation.canvas_width) || 16;
+  const ch = Number(annotation.canvas_height) || 9;
+  const boxStyle = { aspectRatio: `${cw}/${ch}`, maxWidth: `min(100%, ${Math.round(280 * (cw / ch))}px)` };
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
       {safeThumbnail ? (
-        <div className="relative bg-slate-950">
-          <img src={safeThumbnail} alt={annotation.title || label} className="w-full object-contain" />
+        <div className="relative mx-auto w-full overflow-hidden bg-slate-950" style={boxStyle}>
+          <img src={safeThumbnail} alt={annotation.title || label} className="absolute inset-0 h-full w-full object-contain" />
           {annotation.rendered_svg && (
             <div
               className="pointer-events-none absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
@@ -79,8 +84,8 @@ function PublicAnnotationCard({ annotation, linkedFindingTitle }) {
         </div>
       ) : (
         <div
-          className="bg-slate-950"
-          style={{ aspectRatio: `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}` }}
+          className="mx-auto w-full overflow-hidden bg-slate-950 [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+          style={boxStyle}
           dangerouslySetInnerHTML={{
             __html: annotation.rendered_svg || drawingToSvg({}, {
               width: annotation.canvas_width,

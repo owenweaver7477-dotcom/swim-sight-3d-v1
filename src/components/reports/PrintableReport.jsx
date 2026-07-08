@@ -64,31 +64,45 @@ function Field({ label, children, strong, small }) {
 // The frame image: video-frame thumbnail (with drawing overlay when present), or the
 // drawing SVG for a marks-only coach drawing, or a CLEAN light placeholder — never a
 // dark strip for a missing phase-moment frame.
+// Max on-page height for any report image. Portrait screenshots otherwise render very
+// tall and overflow/cut off the PDF page.
+const FRAME_MAX_HEIGHT = 280;
+
 function FrameImage({ annotation }) {
   const safeThumbnail = typeof annotation.thumbnail_data_url === 'string' && annotation.thumbnail_data_url.startsWith('data:image/')
     ? annotation.thumbnail_data_url
     : null;
   const isDrawing = annotation.annotation_type === 'coach_draw' || annotation.annotation_type === 'body_line';
   const stamp = annotation.frame_label || annotation.video_frame_time_label || (annotation.timestamp_seconds != null ? formatTimestamp(annotation.timestamp_seconds) : null);
-  const aspect = `${annotation.canvas_width || 16}/${annotation.canvas_height || 9}`;
+  const cw = Number(annotation.canvas_width) || 16;
+  const ch = Number(annotation.canvas_height) || 9;
+  const hasVisual = Boolean(safeThumbnail || (isDrawing && annotation.rendered_svg));
+  // Keep the frame's exact aspect ratio, but cap the WIDTH derived from a max height so the
+  // box can never exceed FRAME_MAX_HEIGHT. Because the box == the frame aspect, the image
+  // fills it with object-contain (no letterbox bars) AND the drawing SVG overlay — sized to
+  // the same box — stays perfectly aligned with the screenshot.
+  const boxStyle = {
+    aspectRatio: `${cw}/${ch}`,
+    maxWidth: `min(100%, ${Math.round(FRAME_MAX_HEIGHT * (cw / ch))}px)`,
+  };
 
-  let media;
+  let inner;
   if (safeThumbnail) {
-    media = (
-      <div className="relative bg-slate-950">
-        <img src={safeThumbnail} alt="" className="w-full object-contain" />
+    inner = (
+      <>
+        <img src={safeThumbnail} alt="" className="absolute inset-0 h-full w-full object-contain" />
         {annotation.rendered_svg && (
           <div className="pointer-events-none absolute inset-0 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: annotation.rendered_svg }} />
         )}
-      </div>
+      </>
     );
   } else if (isDrawing && annotation.rendered_svg) {
-    media = (
-      <div className="bg-slate-950 [&>svg]:block [&>svg]:h-full [&>svg]:w-full" style={{ aspectRatio: aspect }} dangerouslySetInnerHTML={{ __html: annotation.rendered_svg }} />
+    inner = (
+      <div className="absolute inset-0 [&>svg]:block [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: annotation.rendered_svg }} />
     );
   } else {
-    media = (
-      <div className="flex flex-col items-center justify-center gap-1 bg-slate-100 text-slate-400" style={{ aspectRatio: aspect }}>
+    inner = (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400">
         <Camera className="w-5 h-5 opacity-50" />
         <span className="text-[10px] font-medium">Phase image unavailable</span>
       </div>
@@ -96,8 +110,8 @@ function FrameImage({ annotation }) {
   }
 
   return (
-    <div className="relative">
-      {media}
+    <div className={`relative mx-auto w-full overflow-hidden ${hasVisual ? 'bg-slate-950' : 'bg-slate-100'}`} style={boxStyle}>
+      {inner}
       {stamp && <span className="absolute bottom-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-mono text-white">{stamp}</span>}
     </div>
   );

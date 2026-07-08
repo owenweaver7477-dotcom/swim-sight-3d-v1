@@ -559,7 +559,7 @@ export default function CoachDrawStudio({
   };
 
   const renderVideoSurface = (ref, isFullscreen = false) => (
-    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[46vh] lg:min-h-[68vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
+    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[48vh] lg:min-h-[72vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
       {signedVideoUrl ? (
         <video
           ref={ref}
@@ -828,7 +828,7 @@ export default function CoachDrawStudio({
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
                 {/* LEFT: video + playback */}
                 <div className="space-y-3">
                   {renderVideoSurface(fullscreenVideoRef, true)}
