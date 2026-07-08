@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/shared/PageHeader';
-import { Plus, User, Waves, ChevronRight, Video, FileText, Target, Activity, ArrowLeft, Bell, CheckCircle2, Clock, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, User, Waves, ChevronRight, Video, FileText, Target, Activity, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SwimmerProgressAnalytics from '@/components/analytics/SwimmerProgressAnalytics';
 import ReportHistoryList from '@/components/analytics/ReportHistoryList';
@@ -67,7 +67,6 @@ export default function Swimmers() {
     enabled: !!selected?.id,
   });
 
-  const swimmerNotifications = [];
   const filteredSwimmers = squadFilter === 'all'
     ? swimmers
     : swimmers.filter(swimmer => (squadFilter === 'unassigned' ? !swimmer.squad_id : swimmer.squad_id === squadFilter));
@@ -117,7 +116,8 @@ export default function Swimmers() {
 
   const handleStartReview = (swimmer) => {
     setReviewSession(null);
-    navigate(`/analyse`);
+    // Carry the swimmer into Analyse so the coach lands on the upload step for them.
+    navigate(swimmer?.id ? `/analyse?swimmer=${swimmer.id}` : '/analyse');
   };
 
   if (!club) {
@@ -208,48 +208,6 @@ export default function Swimmers() {
           {canManageSwimmers && <SwimmerSafeguardingPanel swimmer={selected} />}
           <SwimmerProgressAnalytics swimmer={selected} />
           <ReportHistoryList swimmerReports={activeReports} allFindings={swimmerFindings} />
-
-          {/* Notification History */}
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <div className="flex items-center gap-2 mb-3">
-              <Bell className="w-4 h-4 text-primary" />
-            <div className="text-xs font-bold text-foreground">Notification History</div>
-              <span className="text-[10px] text-muted-foreground ml-auto">{swimmerNotifications.length} total</span>
-            </div>
-            {swimmerNotifications.length === 0 ? (
-              <div className="py-6 text-center text-xs text-muted-foreground">
-                Notifications are coming later in the Supabase migration. Email details are saved on the swimmer profile.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {swimmerNotifications.map(n => {
-                  const date = n.created_date ? new Date(n.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
-                  const statusCfg = {
-                    sent:   { color: 'text-green-700 bg-green-100', icon: CheckCircle2 },
-                    read:   { color: 'text-muted-foreground bg-secondary', icon: CheckCircle2 },
-                    queued: { color: 'text-blue-700 bg-blue-100', icon: Clock },
-                    draft:  { color: 'text-muted-foreground bg-secondary', icon: Clock },
-                    failed: { color: 'text-red-700 bg-red-100', icon: AlertCircle },
-                  }[n.status] || { color: 'text-muted-foreground bg-secondary', icon: Clock };
-                  const Icon = statusCfg.icon;
-                  return (
-                    <div key={n.id} className="flex items-start gap-3 p-2.5 rounded-lg border border-border bg-secondary/20 text-xs">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground truncate">{n.title}</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{n.message}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${statusCfg.color}`}>
-                          <Icon className="w-2.5 h-2.5" />{n.status}
-                        </span>
-                        {date && <span className="text-[10px] text-muted-foreground">{date}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     );

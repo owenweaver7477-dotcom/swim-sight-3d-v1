@@ -21,7 +21,7 @@ export default function SettingsPage() {
     ...(canUseCoachApp ? [
       { label: 'Club Settings', to: '/club-settings' },
       { label: 'Club Progress', to: '/club-progress' },
-      { label: 'Reference Library', to: '/reference-library' },
+      // Reference Library link removed while the feature is parked (migration 008 not applied).
     ] : []),
     ...(isAdmin ? [{ label: 'Product Status', to: '/roadmap' }] : []),
   ];

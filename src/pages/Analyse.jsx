@@ -287,6 +287,21 @@ export default function Analyse() {
   });
   const swimmers = Array.isArray(swimmersQuery.data) ? swimmersQuery.data : [];
 
+  // Preselect a swimmer when arriving via "Start Review" on a swimmer card
+  // (/analyse?swimmer=<id>): select them and jump straight to the upload step.
+  const preselectedSwimmerRef = useRef(false);
+  useEffect(() => {
+    if (preselectedSwimmerRef.current || selectedSwimmer || !swimmers.length) return;
+    const wantedId = new URLSearchParams(window.location.search).get('swimmer');
+    if (!wantedId) return;
+    preselectedSwimmerRef.current = true;
+    const match = swimmers.find(s => s.id === wantedId);
+    if (match) {
+      setSelectedSwimmer(match);
+      setStep(1);
+    }
+  }, [swimmers, selectedSwimmer]);
+
   const squadsQuery = useQuery({
     queryKey: ['squads', club?.id],
     queryFn: () => entities.Squad.filter({ club_id: club.id }, 'name', 100),
@@ -548,7 +563,7 @@ export default function Analyse() {
           if (stage === 'preparing_upload') {
             setUploadStatusMessage('Creating private video record...');
           } else if (stage === 'uploading') {
-            setUploadStatusMessage(`Uploading to private storage. Keep this tab open. Video row: ${details.videoUploadId || retryVideoUploadId || 'creating...'}`);
+            setUploadStatusMessage('Uploading to private storage. Keep this tab open.');
             queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
           } else if (stage === 'finalising_upload') {
             setUploadStatusMessage('Finalising upload...');
@@ -564,7 +579,7 @@ export default function Analyse() {
         setUploadedUrl(nextSignedUrl);
       }
       setUploadStatus('uploaded');
-      setUploadStatusMessage(`Video uploaded. Ready for AI Review. Video row: ${uploadRecord.id}`);
+      setUploadStatusMessage('Video uploaded — ready for review.');
       queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
     } catch (err) {
       setUploadStatus('upload_failed');
@@ -574,7 +589,9 @@ export default function Analyse() {
       }
       const msg = err?.response?.data?.error || err?.message || 'Upload failed.';
       setFileError(msg);
-      setUploadStatusMessage(`${msg} Video row: ${err?.videoUploadId || videoUploadId || 'created before upload'}. Retry this upload or delete the failed row from the video library.`);
+      // Keep the row id in the console for support/debugging, not in the coach-facing text.
+      console.warn('Upload failed for video row:', err?.videoUploadId || videoUploadId || '(created before upload)');
+      setUploadStatusMessage(`${msg} Retry this upload or delete the failed video from the video library.`);
       queryClient.invalidateQueries({ queryKey: ['video-uploads', club?.id] });
     }
   };

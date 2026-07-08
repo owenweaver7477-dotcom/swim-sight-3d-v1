@@ -33,7 +33,6 @@ import ClubSettings from './pages/ClubSettings';
 import TeamDashboard from './pages/TeamDashboard.jsx';
 import Swimmers from './pages/Swimmers.jsx';
 import Analyse from './pages/Analyse';
-import ReferenceLibrary from './pages/ReferenceLibrary';
 import DrillLibrary from './pages/DrillLibrary.jsx';
 import Roadmap from './pages/Roadmap.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -171,7 +170,9 @@ const AuthenticatedApp = () => {
           <Route path="/ai-reviews" element={<AIReportsListPage />} />
           <Route path="/ai-review" element={<AIReportPage />} />
           <Route path="/swimmers" element={<Swimmers />} />
-          <Route path="/reference-library" element={<ReferenceLibrary />} />
+          {/* Reference Library is parked: its tables (migration 008) are not applied in
+              production, so the page would error. Redirect until 008 is intentionally applied. */}
+          <Route path="/reference-library" element={<Navigate to="/dashboard" replace />} />
           <Route path="/club-progress" element={<ClubProgress />} />
           <Route path="/swimmer-trends" element={<SwimmerTrends />} />
           <Route path="/performance" element={<PerformanceHub />} />
@@ -190,7 +191,7 @@ const AuthenticatedApp = () => {
           <Route path="/analysis" element={<Navigate to="/analyse" replace />} />
           <Route path="/setup" element={<Navigate to="/analyse" replace />} />
           <Route path="/branded-report" element={<Navigate to="/report" replace />} />
-          <Route path="/model" element={<Navigate to="/reference-library" replace />} />
+          <Route path="/model" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route element={<RoleProtectedRoute allowedRoles={OWNER_ADMIN_ROLES} />}>
             <Route path="/ai-jobs" element={<AIJobMonitor />} />

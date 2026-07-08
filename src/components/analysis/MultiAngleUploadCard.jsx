@@ -138,7 +138,7 @@ export default function MultiAngleUploadCard({
           setStatus(stage);
           if (details.videoUploadId) setFailedRecordId(details.videoUploadId);
           if (stage === 'preparing_upload') setStatusMessage('Creating private video record...');
-          else if (stage === 'uploading') setStatusMessage(`Uploading to private storage. Keep this tab open. Video row: ${details.videoUploadId || failedRecordId || 'creating...'}`);
+          else if (stage === 'uploading') setStatusMessage('Uploading to private storage. Keep this tab open.');
           else if (stage === 'finalising_upload') setStatusMessage('Finalising upload...');
         },
       });
@@ -149,7 +149,8 @@ export default function MultiAngleUploadCard({
       setStatus('error');
       if (err?.videoUploadId) setFailedRecordId(err.videoUploadId);
       setFileError(err?.response?.data?.error || err?.message || 'Upload failed.');
-      setStatusMessage(`Upload did not complete. Retry on stable Wi-Fi or delete the failed row from the video library. Video row: ${err?.videoUploadId || failedRecordId || 'created before upload'}.`);
+      console.warn('Multi-angle upload failed for video row:', err?.videoUploadId || failedRecordId || '(created before upload)');
+      setStatusMessage('Upload did not complete. Retry on stable Wi-Fi or delete the failed video from the video library.');
     }
   };
 
