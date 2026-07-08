@@ -5,10 +5,11 @@ import entities from '@/lib/data/entities';
 import functions from '@/lib/data/functions';
 import { useClubContext } from '@/lib/useClubContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/shared/PageHeader';
 import {
   Brain, ArrowRight,
-  Loader2, Upload, Trash2, X
+  Loader2, Upload, Trash2, X, Search, PlayCircle
 } from 'lucide-react';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
 import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
@@ -27,6 +28,15 @@ const PROCESSING_JOB_STATUSES = [
   'generating_outputs',
   'callback_sending',
 ];
+
+// Short labels for the "continue where you left off" cards, keyed by classify() group.
+const GROUP_LABELS = {
+  needs_review: 'Needs review',
+  processing: 'Processing',
+  manual_review: 'Manual review',
+  in_review: 'In progress',
+  finalised: 'Finalised',
+};
 
 function ReliabilityLabel({ report, job }) {
   const summary = job?.callback_summary || {};
@@ -172,7 +182,7 @@ export default function AIReportsListPage() {
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ['ai-reports', club?.id],
-    queryFn: () => entities.Report.filter({ club_id: club.id }, '-created_date', 50),
+    queryFn: () => entities.Report.filter({ club_id: club.id }, '-created_date', 200),
     enabled: !!club?.id,
     staleTime: 15 * 1000,
     refetchInterval: 15 * 1000,
@@ -185,9 +195,9 @@ export default function AIReportsListPage() {
   });
 
   const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled: !!club?.id, staleTime: 5 * 60 * 1000 });
-  const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 30 * 1000, refetchInterval: 20 * 1000 });
-  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 10 * 1000, refetchInterval: 10 * 1000, refetchOnWindowFocus: true });
-  const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 100), enabled: !!club?.id, staleTime: 15 * 1000, refetchInterval: 15 * 1000 });
+  const { data: videos = [] } = useQuery({ queryKey: ['videos-for-reports', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 200), enabled: !!club?.id, staleTime: 30 * 1000, refetchInterval: 20 * 1000 });
+  const { data: jobs = [] } = useQuery({ queryKey: ['jobs-for-reports', club?.id], queryFn: () => entities.AIProcessingJob.filter({ club_id: club.id }, '-created_date', 200), enabled: !!club?.id, staleTime: 10 * 1000, refetchInterval: 10 * 1000, refetchOnWindowFocus: true });
+  const { data: allFindings = [] } = useQuery({ queryKey: ['ai-reports-findings', club?.id], queryFn: () => entities.Finding.filter({ club_id: club.id }, '-created_date', 300), enabled: !!club?.id, staleTime: 15 * 1000, refetchInterval: 15 * 1000 });
 
   const swimmerMap = Object.fromEntries(swimmers.map(s => [s.id, s]));
   const videoMap   = Object.fromEntries(videos.map(v => [v.id, v]));
@@ -202,18 +212,68 @@ export default function AIReportsListPage() {
 
   const canDelete = isPilotRole(club?._memberRole);
 
-  // Queue sections
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [swimmerFilter, setSwimmerFilter] = useState('all');
+  const [strokeFilter, setStrokeFilter] = useState('all');
+
+  // Classify each report once — single source of truth for both the grouped sections
+  // and the status filter (mirrors the previous mutually-exclusive grouping order).
   const finalisedStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
   const isManualReviewReport = (r) => r.analysis_mode === 'error'
     || r.analysis_mode === 'placeholder'
     || r.analysis_mode === 'manual_review'
     || r.real_pose_detected === false;
   const isProcessingReport = (r) => PROCESSING_JOB_STATUSES.includes(latestJobForReport(r)?.status);
-  const needsReview   = reports.filter(r => !finalisedStatuses.includes(r.status) && (findingsByReport[r.id] || []).some(f => f.approval_status === 'pending'));
-  const processing    = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && isProcessingReport(r));
-  const manualReview  = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && !processing.includes(r) && isManualReviewReport(r));
-  const inReview      = reports.filter(r => !finalisedStatuses.includes(r.status) && !needsReview.includes(r) && !processing.includes(r) && !manualReview.includes(r));
-  const finalised     = reports.filter(r => finalisedStatuses.includes(r.status));
+  const classify = (r) => {
+    if (finalisedStatuses.includes(r.status)) return 'finalised';
+    if ((findingsByReport[r.id] || []).some(f => f.approval_status === 'pending')) return 'needs_review';
+    if (isProcessingReport(r)) return 'processing';
+    if (isManualReviewReport(r)) return 'manual_review';
+    return 'in_review';
+  };
+  const grouped = { needs_review: [], processing: [], manual_review: [], in_review: [], finalised: [] };
+  reports.forEach(r => grouped[classify(r)].push(r));
+
+  const strokeOf = (r) => videoMap[r.video_upload_id]?.stroke_type || r.stroke_type || '';
+  const availableStrokes = Array.from(new Set(reports.map(strokeOf).filter(Boolean))).sort();
+  const swimmersWithReports = Array.from(new Set(reports.map(r => r.swimmer_id).filter(Boolean)))
+    .map(id => swimmerMap[id]).filter(Boolean)
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+  const searchText = search.trim().toLowerCase();
+  const isFiltering = Boolean(searchText) || statusFilter !== 'all' || swimmerFilter !== 'all' || strokeFilter !== 'all';
+  const matchesFilters = (r) => {
+    if (statusFilter !== 'all' && classify(r) !== statusFilter) return false;
+    if (swimmerFilter !== 'all' && r.swimmer_id !== swimmerFilter) return false;
+    if (strokeFilter !== 'all' && strokeOf(r).toLowerCase() !== strokeFilter.toLowerCase()) return false;
+    if (searchText) {
+      const haystack = `${swimmerMap[r.swimmer_id]?.name || ''} ${strokeOf(r)} ${r.title || ''}`.toLowerCase();
+      if (!haystack.includes(searchText)) return false;
+    }
+    return true;
+  };
+  const filteredReports = reports.filter(matchesFilters);
+  const clearFilters = () => { setSearch(''); setStatusFilter('all'); setSwimmerFilter('all'); setStrokeFilter('all'); };
+
+  // Continue where you left off — most recent UNFINISHED reports (never finalised/shared).
+  const continueQueue = reports
+    .filter(r => !finalisedStatuses.includes(r.status))
+    .slice()
+    .sort((a, b) => new Date(b.updated_date || b.created_date || 0) - new Date(a.updated_date || a.created_date || 0))
+    .slice(0, 4);
+
+  const statusChips = [
+    { key: 'all', label: 'All' },
+    { key: 'needs_review', label: 'Needs review' },
+    { key: 'processing', label: 'Processing' },
+    { key: 'manual_review', label: 'Manual review' },
+    { key: 'in_review', label: 'In progress' },
+    { key: 'finalised', label: 'Finalised / Shared' },
+  ].filter(c => c.key === 'all' || grouped[c.key].length > 0);
+
+  const showFacets = availableStrokes.length > 1 || swimmersWithReports.length > 1;
 
   const rowProps = (r) => ({
     report: r,
@@ -264,26 +324,130 @@ export default function AIReportsListPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-6">
-          <QueueSection title="Coach Review Required" count={needsReview.length}>
-            {needsReview.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
-          </QueueSection>
+        <div className="space-y-5">
+          {/* Continue where you left off — unfinished reports only */}
+          {continueQueue.length > 0 && (
+            <div>
+              <div className="mb-2 flex items-center gap-2 px-1">
+                <PlayCircle className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Continue where you left off</span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {continueQueue.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => navigate(`/ai-review?report_id=${r.id}`)}
+                    className="w-56 flex-shrink-0 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-primary/40 hover:bg-slate-50"
+                  >
+                    <div className="truncate text-sm font-semibold text-slate-900">{swimmerMap[r.swimmer_id]?.name || '—'}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      {strokeOf(r) && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">{strokeOf(r)}</span>}
+                      <span className="text-[10px] text-slate-400">{GROUP_LABELS[classify(r)]}</span>
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">Resume <ArrowRight className="h-3 w-3" /></div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <QueueSection title="Processing" count={processing.length}>
-            {processing.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
-          </QueueSection>
+          {/* Search + filters */}
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by swimmer, stroke, or report…"
+                className="h-10 pl-9 text-sm"
+              />
+              {search && (
+                <button type="button" onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="Clear search">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {statusChips.map(chip => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => setStatusFilter(chip.key)}
+                  className={`h-8 rounded-full border px-3 text-xs font-semibold transition-colors ${statusFilter === chip.key ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-primary/40'}`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+            {(showFacets || isFiltering) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {swimmersWithReports.length > 1 && (
+                  <select
+                    value={swimmerFilter}
+                    onChange={e => setSwimmerFilter(e.target.value)}
+                    className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700"
+                  >
+                    <option value="all">All swimmers</option>
+                    {swimmersWithReports.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                )}
+                {availableStrokes.length > 1 && (
+                  <select
+                    value={strokeFilter}
+                    onChange={e => setStrokeFilter(e.target.value)}
+                    className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700"
+                  >
+                    <option value="all">All strokes</option>
+                    {availableStrokes.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
+                {isFiltering && (
+                  <button type="button" onClick={clearFilters} className="inline-flex h-9 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700">
+                    <X className="h-3.5 w-3.5" /> Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-          <QueueSection title="Manual Review Recommended" count={manualReview.length}>
-            {manualReview.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
-          </QueueSection>
+          {/* Filtered results, or the default grouped sections */}
+          {isFiltering ? (
+            filteredReports.length === 0 ? (
+              <div className="p-10 rounded-xl border border-dashed border-slate-300 bg-white text-center">
+                <Search className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+                <div className="text-sm font-semibold text-slate-700 mb-1">No reports match</div>
+                <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto mb-4">Try a different swimmer, stroke, or status.</p>
+                <Button size="sm" variant="outline" onClick={clearFilters}><X className="w-3 h-3 mr-1.5" /> Clear filters</Button>
+              </div>
+            ) : (
+              <QueueSection title="Results" count={filteredReports.length}>
+                {filteredReports.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+              </QueueSection>
+            )
+          ) : (
+            <div className="space-y-6">
+              <QueueSection title="Coach Review Required" count={grouped.needs_review.length}>
+                {grouped.needs_review.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+              </QueueSection>
 
-          <QueueSection title="In Review" count={inReview.length}>
-            {inReview.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
-          </QueueSection>
+              <QueueSection title="Processing" count={grouped.processing.length}>
+                {grouped.processing.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+              </QueueSection>
 
-          <QueueSection title="Finalised" count={finalised.length}>
-            {finalised.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
-          </QueueSection>
+              <QueueSection title="Manual Review Recommended" count={grouped.manual_review.length}>
+                {grouped.manual_review.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+              </QueueSection>
+
+              <QueueSection title="In Review" count={grouped.in_review.length}>
+                {grouped.in_review.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+              </QueueSection>
+
+              <QueueSection title="Finalised" count={grouped.finalised.length}>
+                {grouped.finalised.map(r => <ReportRow key={r.id} {...rowProps(r)} />)}
+              </QueueSection>
+            </div>
+          )}
         </div>
       )}
 

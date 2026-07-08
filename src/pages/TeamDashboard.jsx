@@ -246,6 +246,20 @@ export default function TeamDashboard() {
 
   const recentReports = publishedReports.slice(0, 5).map(r => ({ ...r, swimmerName: swimmers.find(s => s.id === r.swimmer_id)?.name || 'Unknown' }));
 
+  // Continue last review — most recent UNFINISHED report (never finalised/shared).
+  const swimmerNameFor = (id) => swimmers.find(s => s.id === id)?.name || 'Unknown';
+  const lastUnfinished = activeReports
+    .filter(r => !finalStatuses.includes(r.status))
+    .slice()
+    .sort((a, b) => new Date(b.updated_date || b.created_date || 0) - new Date(a.updated_date || a.created_date || 0))[0];
+  // Recently shared — reports already sent out to swimmers/parents.
+  const recentlyShared = activeReports
+    .filter(r => r.status === 'shared')
+    .slice()
+    .sort((a, b) => new Date(b.updated_date || b.created_date || 0) - new Date(a.updated_date || a.created_date || 0))
+    .slice(0, 4)
+    .map(r => ({ ...r, swimmerName: swimmerNameFor(r.swimmer_id) }));
+
   // Real "new this week" deltas + sparklines from created_date — no fabricated numbers.
   const sevenDaysAgo = subDays(new Date(), 7);
   const newSince = (arr, field = 'created_date') => arr.filter(x => x[field] && new Date(x[field]) >= sevenDaysAgo).length;
@@ -450,6 +464,21 @@ export default function TeamDashboard() {
         {/* Right — actions + workflow + focus */}
         <div className="space-y-5">
 
+          {/* Continue last review — jump straight back into the most recent unfinished report */}
+          {lastUnfinished && (
+            <button
+              onClick={() => navigate(`/ai-review?report_id=${lastUnfinished.id}`)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-primary/[0.04] px-4 py-4 text-left shadow-sm shadow-primary/[0.04] transition-colors hover:border-primary/50 hover:bg-primary/[0.07]"
+            >
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-white"><Brain className="h-4 w-4" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Continue last review</div>
+                <div className="truncate text-xs font-semibold text-slate-800">{swimmerNameFor(lastUnfinished.swimmer_id)}</div>
+              </div>
+              <ArrowRight className="h-4 w-4 flex-shrink-0 text-primary" />
+            </button>
+          )}
+
           <SectionCard title="Quick Actions">
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -469,6 +498,26 @@ export default function TeamDashboard() {
               })}
             </div>
           </SectionCard>
+
+          {recentlyShared.length > 0 && (
+            <SectionCard
+              title="Recently Shared"
+              action={<Link to="/ai-reviews" className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+            >
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.02]">
+                {recentlyShared.map(r => (
+                  <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-cyan-600"><Users className="h-4 w-4" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-semibold text-slate-800">{r.swimmerName}</div>
+                      <div className="truncate text-[10px] text-slate-500">Shared{r.title ? ` · ${r.title}` : ''}</div>
+                    </div>
+                    <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Open →</button>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-950/[0.02]">
             <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Coach Workflow</div>
