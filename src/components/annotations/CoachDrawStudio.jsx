@@ -22,6 +22,7 @@ import {
   Search,
   Share2,
   SlidersHorizontal,
+  Star,
   SkipBack,
   SkipForward,
   X,
@@ -163,6 +164,10 @@ export default function CoachDrawStudio({
   onReshare,
   resharing = false,
   linkedEvidenceOptions = [],
+  favourites = [],
+  canManageFavourites = false,
+  onToggleFavourite,
+  onSaveCustomFavourite,
   onBackToAnalyse,
   onReviewAISuggestions,
   onCreateFinding,
@@ -279,6 +284,38 @@ export default function CoachDrawStudio({
     setImSegment(key);
     const nextPhases = STROKE_PHASES[key] || DEFAULT_PHASE_LABELS;
     setMarkerLabel((prev) => (prev && nextPhases.includes(prev) ? prev : ''));
+  };
+
+  // Favourite drills (club-scoped) resolved to displayable drill objects; library refs
+  // resolve against the loaded drill pool, custom favourites are self-contained snapshots.
+  const favouriteDrillList = (favourites || []).map((fav) => {
+    if (fav.type === 'custom') {
+      return { id: `fav-custom-${String(fav.title || '').toLowerCase()}`, title: fav.title, summary: fav.summary || '', cue: fav.cue || '', custom: true };
+    }
+    const found = drillPool.find((drill) => drill.id === fav.id);
+    if (!found) return null;
+    return { id: found.id, title: found.title, summary: drillSummary(found) || found.report_summary || found.purpose || '', cue: found.coaching_cue || '', custom: false };
+  }).filter(Boolean);
+  const isLibraryFavourited = (id) => (favourites || []).some((fav) => fav.type === 'library' && fav.id === id);
+
+  // Recently-used drills from this report's findings (no storage — in-session convenience).
+  const recentDrills = [];
+  const seenRecentDrill = new Set();
+  (findings || []).forEach((finding) => {
+    const title = finding.linked_drill_title || finding.drill;
+    if (!title) return;
+    const key = String(title).toLowerCase();
+    if (seenRecentDrill.has(key)) return;
+    seenRecentDrill.add(key);
+    recentDrills.push({ id: `recent-${key}`, title, summary: finding.linked_drill_summary || '', custom: true });
+  });
+
+  // Add an already-normalised drill (from a favourite/recent chip) to the finding.
+  const addNormalizedDrill = (drill) => {
+    if (!drill?.title) return;
+    setSelectedDrills((prev) => (prev.some((item) => item.id === drill.id) ? prev : [...prev, {
+      id: drill.id, title: drill.title, summary: drill.summary || '', cue: drill.cue || '', why: '', custom: !!drill.custom,
+    }]));
   };
   // Key moments come from saved key_frame annotations (which carry a captured thumbnail),
   // not from findings — so the strip shows real screenshots.
@@ -1041,6 +1078,34 @@ export default function CoachDrawStudio({
                       </div>
                     )}
 
+                    {/* Favourite drills — one-tap add (club-scoped). */}
+                    {favouriteDrillList.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-300"><Star className="h-3 w-3 fill-amber-300" /> Favourites</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {favouriteDrillList.map((drill) => (
+                            <button key={drill.id} type="button" onClick={() => addNormalizedDrill(drill)} className="inline-flex max-w-[11rem] items-center gap-1 rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-1 text-[11px] font-semibold text-amber-100 hover:bg-amber-400/20">
+                              <Plus className="h-3 w-3 flex-shrink-0" /><span className="truncate">{drill.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recently used drills in this report. */}
+                    {recentDrills.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Recent</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {recentDrills.slice(0, 6).map((drill) => (
+                            <button key={drill.id} type="button" onClick={() => addNormalizedDrill(drill)} className="inline-flex max-w-[11rem] items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:border-cyan-300/40">
+                              <Plus className="h-3 w-3 flex-shrink-0" /><span className="truncate">{drill.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {drillMode === 'suggested' ? (
                       <div className="space-y-2">
                         <div className="relative">
@@ -1058,21 +1123,34 @@ export default function CoachDrawStudio({
                           ) : (
                             drillListForPicker.map((drill) => {
                               const active = isDrillSelected(drill.id);
+                              const favourited = isLibraryFavourited(drill.id);
                               return (
-                                <button
-                                  key={drill.id}
-                                  type="button"
-                                  onClick={() => (active ? removeDrill(drill.id) : addLibraryDrill(drill))}
-                                  className={`flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors ${active ? 'bg-cyan-400/20' : 'hover:bg-white/5'}`}
-                                >
-                                  <span className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${active ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/25 text-transparent'}`}>✓</span>
-                                  <span className="min-w-0">
-                                    <span className="block text-xs font-semibold text-white">{drill.title}</span>
-                                    {(drill.report_summary || drill.purpose) && (
-                                      <span className="block truncate text-[10px] text-slate-400">{drill.report_summary || drill.purpose}</span>
-                                    )}
-                                  </span>
-                                </button>
+                                <div key={drill.id} className={`flex items-center gap-1 rounded-md transition-colors ${active ? 'bg-cyan-400/20' : 'hover:bg-white/5'}`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => (active ? removeDrill(drill.id) : addLibraryDrill(drill))}
+                                    className="flex min-w-0 flex-1 items-start gap-2 px-2.5 py-2 text-left"
+                                  >
+                                    <span className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${active ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/25 text-transparent'}`}>✓</span>
+                                    <span className="min-w-0">
+                                      <span className="block text-xs font-semibold text-white">{drill.title}</span>
+                                      {(drill.report_summary || drill.purpose) && (
+                                        <span className="block truncate text-[10px] text-slate-400">{drill.report_summary || drill.purpose}</span>
+                                      )}
+                                    </span>
+                                  </button>
+                                  {canManageFavourites && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onToggleFavourite?.({ id: drill.id })}
+                                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:text-amber-300"
+                                      title={favourited ? 'Remove from favourites' : 'Add to favourites'}
+                                      aria-label={favourited ? 'Remove from favourites' : 'Add to favourites'}
+                                    >
+                                      <Star className={`h-4 w-4 ${favourited ? 'fill-amber-300 text-amber-300' : ''}`} />
+                                    </button>
+                                  )}
+                                </div>
                               );
                             })
                           )}
@@ -1109,15 +1187,29 @@ export default function CoachDrawStudio({
                           className="h-11 bg-white text-sm text-slate-950"
                           placeholder="Why this helps / focus (optional)"
                         />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-10 w-full border-cyan-300/40 bg-white/5 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
-                          onClick={addCustomDrill}
-                          disabled={!customDrillTitle.trim()}
-                        >
-                          <Plus className="mr-1.5 h-4 w-4" /> Add this drill
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-10 flex-1 border-cyan-300/40 bg-white/5 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
+                            onClick={addCustomDrill}
+                            disabled={!customDrillTitle.trim()}
+                          >
+                            <Plus className="mr-1.5 h-4 w-4" /> Add this drill
+                          </Button>
+                          {canManageFavourites && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-10 flex-shrink-0 border-amber-300/40 bg-amber-400/10 px-3 text-xs font-semibold text-amber-100 hover:bg-amber-400/20 disabled:opacity-50"
+                              onClick={() => onSaveCustomFavourite?.({ title: customDrillTitle, summary: customDrillSummary, cue: customDrillCue })}
+                              disabled={!customDrillTitle.trim()}
+                              title="Save as favourite"
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

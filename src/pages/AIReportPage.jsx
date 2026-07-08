@@ -35,7 +35,7 @@ import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
 import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
 import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
-import { isCoachAppRole, isPilotRole } from '@/lib/permissions';
+import { isCoachAppRole, isPilotRole, isAdminRole } from '@/lib/permissions';
 
 function PhaseBar({ label, score }) {
   const pct = Math.min(100, Math.max(0, score));
@@ -908,6 +908,33 @@ export default function AIReportPage() {
       label: annotation.title || annotation.frame_label || (annotation.annotation_type === 'key_frame' ? 'Phase moment' : 'Coach drawing'),
       thumb: annotation.thumbnail_data_url,
     }));
+
+  // Coach drill favourites (club-scoped; owner/admin curate via clubs RLS, all members use).
+  const canManageFavourites = isAdminRole(memberRole);
+  const [favouriteDrills, setFavouriteDrills] = useState([]);
+  useEffect(() => {
+    setFavouriteDrills(Array.isArray(club?.favourite_drills) ? club.favourite_drills : []);
+  }, [club?.id]);
+  const persistFavourites = async (next) => {
+    setFavouriteDrills(next); // optimistic
+    try { await entities.Club.update(club.id, { favourite_drills: next }); }
+    catch (error) { console.warn('Could not save drill favourites.', error?.message || error); }
+  };
+  const toggleLibraryFavourite = (entry) => {
+    if (!entry?.id) return;
+    const exists = favouriteDrills.some(fav => fav.type === 'library' && fav.id === entry.id);
+    persistFavourites(exists
+      ? favouriteDrills.filter(fav => !(fav.type === 'library' && fav.id === entry.id))
+      : [...favouriteDrills, { type: 'library', id: entry.id }]);
+  };
+  const saveCustomFavourite = (custom) => {
+    const title = (custom?.title || '').trim();
+    if (!title) return;
+    const norm = title.toLowerCase();
+    if (favouriteDrills.some(fav => fav.type === 'custom' && String(fav.title || '').toLowerCase() === norm)) return;
+    persistFavourites([...favouriteDrills, { type: 'custom', title, summary: (custom.summary || '').trim(), cue: (custom.cue || '').trim() }]);
+  };
+
   const activeSharedLinks = sharedLinks.filter(link => link.status === 'active');
   const isReportFinalised = FINAL_REPORT_STATUSES.includes(report?.status);
   // Reopen a finalised/shared report for editing (coach role only). Pauses the public link
@@ -1372,6 +1399,10 @@ export default function AIReportPage() {
                 onReshare={() => reshareReport.mutateAsync()}
                 resharing={reshareReport.isPending}
                 linkedEvidenceOptions={linkableEvidence}
+                favourites={favouriteDrills}
+                canManageFavourites={canManageFavourites}
+                onToggleFavourite={toggleLibraryFavourite}
+                onSaveCustomFavourite={saveCustomFavourite}
                 onFinaliseReport={handleFinaliseConfirmed}
                 onPrintReport={() => window.print()}
                 shareLink={fullscreenShareLink}
