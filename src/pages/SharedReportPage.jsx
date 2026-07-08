@@ -130,16 +130,25 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
   // AI-generated technical summary. Manual coach reviews have none, so the AI
   // technical score and AI disclaimer are hidden for them.
   const aiUsed = Boolean(report.technical_summary && String(report.technical_summary).trim());
+  // Link coach annotations to findings by finding_id (robust — set by the coach's picker),
+  // falling back to the legacy title match for older shared reports.
+  const annotationsByFindingId = new Map();
   const annotationsByFindingTitle = new Map();
   coachAnnotations.forEach(annotation => {
-    if (!annotation.linked_finding_title) return;
-    const group = annotationsByFindingTitle.get(annotation.linked_finding_title) || [];
-    group.push(annotation);
-    annotationsByFindingTitle.set(annotation.linked_finding_title, group);
+    if (annotation.finding_id) {
+      const group = annotationsByFindingId.get(annotation.finding_id) || [];
+      group.push(annotation);
+      annotationsByFindingId.set(annotation.finding_id, group);
+    } else if (annotation.linked_finding_title) {
+      const group = annotationsByFindingTitle.get(annotation.linked_finding_title) || [];
+      group.push(annotation);
+      annotationsByFindingTitle.set(annotation.linked_finding_title, group);
+    }
   });
-  const linkedAnnotationSet = new Set(
-    Array.from(annotationsByFindingTitle.values()).flat()
-  );
+  const linkedAnnotationSet = new Set([
+    ...Array.from(annotationsByFindingId.values()).flat(),
+    ...Array.from(annotationsByFindingTitle.values()).flat(),
+  ]);
   const unlinkedAnnotations = coachAnnotations.filter(annotation => !linkedAnnotationSet.has(annotation));
 
   return (
@@ -331,7 +340,7 @@ function PublicReportContent({ report, swimmer, club, video_meta, findings, anno
           </h2>
           <div className="space-y-4">
             {findings.map((finding, index) => {
-              const linkedAnnotations = annotationsByFindingTitle.get(finding.finding_name) || [];
+              const linkedAnnotations = annotationsByFindingId.get(finding.id) || annotationsByFindingTitle.get(finding.finding_name) || [];
               return (
               <div key={index} className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid print:border-slate-300">
                 <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">

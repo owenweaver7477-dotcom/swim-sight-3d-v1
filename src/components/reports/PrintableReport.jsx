@@ -122,36 +122,39 @@ function FindingCard({ finding, index, image }) {
   const drillTitle = finding.drill || finding.linked_drill_title;
   const stamp = finding.timestamp_start != null ? formatTimestamp(finding.timestamp_start) : null;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden print:break-inside-avoid">
-      <div className={`grid grid-cols-1 ${image ? 'md:grid-cols-[minmax(0,220px)_1fr] print:grid-cols-[220px_1fr]' : ''}`}>
-        {image && (
-          <div className="bg-slate-950 md:border-r print:border-r border-slate-200">
-            <FrameImage annotation={image} />
+    <div className="rounded-xl border border-slate-200 bg-white p-4 print:break-inside-avoid">
+      <div className="flex items-center gap-2 flex-wrap mb-2.5">
+        <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">{index}</div>
+        {finding.phase && <span className="text-sm font-bold text-slate-900">{finding.phase}</span>}
+        {stamp && <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">{stamp}</span>}
+        {finding.severity && <SeverityBadge severity={finding.severity} />}
+      </div>
+      {/* Text-first: findings read as clean text; the linked image is a small supporting
+          thumbnail. Full-size evidence still lives in the galleries below. */}
+      <div className="flex gap-4">
+        <div className="min-w-0 flex-1 grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-x-5 gap-y-2.5">
+          <div className="space-y-2.5">
+            {observation && <Field label="Observation">{observation}</Field>}
+            {finding.cue && <Field label="Coaching Cue">{finding.cue}</Field>}
+            {finding.why_it_matters && <Field label="Why it matters">{finding.why_it_matters}</Field>}
           </div>
-        )}
-        <div className="p-4">
-          <div className="flex items-center gap-2 flex-wrap mb-2.5">
-            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">{index}</div>
-            {finding.phase && <span className="text-sm font-bold text-slate-900">{finding.phase}</span>}
-            {stamp && <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">{stamp}</span>}
-            {finding.severity && <SeverityBadge severity={finding.severity} />}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-x-5 gap-y-2.5">
-            <div className="space-y-2.5">
-              {observation && <Field label="Observation">{observation}</Field>}
-              {finding.cue && <Field label="Coaching Cue">{finding.cue}</Field>}
-              {finding.why_it_matters && <Field label="Why it matters">{finding.why_it_matters}</Field>}
-            </div>
-            <div className="space-y-2.5">
-              {drillTitle && <Field label="Recommended Drill" strong>{drillTitle}</Field>}
-              {finding.linked_drill_summary && <Field label="Why it helps" small>{finding.linked_drill_summary}</Field>}
-              {Array.isArray(finding.extra_drills) && finding.extra_drills.length > 0 && (
-                <Field label="Additional Drills" small>{finding.extra_drills.map(drill => drill.title).join(' · ')}</Field>
-              )}
-              {finding.next_focus && <Field label="Next Focus">{finding.next_focus}</Field>}
-            </div>
+          <div className="space-y-2.5">
+            {drillTitle && <Field label="Recommended Drill" strong>{drillTitle}</Field>}
+            {finding.linked_drill_summary && <Field label="Why it helps" small>{finding.linked_drill_summary}</Field>}
+            {Array.isArray(finding.extra_drills) && finding.extra_drills.length > 0 && (
+              <Field label="Additional Drills" small>{finding.extra_drills.map(drill => drill.title).join(' · ')}</Field>
+            )}
+            {finding.next_focus && <Field label="Next Focus">{finding.next_focus}</Field>}
           </div>
         </div>
+        {image && (
+          <div className="w-28 flex-shrink-0 print:w-24">
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+              <FrameImage annotation={image} />
+            </div>
+            <div className="mt-1 text-center text-[8px] font-semibold uppercase tracking-wider text-slate-400">Linked evidence</div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -783,7 +783,7 @@ export default function AIReportPage() {
   // phase, note, and one or more selected drills — without leaving fullscreen. The first
   // drill is the Primary Drill (stored on linked_drill_*); the rest become Additional
   // Drills on raw_ai_payload.extra_drills (no schema change).
-  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, drills = [], keyStampLinkId }) => {
+  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, cue, drills = [], keyStampLinkId }) => {
     const phaseKey = mapPhaseLabelToKey(phaseLabel);
     const list = (Array.isArray(drills) ? drills : []).filter(drill => drill && drill.title);
     const primary = list[0] || null;
@@ -791,7 +791,7 @@ export default function AIReportPage() {
     const override = {
       timestamp: timestampSeconds ?? null,
       phase: phaseKey || null,
-      observation: (note || '').trim() || (phaseKey ? labelFromKey(phaseKey) : '') || 'Coach note',
+      observation: (note || '').trim() || (phaseKey ? `Coach marked ${labelFromKey(phaseKey)} for review.` : '') || 'Coach note',
       keyStampLinkId: keyStampLinkId || null,
       drill: primary?.title || '',
       // Library drills keep their id link; custom (coach-written) drills have no library id.
@@ -806,6 +806,8 @@ export default function AIReportPage() {
     };
     if (primary?.cue) override.cue = primary.cue;
     if (primary?.why) override.nextFocus = primary.why;
+    // The coach's explicit cue takes precedence over a drill's built-in cue.
+    if (cue && cue.trim()) override.cue = cue.trim();
     return createManualFinding.mutateAsync(override);
   };
 
@@ -894,6 +896,18 @@ export default function AIReportPage() {
   const includedAnnotations = videoAnnotations.filter(annotation => annotation.include_in_report && annotation.is_public);
   const keyStampCount = videoAnnotations.filter(annotation => annotation.annotation_type === 'key_frame').length;
   const coachDrawCount = videoAnnotations.filter(annotation => ['coach_draw', 'body_line'].includes(annotation.annotation_type)).length;
+  // Saved evidence the coach can link to a finding (phase moments + coach drawings with a
+  // captured thumbnail). The picker in the fullscreen workspace uses this list.
+  const linkableEvidence = videoAnnotations
+    .filter(annotation => ['key_frame', 'coach_draw', 'body_line'].includes(annotation.annotation_type)
+      && typeof annotation.thumbnail_data_url === 'string' && annotation.thumbnail_data_url.startsWith('data:image/'))
+    .map(annotation => ({
+      id: annotation.id,
+      kind: annotation.annotation_type === 'key_frame' ? 'moment' : 'drawing',
+      seconds: Number(annotation.timestamp_seconds ?? 0) || 0,
+      label: annotation.title || annotation.frame_label || (annotation.annotation_type === 'key_frame' ? 'Phase moment' : 'Coach drawing'),
+      thumb: annotation.thumbnail_data_url,
+    }));
   const activeSharedLinks = sharedLinks.filter(link => link.status === 'active');
   const isReportFinalised = FINAL_REPORT_STATUSES.includes(report?.status);
   // Reopen a finalised/shared report for editing (coach role only). Pauses the public link
@@ -1357,6 +1371,7 @@ export default function AIReportPage() {
                 reopening={reopenReport.isPending}
                 onReshare={() => reshareReport.mutateAsync()}
                 resharing={reshareReport.isPending}
+                linkedEvidenceOptions={linkableEvidence}
                 onFinaliseReport={handleFinaliseConfirmed}
                 onPrintReport={() => window.print()}
                 shareLink={fullscreenShareLink}

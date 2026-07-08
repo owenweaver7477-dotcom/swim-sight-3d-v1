@@ -162,6 +162,7 @@ export default function CoachDrawStudio({
   reopening = false,
   onReshare,
   resharing = false,
+  linkedEvidenceOptions = [],
   onBackToAnalyse,
   onReviewAISuggestions,
   onCreateFinding,
@@ -196,6 +197,7 @@ export default function CoachDrawStudio({
     () => (typeof savedDraft.phase === 'string' && savedDraft.phase !== 'Key frame' ? savedDraft.phase : ''),
   );
   const [markerNote, setMarkerNote] = useState(() => (typeof savedDraft.note === 'string' ? savedDraft.note : ''));
+  const [markerCue, setMarkerCue] = useState('');
   const [markerIncludeInReport, setMarkerIncludeInReport] = useState(false);
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const fps = estimateFps(video);
@@ -221,6 +223,7 @@ export default function CoachDrawStudio({
   const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
   const [drawingSaving, setDrawingSaving] = useState(false);
   const [reopenConfirm, setReopenConfirm] = useState(false);
+  const [linkChoice, setLinkChoice] = useState('auto'); // 'auto' | 'none' | <annotationId>
   const phaseSelected = Boolean(markerLabel && markerLabel.trim());
   // Finalised/shared reports are read-only. canEdit (passed by the parent) already folds
   // in !isReportFinalised, so !canEdit here means "cannot save into this report".
@@ -286,6 +289,16 @@ export default function CoachDrawStudio({
     note: a.coach_note || '',
     thumb: (typeof a.thumbnail_data_url === 'string' && a.thumbnail_data_url.startsWith('data:image/')) ? a.thumbnail_data_url : null,
   }));
+
+  // Linked evidence for the finding: default ('auto') is the just-captured moment, else the
+  // saved evidence nearest the current time. Coach can pick another thumbnail or "No image".
+  const autoLinkedEvidenceId = (() => {
+    if (lastCapturedMomentId) return lastCapturedMomentId;
+    if (!linkedEvidenceOptions.length) return null;
+    return [...linkedEvidenceOptions]
+      .sort((a, b) => Math.abs((a.seconds || 0) - timestamp) - Math.abs((b.seconds || 0) - timestamp))[0]?.id || null;
+  })();
+  const effectiveLinkId = linkChoice === 'none' ? null : (linkChoice === 'auto' ? autoLinkedEvidenceId : linkChoice);
 
   useEffect(() => {
     [inlineVideoRef.current, fullscreenVideoRef.current].forEach(current => {
@@ -430,12 +443,15 @@ export default function CoachDrawStudio({
         timestampSeconds: currentTime,
         phaseLabel: phaseSelected ? markerLabel : '',
         note: markerNote,
+        cue: markerCue.trim() || null,
         drills: drillsToSend,
-        keyStampLinkId: lastCapturedMomentId || null,
+        keyStampLinkId: effectiveLinkId || null,
       });
       setAddedFindingCount((n) => n + 1);
       setActionFeedback({ type: 'success', msg: 'Finding added' });
       setMarkerNote('');
+      setMarkerCue('');
+      setLinkChoice('auto');
       setSelectedDrills([]);
       setCustomDrillTitle('');
       setCustomDrillSummary('');
@@ -917,7 +933,7 @@ export default function CoachDrawStudio({
                     When read-only, the whole panel is non-interactive so a locked report
                     can never silently swallow a phase/drill/Add-Finding click. */}
                 <div className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
-                  <div className="text-sm font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'Mark this moment'}</div>
+                  <div className="text-sm font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'Add Coach Finding'}</div>
 
                   {reviewMode === 'ai' && findings.length > 0 && onReviewAISuggestions && (
                     <div className="flex items-center justify-between gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2">
@@ -968,13 +984,24 @@ export default function CoachDrawStudio({
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-300">Coach note</div>
+                    <div className="text-xs font-semibold text-slate-300">Coach observation</div>
                     <Textarea
                       value={markerNote}
                       onChange={(e) => setMarkerNote(e.target.value)}
                       maxLength={150}
                       className="min-h-[64px] bg-white text-sm text-slate-950"
                       placeholder="What did you notice?"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-semibold text-slate-300">Coach cue <span className="text-slate-500">(optional)</span></div>
+                    <Input
+                      value={markerCue}
+                      onChange={(e) => setMarkerCue(e.target.value)}
+                      maxLength={160}
+                      className="h-10 bg-white text-sm text-slate-950"
+                      placeholder="What should the swimmer feel or do?"
                     />
                   </div>
 
@@ -1094,6 +1121,38 @@ export default function CoachDrawStudio({
                       </div>
                     )}
                   </div>
+
+                  {linkedEvidenceOptions.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-semibold text-slate-300">Linked image <span className="text-slate-500">(evidence)</span></div>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        <button
+                          type="button"
+                          onClick={() => setLinkChoice('none')}
+                          className={`flex h-16 w-16 flex-shrink-0 flex-col items-center justify-center rounded-lg border text-[10px] font-semibold transition-colors ${linkChoice === 'none' ? 'border-cyan-400 bg-cyan-400/20 text-cyan-100' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/40'}`}
+                        >
+                          No image
+                        </button>
+                        {linkedEvidenceOptions.map((ev) => (
+                          <button
+                            key={ev.id}
+                            type="button"
+                            onClick={() => setLinkChoice(ev.id)}
+                            title={ev.label}
+                            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border transition-colors ${effectiveLinkId === ev.id ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/15 hover:border-cyan-300/40'}`}
+                          >
+                            <img src={ev.thumb} alt="" className="h-full w-full object-cover" />
+                            <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[8px] font-mono text-white">
+                              {ev.kind === 'drawing' ? 'Draw' : formatTimestamp(ev.seconds)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {effectiveLinkId ? '✓ Image linked to this finding' : 'This finding will have no image.'}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
                     <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={addFindingInline} disabled={readOnly || !signedVideoUrl || savingFinding || (!markerNote.trim() && !phaseSelected)}>
