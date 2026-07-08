@@ -14,6 +14,7 @@ import {
   Download,
   FastForward,
   Gauge,
+  Lock,
   Maximize2,
   PencilLine,
   Plus,
@@ -214,6 +215,12 @@ export default function CoachDrawStudio({
   const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
   const [drawingSaving, setDrawingSaving] = useState(false);
   const phaseSelected = Boolean(markerLabel && markerLabel.trim());
+  // Finalised/shared reports are read-only. canEdit (passed by the parent) already folds
+  // in !isReportFinalised, so !canEdit here means "cannot save into this report".
+  const readOnly = !canEdit;
+  const readOnlyReason = reportFinalised
+    ? 'This report is shared/finalised and read-only.'
+    : 'This report is read-only for your account.';
   const drillPool = (drillOptions && drillOptions.length) ? drillOptions : DEFAULT_DRILLS;
   const drillNoteText = expandNoteForDrills(markerNote);
   const draftFindingForDrills = { stroke_phase: markerLabel, phase: markerLabel, observation: drillNoteText, coach_sees: drillNoteText, fault_tag: drillNoteText };
@@ -811,6 +818,16 @@ export default function CoachDrawStudio({
           {/* Scrollable workspace body */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="mx-auto max-w-[1600px] space-y-4">
+              {readOnly && (
+                <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm font-bold text-amber-100">
+                    <Lock className="h-4 w-4 flex-shrink-0" /> {readOnlyReason}
+                  </div>
+                  <div className="mt-1 text-xs text-amber-200/90">
+                    To add findings, phase moments, or coach drawings, open a draft review or reopen this report for editing.
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
                 {/* LEFT: video + playback */}
                 <div className="space-y-3">
@@ -842,9 +859,11 @@ export default function CoachDrawStudio({
                   </div>
                 </div>
 
-                {/* RIGHT: Mark this moment (compact so the video stays the hero) */}
-                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
-                  <div className="text-sm font-bold uppercase tracking-wider">Mark this moment</div>
+                {/* RIGHT: Mark this moment (compact so the video stays the hero).
+                    When read-only, the whole panel is non-interactive so a locked report
+                    can never silently swallow a phase/drill/Add-Finding click. */}
+                <div className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
+                  <div className="text-sm font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'Mark this moment'}</div>
 
                   {reviewMode === 'ai' && findings.length > 0 && onReviewAISuggestions && (
                     <div className="flex items-center justify-between gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2">
@@ -1023,10 +1042,10 @@ export default function CoachDrawStudio({
                   </div>
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
-                    <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={addFindingInline} disabled={!signedVideoUrl || !canEdit || savingFinding || (!markerNote.trim() && !phaseSelected)}>
-                      <Plus className="mr-1.5 h-5 w-5" /> {savingFinding ? 'Adding…' : 'Add Finding'}
+                    <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={addFindingInline} disabled={readOnly || !signedVideoUrl || savingFinding || (!markerNote.trim() && !phaseSelected)}>
+                      <Plus className="mr-1.5 h-5 w-5" /> {readOnly ? 'Report is read-only' : (savingFinding ? 'Adding…' : 'Add Finding')}
                     </Button>
-                    {(!markerNote.trim() && !phaseSelected) && (
+                    {!readOnly && (!markerNote.trim() && !phaseSelected) && (
                       <p className="text-[10px] text-slate-400">Pick a phase or type a note to add a finding.</p>
                     )}
                     {addedFindingCount > 0 && (
@@ -1094,7 +1113,19 @@ export default function CoachDrawStudio({
 
           {/* Sticky poolside action bar — always-visible primary actions for iPad. Hidden
               while drawing so it never overlaps the annotation toolbar. */}
-          {!drawing && (
+          {!drawing && (readOnly ? (
+            <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-slate-950/95 px-4 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
+              <div className="flex items-center gap-2 text-xs font-semibold text-amber-200">
+                <Lock className="h-4 w-4 flex-shrink-0" />
+                <span>Report is read-only — open a draft review to add findings, phase moments, or drawings.</span>
+              </div>
+              {reportFinalised && (onFinaliseReport || onFinalise) && (
+                <Button className="h-10 flex-shrink-0 rounded-xl border border-white/15 bg-white/5 text-xs font-semibold text-white hover:bg-white/10" onClick={() => setFinaliseFlow('ready')}>
+                  <CheckCircle2 className="mr-1.5 h-4 w-4 text-emerald-300" /> View report
+                </Button>
+              )}
+            </div>
+          ) : (
             <div className="flex items-stretch gap-2 border-t border-white/10 bg-slate-950/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
               {onSaveMarker && (
                 <Button
@@ -1107,7 +1138,7 @@ export default function CoachDrawStudio({
                 </Button>
               )}
               <Button
-                className="h-14 flex-1 flex-col gap-0.5 rounded-xl bg-cyan-400 text-[11px] font-semibold leading-tight text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
+                className="h-12 flex-1 flex-col gap-0.5 rounded-xl bg-cyan-400 text-[11px] font-semibold leading-tight text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
                 onClick={addFindingInline}
                 disabled={!signedVideoUrl || !canEdit || savingFinding || (!markerNote.trim() && !phaseSelected)}
               >
@@ -1115,7 +1146,7 @@ export default function CoachDrawStudio({
                 {savingFinding ? 'Adding…' : 'Add Finding'}
               </Button>
               <Button
-                className="h-14 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
+                className="h-12 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
                 onClick={startDrawing}
                 disabled={!signedVideoUrl || !canEdit}
               >
@@ -1136,7 +1167,7 @@ export default function CoachDrawStudio({
                 </Button>
               )}
             </div>
-          )}
+          ))}
         </div>,
         document.body
       )}
@@ -1188,7 +1219,7 @@ export default function CoachDrawStudio({
                   </Button>
                 )}
                 <Button variant="outline" className="h-11 w-full border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => setFinaliseFlow('idle')}>
-                  Continue editing
+                  {reportFinalised ? 'View review (read-only)' : 'Continue editing'}
                 </Button>
                 <Button variant="ghost" className="h-11 w-full text-slate-300 hover:bg-white/10" onClick={() => onBackToAnalyse?.()}>
                   Back to Analyse
