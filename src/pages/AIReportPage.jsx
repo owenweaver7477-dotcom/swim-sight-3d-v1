@@ -896,6 +896,33 @@ export default function AIReportPage() {
   const coachDrawCount = videoAnnotations.filter(annotation => ['coach_draw', 'body_line'].includes(annotation.annotation_type)).length;
   const activeSharedLinks = sharedLinks.filter(link => link.status === 'active');
   const isReportFinalised = FINAL_REPORT_STATUSES.includes(report?.status);
+  // Reopen a finalised/shared report for editing (coach role only). Pauses the public link
+  // via the disable endpoint and drops the report to an editable status; re-share reactivates
+  // the SAME link/token through the share-link endpoint so parents keep the same URL.
+  const canReopen = canEdit && isReportFinalised;
+  const reopenedForEditing = !isReportFinalised && sharedLinks.some(link => link.status === 'disabled');
+  const reopenReport = useMutation({
+    mutationFn: async () => {
+      for (const link of activeSharedLinks) {
+        try { await functions.disableSharedReportLink(link.id); } catch (error) { console.warn('Could not pause a share link.', error?.message || error); }
+      }
+      return entities.Report.update(reportId, { status: 'draft' });
+    },
+    onSuccess: async () => {
+      try { await logFeedback(null, 'reopened', { coach_edit_summary: 'Report reopened for editing; shared link paused.' }); } catch { /* audit is best-effort */ }
+      queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] });
+      queryClient.invalidateQueries({ queryKey: ['ai-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['shared-links', report?.id] });
+    },
+  });
+  const reshareReport = useMutation({
+    mutationFn: () => functions.createSharedReportLink(reportId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] });
+      queryClient.invalidateQueries({ queryKey: ['ai-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['shared-links', report?.id] });
+    },
+  });
   const isManualReviewReport = report?.analysis_mode === 'error'
     || report?.analysis_mode === 'placeholder'
     || report?.analysis_mode === 'manual_review'
@@ -1324,6 +1351,12 @@ export default function AIReportPage() {
                 reviewMode={reviewMode}
                 reportFinalised={isReportFinalised}
                 canFinalise={canFinalise}
+                canReopen={canReopen}
+                reopenedForEditing={reopenedForEditing}
+                onReopen={() => reopenReport.mutateAsync()}
+                reopening={reopenReport.isPending}
+                onReshare={() => reshareReport.mutateAsync()}
+                resharing={reshareReport.isPending}
                 onFinaliseReport={handleFinaliseConfirmed}
                 onPrintReport={() => window.print()}
                 shareLink={fullscreenShareLink}

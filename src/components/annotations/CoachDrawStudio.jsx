@@ -156,6 +156,12 @@ export default function CoachDrawStudio({
   reviewMode = 'manual',
   reportFinalised = false,
   canFinalise = false,
+  canReopen = false,
+  reopenedForEditing = false,
+  onReopen,
+  reopening = false,
+  onReshare,
+  resharing = false,
   onBackToAnalyse,
   onReviewAISuggestions,
   onCreateFinding,
@@ -214,6 +220,7 @@ export default function CoachDrawStudio({
   const [customDrillWhy, setCustomDrillWhy] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
   const [drawingSaving, setDrawingSaving] = useState(false);
+  const [reopenConfirm, setReopenConfirm] = useState(false);
   const phaseSelected = Boolean(markerLabel && markerLabel.trim());
   // Finalised/shared reports are read-only. canEdit (passed by the parent) already folds
   // in !isReportFinalised, so !canEdit here means "cannot save into this report".
@@ -546,6 +553,33 @@ export default function CoachDrawStudio({
     } catch { /* clipboard blocked — coach can copy from the share section */ }
   };
 
+  // Reopen a finalised/shared report: parent pauses the public link + drops it to editable.
+  // On success, leave the report-ready panel so the coach lands in the editable workspace.
+  const runReopen = async () => {
+    if (!onReopen) return;
+    try {
+      await onReopen();
+      setReopenConfirm(false);
+      setFinaliseFlow('idle');
+      setActionFeedback({ type: 'success', msg: 'Reopened for editing — the shared link is paused.' });
+    } catch (error) {
+      console.warn('Reopen did not complete.', error?.message || error);
+      setActionFeedback({ type: 'error', msg: `Could not reopen: ${readableError(error)}.` });
+    }
+  };
+
+  // Re-share after re-finalising: reactivates the SAME paused link (same public URL).
+  const runReshare = async () => {
+    if (!onReshare) return;
+    try {
+      await onReshare();
+      setActionFeedback({ type: 'success', msg: 'Re-shared — the original link works again with the updated report.' });
+    } catch (error) {
+      console.warn('Re-share did not complete.', error?.message || error);
+      setActionFeedback({ type: 'error', msg: `Could not re-share: ${readableError(error)}.` });
+    }
+  };
+
   const closeFullscreen = () => {
     const current = fullscreenVideoRef.current;
     if (current) {
@@ -825,6 +859,26 @@ export default function CoachDrawStudio({
                   </div>
                   <div className="mt-1 text-xs text-amber-200/90">
                     To add findings, phase moments, or coach drawings, open a draft review or reopen this report for editing.
+                  </div>
+                  {canReopen && (
+                    <Button
+                      size="sm"
+                      className="mt-2.5 h-9 bg-amber-400 px-3 text-xs font-bold text-slate-950 hover:bg-amber-300"
+                      onClick={() => setReopenConfirm(true)}
+                      disabled={reopening}
+                    >
+                      {reopening ? 'Reopening…' : 'Reopen for editing'}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {!readOnly && reopenedForEditing && (
+                <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm font-bold text-amber-100">
+                    <PencilLine className="h-4 w-4 flex-shrink-0" /> Reopened for editing — the shared link is paused.
+                  </div>
+                  <div className="mt-1 text-xs text-amber-200/90">
+                    Re-finalise and re-share when you&apos;re done — the same link will work again with the updated report.
                   </div>
                 </div>
               )}
@@ -1195,6 +1249,29 @@ export default function CoachDrawStudio({
         document.body
       )}
 
+      {/* Reopen confirm — deliberate coach action; pauses the shared link. */}
+      {reopenConfirm && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-6 text-white">
+            <div>
+              <h2 className="text-base font-bold">Reopen this report?</h2>
+              <p className="mt-1 text-xs text-slate-300">
+                It becomes editable again, and the shared link is paused. No one can view it until you re-finalise and re-share.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="h-11 flex-1 border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => setReopenConfirm(false)} disabled={reopening}>
+                Cancel
+              </Button>
+              <Button className="h-11 flex-1 bg-amber-500 text-slate-950 hover:bg-amber-400" onClick={runReopen} disabled={reopening}>
+                {reopening ? 'Reopening…' : 'Reopen report'}
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Report-ready panel — fullscreen-first, never the old dashboard. */}
       {(finaliseFlow === 'saving' || finaliseFlow === 'ready') && createPortal(
         <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/80 p-4">
@@ -1218,9 +1295,19 @@ export default function CoachDrawStudio({
                     <Share2 className="mr-1.5 h-4 w-4" /> {shareCopied ? 'Link copied' : 'Copy share link'}
                   </Button>
                 )}
+                {!shareLink && onReshare && (
+                  <Button className="h-11 w-full bg-cyan-500 text-white hover:bg-cyan-400" onClick={runReshare} disabled={resharing}>
+                    <Share2 className="mr-1.5 h-4 w-4" /> {resharing ? 'Re-sharing…' : 'Re-share updated report'}
+                  </Button>
+                )}
                 <Button variant="outline" className="h-11 w-full border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => setFinaliseFlow('idle')}>
                   {reportFinalised ? 'View review (read-only)' : 'Continue editing'}
                 </Button>
+                {canReopen && (
+                  <Button variant="outline" className="h-11 w-full border-amber-300/40 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20" onClick={() => setReopenConfirm(true)} disabled={reopening}>
+                    {reopening ? 'Reopening…' : 'Reopen for editing'}
+                  </Button>
+                )}
                 <Button variant="ghost" className="h-11 w-full text-slate-300 hover:bg-white/10" onClick={() => onBackToAnalyse?.()}>
                   Back to Analyse
                 </Button>

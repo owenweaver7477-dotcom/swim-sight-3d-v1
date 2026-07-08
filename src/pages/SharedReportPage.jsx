@@ -498,12 +498,15 @@ export default function SharedReportPage() {
   const { token } = useParams();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!token) { setError('Invalid link.'); setLoading(false); return; }
     functions.getSharedReport(token)
       .then(res => {
+        // Report was reopened by the coach — link is paused. Show a neutral message.
+        if (res.data && res.data.updating) { setUpdating(true); return; }
         const safeReport = sanitizePublicReportPayload(res.data);
         if (!safeReport.report) throw new Error('Report not found or not ready to share.');
         setData(safeReport);
@@ -520,6 +523,27 @@ export default function SharedReportPage() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">Loading report…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (updating) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-foreground mb-1">Report is being updated</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              This report is being updated by the coach. Please check back soon — this same link will work again once it&apos;s re-shared.
+            </p>
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            Powered by <span className="text-primary font-semibold">Swim Sight 3D</span>
+          </div>
         </div>
       </div>
     );

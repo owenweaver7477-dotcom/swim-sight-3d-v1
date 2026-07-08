@@ -73,6 +73,40 @@ export default async function handler(req, res) {
       });
     }
 
+    // Same-URL re-share: if this report was reopened (its link was paused/disabled),
+    // reactivate the most recently disabled link — reusing the original token — instead
+    // of minting a new one, so the link parents already have keeps working after re-share.
+    const { data: disabledLinks, error: disabledError } = await service
+      .from('shared_report_links')
+      .select('*')
+      .eq('report_id', report.id)
+      .eq('status', 'disabled')
+      .order('disabled_at', { ascending: false })
+      .limit(1);
+
+    if (disabledError) throw disabledError;
+    const reusable = disabledLinks?.[0];
+
+    if (reusable) {
+      const { data: reactivated, error: reactivateError } = await service
+        .from('shared_report_links')
+        .update({ status: 'active', disabled_at: null, disabled_by: null })
+        .eq('id', reusable.id)
+        .select('*')
+        .single();
+
+      if (reactivateError) throw reactivateError;
+
+      await service.from('reports').update({ status: 'shared' }).eq('id', report.id);
+
+      return sendJson(res, 200, {
+        success: true,
+        share_link_id: reactivated.id,
+        token: reactivated.token,
+        public_url: `${origin}/shared-report/${reactivated.token}`,
+      });
+    }
+
     const token = randomBytes(32).toString('hex');
     const { data: link, error: createError } = await service
       .from('shared_report_links')

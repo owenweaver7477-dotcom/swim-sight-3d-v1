@@ -17,7 +17,28 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (linkError) throw linkError;
-    if (!link || link.status !== 'active') {
+    if (!link) {
+      return sendJson(res, 404, { error: 'Report not found or link expired' });
+    }
+
+    const shareableStatuses = ['coach_approved', 'finalised', 'published', 'shared'];
+
+    // A disabled link whose report is no longer in a shareable status = the coach reopened
+    // the report for editing. Return a neutral "being updated" flag — never any report
+    // data — so the same public URL shows a friendly message instead of "not found".
+    if (link.status === 'disabled') {
+      const { data: pausedReport } = await service
+        .from('reports')
+        .select('id,status,is_deleted')
+        .eq('id', link.report_id)
+        .maybeSingle();
+      if (pausedReport && !pausedReport.is_deleted && !shareableStatuses.includes(pausedReport.status)) {
+        return sendJson(res, 200, { updating: true });
+      }
+      return sendJson(res, 404, { error: 'Report not found or link expired' });
+    }
+
+    if (link.status !== 'active') {
       return sendJson(res, 404, { error: 'Report not found or link expired' });
     }
     if (link.expires_at && new Date(link.expires_at) < new Date()) {
