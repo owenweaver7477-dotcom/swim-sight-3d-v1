@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Toaster } from "@/components/ui/toaster"
@@ -13,28 +13,14 @@ import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 import InstallAppPrompt from '@/components/shared/InstallAppPrompt';
 
 import AppLayout from './components/layout/AppLayout';
+// Core coach loop + entry pages stay eager so the pilot flow never shows a chunk
+// loading flash: home, auth, dashboard, analyse, reviews, swimmers, settings, shared report.
 import HomePage from './pages/public/HomePage';
-import FeaturesPage from './pages/public/FeaturesPage';
-import ForCoachesPage from './pages/public/ForCoachesPage';
-import ForClubsPage from './pages/public/ForClubsPage';
-import CoachApprovedAIPage from './pages/public/CoachApprovedAIPage';
-import PrivacyVideoReviewPage from './pages/public/PrivacyVideoReviewPage';
-import SampleReportPage from './pages/public/SampleReportPage';
-import StrokeAnalysisPage from './pages/public/StrokeAnalysisPage';
-import BreaststrokeAnalysisPage from './pages/public/BreaststrokeAnalysisPage';
-import FreestyleAnalysisPage from './pages/public/FreestyleAnalysisPage';
-import BackstrokeAnalysisPage from './pages/public/BackstrokeAnalysisPage';
-import ButterflyAnalysisPage from './pages/public/ButterflyAnalysisPage';
-import PricingPage from './pages/public/PricingPage';
-import FAQPage from './pages/public/FAQPage';
-import ClubProgress from './pages/ClubProgress';
 import ClubOnboarding from './pages/ClubOnboarding';
 import ClubSettings from './pages/ClubSettings';
 import TeamDashboard from './pages/TeamDashboard.jsx';
 import Swimmers from './pages/Swimmers.jsx';
 import Analyse from './pages/Analyse';
-import DrillLibrary from './pages/DrillLibrary.jsx';
-import Roadmap from './pages/Roadmap.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -43,19 +29,51 @@ import ResetPassword from './pages/ResetPassword';
 import AIReportPage from './pages/AIReportPage';
 import AIReportsListPage from './pages/AIReportsListPage';
 import SharedReportPage from './pages/SharedReportPage';
-import SwimmerTrends from './pages/SwimmerTrends';
-import PerformanceHub from './pages/PerformanceHub';
-import AIJobMonitor from './pages/AIJobMonitor';
-import AICalibration from './pages/AICalibration';
-import AIInfrastructureStatus from './pages/AIInfrastructureStatus';
-import FootageChecklist from './pages/FootageChecklist';
-import PilotLaunchPage from './pages/PilotLaunchPage';
+// Everything else is code-split: marketing subpages, analytics (recharts), admin/internal
+// tools, and the drill library load on demand instead of inside the main bundle.
+const FeaturesPage = lazy(() => import('./pages/public/FeaturesPage'));
+const ForCoachesPage = lazy(() => import('./pages/public/ForCoachesPage'));
+const ForClubsPage = lazy(() => import('./pages/public/ForClubsPage'));
+const CoachApprovedAIPage = lazy(() => import('./pages/public/CoachApprovedAIPage'));
+const PrivacyVideoReviewPage = lazy(() => import('./pages/public/PrivacyVideoReviewPage'));
+const SampleReportPage = lazy(() => import('./pages/public/SampleReportPage'));
+const StrokeAnalysisPage = lazy(() => import('./pages/public/StrokeAnalysisPage'));
+const BreaststrokeAnalysisPage = lazy(() => import('./pages/public/BreaststrokeAnalysisPage'));
+const FreestyleAnalysisPage = lazy(() => import('./pages/public/FreestyleAnalysisPage'));
+const BackstrokeAnalysisPage = lazy(() => import('./pages/public/BackstrokeAnalysisPage'));
+const ButterflyAnalysisPage = lazy(() => import('./pages/public/ButterflyAnalysisPage'));
+const PricingPage = lazy(() => import('./pages/public/PricingPage'));
+const FAQPage = lazy(() => import('./pages/public/FAQPage'));
+const ClubProgress = lazy(() => import('./pages/ClubProgress'));
+const DrillLibrary = lazy(() => import('./pages/DrillLibrary.jsx'));
+const Roadmap = lazy(() => import('./pages/Roadmap.jsx'));
+const SwimmerTrends = lazy(() => import('./pages/SwimmerTrends'));
+const PerformanceHub = lazy(() => import('./pages/PerformanceHub'));
+const AIJobMonitor = lazy(() => import('./pages/AIJobMonitor'));
+const AICalibration = lazy(() => import('./pages/AICalibration'));
+const AIInfrastructureStatus = lazy(() => import('./pages/AIInfrastructureStatus'));
+const FootageChecklist = lazy(() => import('./pages/FootageChecklist'));
+const PilotLaunchPage = lazy(() => import('./pages/PilotLaunchPage'));
 import { ADMIN_ACCESS_ROLES, COACH_ACCESS_ROLES } from '@/lib/permissions';
 import RouteErrorBoundary from '@/components/system/RouteErrorBoundary';
 import { useClubContext } from '@/lib/useClubContext';
 
 const COACH_APP_ROLES = COACH_ACCESS_ROLES;
 const OWNER_ADMIN_ROLES = ADMIN_ACCESS_ROLES;
+
+// After a deploy, a stale tab requesting an old hashed chunk gets index.html back and the
+// dynamic import rejects. Vite emits vite:preloadError for this — reload once to pick up
+// the fresh asset manifest instead of stranding the coach on a blank screen. The guard
+// prevents a reload loop if the network itself is down.
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    const last = Number(sessionStorage.getItem('ssd-chunk-reload-at') || 0);
+    if (Date.now() - last < 15000) return; // let the error boundary handle repeat failures
+    event.preventDefault();
+    sessionStorage.setItem('ssd-chunk-reload-at', String(Date.now()));
+    window.location.reload();
+  });
+}
 
 function AnalyseRoute() {
   const location = useLocation();
@@ -126,6 +144,17 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    // Boundary above Suspense: a rejected lazy import (or any route render error) shows the
+    // recovery card instead of unmounting the whole app to a blank page. Keyed by path so
+    // navigating away resets the boundary.
+    <RouteErrorBoundary routeName="App" key={location.pathname} currentPath={location.pathname}>
+    <Suspense
+      fallback={(
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Loading page" />
+        </div>
+      )}
+    >
     <Routes>
       {/* Public auth routes */}
       <Route path="/login" element={<Login />} />
@@ -207,6 +236,8 @@ const AuthenticatedApp = () => {
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </Suspense>
+    </RouteErrorBoundary>
   );
 };
 

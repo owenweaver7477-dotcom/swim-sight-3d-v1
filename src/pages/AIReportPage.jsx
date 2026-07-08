@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
@@ -368,12 +368,20 @@ export default function AIReportPage() {
   // Determine coach role
   const canEdit = isCoachAppRole(memberRole) || user?.role === 'admin';
 
+  // Poll report/findings only while an AI job is actually running. During manual review
+  // the coach's own mutations invalidate these queries, so background polling just churns
+  // the page (and battery on iPad). The ref is synced from isAIJobActive below.
+  const activeAIJobRef = useRef(false);
+
   const { data: reportArr = [], isLoading: loadingReport } = useQuery({
     queryKey: ['ai-report', reportId],
     queryFn: () => entities.Report.filter({ id: reportId }),
     enabled: !!reportId,
     staleTime: 15 * 1000,
-    refetchInterval: 15 * 1000,
+    refetchInterval: () => (activeAIJobRef.current ? 15 * 1000 : false),
+    // Global default is refetchOnWindowFocus:false — with idle polling off, tab-return is
+    // the only refresh trigger for changes made elsewhere (other tab/device, AI re-trigger).
+    refetchOnWindowFocus: true,
   });
   const report = reportArr[0];
 
@@ -382,7 +390,8 @@ export default function AIReportPage() {
     queryFn: () => entities.Finding.filter({ report_id: reportId }, '-created_date', 50),
     enabled: !!reportId,
     staleTime: 15 * 1000,
-    refetchInterval: 15 * 1000,
+    refetchInterval: () => (activeAIJobRef.current ? 15 * 1000 : false),
+    refetchOnWindowFocus: true,
   });
 
   const { data: keyFrames = [] } = useQuery({
@@ -437,7 +446,8 @@ export default function AIReportPage() {
     enabled: !!report?.ai_processing_job_id,
     staleTime: 10 * 1000,
     refetchOnWindowFocus: true, // refresh live AI job status when the coach returns to the tab
-    refetchInterval: 10 * 1000,
+    // Fast while the job runs; slow heartbeat otherwise (job state changes only via triggers).
+    refetchInterval: () => (activeAIJobRef.current ? 10 * 1000 : 60 * 1000),
   });
   const aiJob = jobArr[0] || null;
   const qualityMeta = qualityGateMeta(report, aiJob);
@@ -982,6 +992,16 @@ export default function AIReportPage() {
     : null;
   const activeAIJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
   const isAIJobActive = activeAIJobStatuses.includes(aiJob?.status) || ['queued', 'dispatching', 'dispatched', 'processing', 'cancel_requested'].includes(aiJob?.queue_status);
+  // Keep the polling gate in sync, and refresh report/findings ONCE when a job finishes so
+  // the AI results land immediately even though idle polling is off.
+  useEffect(() => {
+    const wasActive = activeAIJobRef.current;
+    activeAIJobRef.current = isAIJobActive;
+    if (wasActive && !isAIJobActive) {
+      queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] });
+      queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] });
+    }
+  }, [isAIJobActive, queryClient, reportId]);
   const isAIJobUnavailable = ['error', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.status)
     || ['failed', 'timed_out', 'retry_available', 'cancelled'].includes(aiJob?.queue_status)
     || report?.analysis_mode === 'error';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, MessageSquare, Star, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
 import { SUPPORT_COPY, SUPPORT_EMAIL, buildFeedbackMailto, getDeviceSummary } from '@/lib/supportConfig';
@@ -35,8 +35,16 @@ function StarRating({ value, onChange }) {
   );
 }
 
+// pilot_feedback.severity accepts only: blocker | annoying | suggestion.
+function mapSeverity(feedbackType, severity) {
+  if (severity === 'critical' || severity === 'high') return 'blocker';
+  if (severity === 'medium') return 'annoying';
+  if (feedbackType === 'bug') return 'annoying';
+  return 'suggestion';
+}
+
 export default function FeedbackModal({ onClose, pageRoute }) {
-  const { club } = useClubContext();
+  const { club, memberRole } = useClubContext();
   const { user } = useAuth();
   const [form, setForm] = useState({
     feedback_type: 'usability',
@@ -61,18 +69,29 @@ export default function FeedbackModal({ onClose, pageRoute }) {
     setSubmitting(true);
     setSubmitError('');
     try {
-      await base44.entities.CoachFeedback.create({
-        club_id: club?.id || '',
-        user_id: user?.id || '',
-        page_route: pageRoute || window.location.pathname,
-        feedback_type: form.feedback_type,
-        rating: form.rating || undefined,
-        title: form.title || undefined,
-        message: `${form.message}${form.expected ? `\nExpected: ${form.expected}` : ''}`,
-        screenshot_note: form.screenshot_note || undefined,
-        severity: form.feedback_type === 'bug' && form.severity ? form.severity : undefined,
-        status: 'new',
+      // Pilot feedback lands in Supabase (pilot_feedback, RLS: coach roles insert own rows).
+      const detailLines = [
+        form.title && `Title: ${form.title}`,
+        `Type: ${form.feedback_type}`,
+        form.rating && `Rating: ${form.rating}/5`,
+        `Page: ${pageRoute || window.location.pathname}`,
+        `AI job involved: ${form.ai_job_involved} · Report/share/PDF involved: ${form.report_involved}`,
+      ].filter(Boolean).join('\n');
+      const { error } = await supabase.from('pilot_feedback').insert({
+        club_id: club?.id || null,
+        user_id: user?.id || null,
+        name: user?.full_name || user?.name || null,
+        role: memberRole || null,
+        club_squad: club?.name || null,
+        device_used: getDeviceSummary(),
+        flow_tested: detailLines,
+        what_was_confusing: `${form.message}${form.expected ? `\nExpected: ${form.expected}` : ''}`,
+        bug_description: form.feedback_type === 'bug' ? form.message : null,
+        screenshot_or_link: form.screenshot_note || null,
+        severity: mapSeverity(form.feedback_type, form.severity),
+        follow_up_ok: true,
       });
+      if (error) throw error;
       setDone(true);
     } catch {
       setSubmitError('The pilot log could not be saved. Open the prepared support email so this feedback is not lost.');

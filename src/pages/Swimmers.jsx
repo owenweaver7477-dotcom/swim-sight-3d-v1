@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import { setReviewSession } from '@/lib/swimState';
@@ -14,7 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/shared/PageHeader';
 import { Plus, User, Waves, ChevronRight, Video, FileText, Target, Activity, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import SwimmerProgressAnalytics from '@/components/analytics/SwimmerProgressAnalytics';
+// Lazy: pulls recharts, which would otherwise sit in the main bundle for every page.
+const SwimmerProgressAnalytics = lazy(() => import('@/components/analytics/SwimmerProgressAnalytics'));
 import ReportHistoryList from '@/components/analytics/ReportHistoryList';
 import { activeCompletedReports, PENDING_STATUSES } from '@/components/analytics/analyticsHelpers';
 import SwimmerSafeguardingPanel from '@/components/swimmers/SwimmerSafeguardingPanel';
@@ -304,7 +305,9 @@ export default function Swimmers() {
         {/* Progress Analytics — full width below */}
         <div className="space-y-4 mt-4">
           {canManageSwimmers && <SwimmerSafeguardingPanel swimmer={selected} />}
-          <SwimmerProgressAnalytics swimmer={selected} />
+          <Suspense fallback={<div className="p-4 text-xs text-muted-foreground">Loading progress…</div>}>
+            <SwimmerProgressAnalytics swimmer={selected} />
+          </Suspense>
           <ReportHistoryList swimmerReports={activeReports} allFindings={swimmerFindings} />
         </div>
       </div>
