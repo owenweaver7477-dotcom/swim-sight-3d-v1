@@ -36,22 +36,9 @@ import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
 import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
 import { isCoachAppRole, isPilotRole, isAdminRole } from '@/lib/permissions';
-
-function PhaseBar({ label, score }) {
-  const pct = Math.min(100, Math.max(0, score));
-  const color = pct >= 80 ? 'bg-green-500' : pct >= 65 ? 'bg-yellow-500' : 'bg-orange-500';
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[10px]">
-        <span className="text-muted-foreground capitalize">{label.replace(/_/g, ' ')}</span>
-        <span className="text-foreground font-semibold">{score}</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
+import PhaseBar from '@/components/ai-report/PhaseBar';
+import HydrodynamicReviewPanel from '@/components/ai-report/HydrodynamicReviewPanel';
+import CoachStudioSnapshot from '@/components/ai-report/CoachStudioSnapshot';
 
 // Derive a display status from finding counts
 function getReviewStatus(findings) {
@@ -178,66 +165,6 @@ function qualityGateMeta(report, job) {
   };
 }
 
-function HydrodynamicReviewPanel({ report, findings }) {
-  const approved = findings.filter(f => f.approval_status === 'approved');
-  const dragKeywords = /\b(drag|resistance|body line|streamline|hip|head lift|wide kick|knee width|frontal area|breakout)\b/i;
-  const relevant = approved.filter(f => dragKeywords.test([
-    f.finding_name,
-    f.coach_sees,
-    f.why_it_matters,
-    f.cue,
-    f.next_focus,
-    f.phase,
-  ].filter(Boolean).join(' ')));
-  const highestSeverity = relevant.some(f => f.severity === 'high' || f.severity === 'critical')
-    ? 'High attention'
-    : relevant.some(f => f.severity === 'medium')
-    ? 'Moderate attention'
-    : relevant.length
-    ? 'Monitor'
-    : 'Not assessed';
-
-  return (
-    <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xs font-bold text-foreground uppercase tracking-wider">Hydrodynamic Risk Review</div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Coach-reviewed resistance cues only. This is not a lab-measured value.
-          </p>
-        </div>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-          highestSeverity === 'High attention' ? 'bg-red-50 text-red-700 border-red-200'
-            : highestSeverity === 'Moderate attention' ? 'bg-amber-50 text-amber-700 border-amber-200'
-            : highestSeverity === 'Monitor' ? 'bg-green-50 text-green-700 border-green-200'
-            : 'bg-slate-50 text-slate-500 border-slate-200'
-        }`}>
-          {highestSeverity}
-        </span>
-      </div>
-      {relevant.length > 0 ? (
-        <div className="space-y-1.5">
-          {relevant.slice(0, 3).map(finding => (
-            <div key={finding.id} className="text-[10px] text-muted-foreground flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
-              <span>{finding.finding_name || finding.coach_sees}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-[10px] text-muted-foreground p-2.5 rounded-lg bg-secondary/50 border border-border">
-          Drag risk has not been assessed in this report. Add a coach finding about body line, streamline, head position, hip position, or kick width if it is visible in the video.
-        </div>
-      )}
-      {report?.analysis_mode !== 'real_pose' && (
-        <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-          AI-derived drag estimates require reliable pose evidence. This report should use coach-observed hydrodynamic notes only.
-        </div>
-      )}
-    </div>
-  );
-}
-
 function CoachStudioGuidedNav({
   activeStep,
   onStepChange,
@@ -295,34 +222,6 @@ function CoachStudioGuidedNav({
       <div className="text-[10px] text-muted-foreground">
         {completeCount} of {COACH_STUDIO_GUIDED_STEPS.length} review steps have progress. Use this as a guide, not a hard gate.
       </div>
-    </div>
-  );
-}
-
-function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coachDrawCount, isReportFinalised }) {
-  const rows = [
-    { label: 'Pending AI drafts', value: pendingCount, status: pendingCount > 0 ? 'Needs coach decision' : 'Clear' },
-    { label: 'Approved findings', value: approvedCount, status: approvedCount > 0 ? 'Report-ready' : 'None yet' },
-    { label: 'Key moments', value: keyStampCount, status: keyStampCount > 0 ? 'Captured' : 'Optional' },
-    { label: 'Coach Draw marks', value: coachDrawCount, status: coachDrawCount > 0 ? 'Saved' : 'Optional' },
-  ];
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-      {rows.map(row => (
-        <div key={row.label} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-          <div className="text-[10px] text-slate-500">{row.label}</div>
-          <div className="flex items-end justify-between gap-2 mt-1">
-            <div className="text-lg font-bold text-slate-900">{row.value}</div>
-            <div className="text-[9px] text-slate-400 text-right">{row.status}</div>
-          </div>
-        </div>
-      ))}
-      {isReportFinalised && (
-        <div className="sm:col-span-2 lg:col-span-4 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
-          This coach-approved report is finalised. Share and PDF actions are available in the final step.
-        </div>
-      )}
     </div>
   );
 }

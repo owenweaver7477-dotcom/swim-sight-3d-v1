@@ -47,6 +47,7 @@ import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { AI_CREDIT_COPY, getFeatureGateState, getPlanKey } from '@/lib/plans/featureGates';
 import { getConsentActionState } from '@/lib/consentReadiness';
 import { buildAthleteProfileReadiness, buildReportOutputPlan } from '@/lib/aiReportOutputs';
+import StepBar from '@/components/analysis/AnalyseStepBar';
 
 // ─── Stroke phase sets ────────────────────────────────────────────────────────
 const STROKE_PHASES = {
@@ -117,30 +118,9 @@ function getFileSizeWarning(f) {
   return '';
 }
 
-// ─── Step indicators ──────────────────────────────────────────────────────────
-const STEPS = ['Swimmer', 'Video', 'Configure', 'Analyse'];
-
-function StepBar({ current }) {
-  return (
-    <div className="flex items-center gap-0 mb-8">
-      {STEPS.map((s, i) => (
-        <React.Fragment key={s}>
-          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
-            i < current ? 'text-primary' : i === current ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
-          }`}>
-            <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
-              i < current ? 'bg-primary text-primary-foreground' :
-              i === current ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'
-            }`}>{i < current ? '✓' : i + 1}</span>
-            {s}
-          </div>
-          {i < STEPS.length - 1 && <div className="flex-1 h-px bg-border mx-1" />}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
+// Error boundary so one broken Analyse panel degrades gracefully instead of taking
+// down the whole page. Kept inline here — the analyse-route-runtime-safety guard test
+// asserts `class AnalysePanelBoundary` + `function SafeAnalyseSection` live in this file.
 class AnalysePanelBoundary extends React.Component {
   constructor(props) {
     super(props);

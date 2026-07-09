@@ -151,15 +151,13 @@ If unsure which level applies, treat it as the **higher** level.
 
 UI/UX direction: **simple, professional, dark/premium sport-tech, coach-first, calm not cluttered, clear about the next action.** Advanced biomechanics tools sit behind optional layers, not on the main path.
 
-Reference locations to confirm and fill in once inside the repo:
+Reference locations (confirmed in-repo 2026-07-10):
 
-- Design tokens / theme: `[UNCONFIRMED — verify in-repo: e.g. tailwind config, theme file, or CSS variables]`
-- Shared UI components: `[UNCONFIRMED — verify in-repo: e.g. /src/components]`
-- Brand assets (logo, colors, fonts): `[UNCONFIRMED — verify in-repo: e.g. /public, /src/assets]`
-- Report templates / layout: `[UNCONFIRMED — verify in-repo]`
-- Any design spec, Figma link, or style guide: `[UNCONFIRMED — Owen to add]`
-
-> When these are confirmed, replace the placeholders with real paths so future sessions follow the established design system instead of inventing one.
+- **Design tokens / theme:** `tailwind.config.js` (CSS-variable-driven tokens: background/foreground/primary/card/sidebar/chart, `darkMode: 'class'`) + `src/index.css` for the actual HSL values under `:root` and `.dark` (e.g. `--background: 210 40% 98%`, `--foreground: 210 74% 12%` deep navy, `--primary: 201 100% 36%`). Change token *values* in `src/index.css`; wire new tokens through `tailwind.config.js`.
+- **Shared UI components:** `src/components/ui/` (shadcn-style primitives — `button.jsx`, `alert.jsx`, `badge.jsx`, `avatar.jsx`, etc.). Reuse these before hand-rolling. Public-marketing chrome lives in `src/components/public/` (`PublicNav`, `PublicFooter`, `PublicLayout`).
+- **Brand assets:** live logo `public/brand/swim-sight-logo.png` (256px, used in nav/footer); social preview `public/og-swim-sight-3d.png` (1200×630); hero `public/hero/hero-desktop.jpg`. High-res source reference (logo, full-page screenshots) in `docs/design-reference/` — reference only, not imported by the app.
+- **Report templates / layout:** `src/components/reports/PrintableReport.jsx` (PDF/print) and `src/components/reports/PublicReportView.jsx` (shared-link view). Public share safety is enforced server-side in `api/shared-reports/[token].js` + guarded by `npm run test:public-report-safety`.
+- **Design spec / style guide:** no Figma. Ground-truth visual references are `docs/design-reference/Logged-In Page.png` and `docs/design-reference/Public UI Page.png`; product/UI direction docs (`CoachSight_Core_Master_Plan…`, `Swim_Sight_3D_Codex_UI_Prompts.docx`) are in the same folder. There is no in-app living style guide — cross-check those screenshots plus `src/components/ui/` for consistency.
 
 ---
 
