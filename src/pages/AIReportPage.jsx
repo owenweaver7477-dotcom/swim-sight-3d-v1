@@ -327,6 +327,10 @@ function CoachStudioSnapshot({ pendingCount, approvedCount, keyStampCount, coach
   );
 }
 
+// Client-side capped-retry tuning for worker_acceptance_delayed jobs (Option B).
+const AUTO_RETRY_MAX = 2;
+const AUTO_RETRY_BACKOFF_MS = 90 * 1000;
+
 export default function AIReportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -451,6 +455,48 @@ export default function AIReportPage() {
   });
   const aiJob = jobArr[0] || null;
   const qualityMeta = qualityGateMeta(report, aiJob);
+
+  // ── Client-side capped retry for worker_acceptance_delayed jobs (Option B) ──
+  // When the app aborts waiting for the worker to accept (typically a Render cold
+  // start), the job is requeued as worker_acceptance_delayed. While the coach is
+  // on this page we re-nudge the EXISTING dispatch a bounded number of times so a
+  // now-warm worker can pick it up. Bounded + backed off so it cannot spam the
+  // worker; manual Coach Studio review stays available the whole time. No new
+  // endpoint, no cron, no schema change — reuses functions.dispatchNextAIJob.
+  const [autoRetryCount, setAutoRetryCount] = useState(0);
+  const autoRetryTimerRef = useRef(null);
+
+  const retryClubId = aiJob?.club_id || report?.club_id || club?.id || null;
+  const isWorkerWakingUp =
+    aiJob?.stage === 'worker_acceptance_delayed' && aiJob?.queue_status === 'queued';
+  const autoRetryExhausted =
+    autoRetryCount >= AUTO_RETRY_MAX
+    || aiJob?.retryable === false
+    || Number(aiJob?.attempt_count ?? 1) >= Number(aiJob?.max_attempts ?? 3);
+  const delayedRetryEligible = isWorkerWakingUp && !autoRetryExhausted && !!retryClubId;
+
+  useEffect(() => {
+    if (!delayedRetryEligible) return undefined;
+    if (autoRetryTimerRef.current) return undefined;
+    autoRetryTimerRef.current = setTimeout(() => {
+      autoRetryTimerRef.current = null;
+      // Fire-and-forget: manual review stays available regardless of outcome.
+      functions.dispatchNextAIJob({ club_id: retryClubId })
+        .catch(() => {})
+        .finally(() => {
+          setAutoRetryCount((count) => count + 1);
+          queryClient.invalidateQueries({
+            queryKey: ['ai-job-for-report', report?.ai_processing_job_id],
+          });
+        });
+    }, AUTO_RETRY_BACKOFF_MS);
+    return () => {
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+    };
+  }, [delayedRetryEligible, retryClubId, report?.ai_processing_job_id, queryClient, autoRetryCount]);
 
   const logFeedback = async (finding, action, extras = {}) => {
     if (!report?.id || !report?.club_id) return;
@@ -1249,6 +1295,23 @@ export default function AIReportPage() {
                     primary: { label: 'Open Coach Studio', onClick: () => goToStudioStep('video') },
                     secondary: { label: 'Upload a clearer clip', onClick: () => navigate('/analyse') },
                   };
+                } else if (isWorkerWakingUp) {
+                  // Worker acceptance is delayed (usually a cold start). Not a
+                  // fatal error: manual review is available and we auto-retry.
+                  card = autoRetryExhausted
+                    ? {
+                      tone: 'warning',
+                      title: 'AI worker did not accept the job yet',
+                      text: 'You can continue manual coach review and retry AI later. Your video is safe.',
+                      primary: { label: 'Open Coach Studio', onClick: () => goToStudioStep('video') },
+                      secondary: { label: 'Retry AI review', onClick: () => navigate('/analyse') },
+                    }
+                    : {
+                      tone: 'info',
+                      title: 'AI worker is waking up',
+                      text: 'You can continue manual coach review now. We’ll retry shortly.',
+                      primary: { label: 'Open Coach Studio', onClick: () => goToStudioStep('video') },
+                    };
                 } else if (analysisMode === 'error' || isAIJobUnavailable
                     || stg === 'worker_acceptance_delayed' || stg === 'callback_failed'
                     || ['error', 'timed_out', 'failed', 'retry_available', 'cancelled'].includes(s)
