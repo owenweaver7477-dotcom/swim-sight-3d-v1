@@ -1,4 +1,4 @@
-const SITE_URL = 'https://swim-sight-3d-v1.vercel.app';
+const SITE_URL = 'https://swimsight3d.com';
 
 export function homeStructuredData() {
   return [
@@ -8,6 +8,7 @@ export function homeStructuredData() {
       name: 'Swim Sight 3D',
       url: SITE_URL,
       logo: `${SITE_URL}/icons/icon-512.png`,
+      areaServed: 'AU',
     },
     {
       '@context': 'https://schema.org',
@@ -15,7 +16,7 @@ export function homeStructuredData() {
       name: 'Swim Sight 3D',
       url: SITE_URL,
       description: 'AI-assisted swimming analysis report software for coaches and clubs.',
-      inLanguage: 'en',
+      inLanguage: 'en-AU',
     },
     {
       '@context': 'https://schema.org',

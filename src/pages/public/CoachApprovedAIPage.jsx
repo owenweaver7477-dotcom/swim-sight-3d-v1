@@ -51,7 +51,7 @@ export default function CoachApprovedAIPage() {
       <PublicHero
         eyebrow="Coach-approved AI"
         title="AI-assisted swimming analysis, controlled by the coach."
-        description="Draft AI evidence supports review; every report is coach-approved, manual-friendly, and public-safe."
+        description="Draft AI evidence supports review; every report is coach-approved, and only coach-approved content is ever shared."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>

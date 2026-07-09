@@ -1,5 +1,7 @@
 export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'swimsight3d.support@gmail.com';
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
+// Public-site pilot booking CTA — a plain email for now (no form/booking tool yet).
+export const PILOT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Swim Sight 3D pilot enquiry')}`;
 
 export const SUPPORT_COPY = {
   pilot: 'Feedback opens an email to Swim Sight 3D support so nothing is lost during the pilot.',

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const FALLBACK_BASE_URL = 'https://swim-sight-3d-v1.vercel.app';
+const FALLBACK_BASE_URL = 'https://swimsight3d.com';
 
 function getPublicBaseUrl() {
   const configured = import.meta.env.VITE_PUBLIC_SITE_URL || import.meta.env.VITE_APP_BASE_URL;
@@ -52,7 +52,7 @@ export default function usePublicMeta(input, legacyDescription) {
       description = 'AI-assisted swimming analysis report software for serious coaches and clubs.',
       path = '/',
       canonicalPath = path,
-      image = '/og-swim-sight-3d.svg',
+      image = '/og-swim-sight-3d.png',
       noindex = false,
       type = 'website',
     } = metadata;

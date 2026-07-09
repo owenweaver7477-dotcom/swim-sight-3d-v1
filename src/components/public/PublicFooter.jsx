@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { PILOT_MAILTO, SUPPORT_EMAIL } from '@/lib/supportConfig';
 
 export default function PublicFooter() {
   return (
@@ -22,6 +23,20 @@ export default function PublicFooter() {
           <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
             AI-assisted swimming analysis report software for serious coaches and clubs. Built around coach-approved feedback, private video handling, and clear swimmer improvement reports.
           </p>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-400">
+            Built for Australian swim clubs and coaches.
+          </p>
+          <div className="mt-4">
+            <a
+              href={PILOT_MAILTO}
+              className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-400"
+            >
+              Book a pilot
+            </a>
+            <p className="mt-2 text-xs text-slate-400">
+              Questions? Email <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-slate-200 hover:text-white">{SUPPORT_EMAIL}</a>
+            </p>
+          </div>
         </div>
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Product</div>
@@ -31,7 +46,7 @@ export default function PublicFooter() {
             <Link to="/privacy-video-review" className="hover:text-white">Privacy + Video Review</Link>
             <Link to="/sample-report" className="hover:text-white">Sample Report</Link>
             <Link to="/stroke-analysis" className="hover:text-white">Stroke Analysis</Link>
-            <Link to="/pricing" className="hover:text-white">Pricing</Link>
+            <Link to="/pricing" className="hover:text-white">Pilot Access</Link>
           </div>
         </div>
         <div>
@@ -47,7 +62,7 @@ export default function PublicFooter() {
       <div className="border-t border-white/10 px-4 py-4">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} Swim Sight 3D.</span>
-          <span>Coach-reviewed reports. Private videos. No unsupported biomechanics claims.</span>
+          <span>Coach-reviewed reports. Private videos. Every shared finding is coach-approved.</span>
         </div>
       </div>
     </footer>

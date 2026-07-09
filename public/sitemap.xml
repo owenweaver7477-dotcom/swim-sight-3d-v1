@@ -1,72 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/</loc>
+    <loc>https://swimsight3d.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/features</loc>
+    <loc>https://swimsight3d.com/features</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/for-coaches</loc>
+    <loc>https://swimsight3d.com/for-coaches</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/for-clubs</loc>
+    <loc>https://swimsight3d.com/for-clubs</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/coach-approved-ai</loc>
+    <loc>https://swimsight3d.com/coach-approved-ai</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/privacy-video-review</loc>
+    <loc>https://swimsight3d.com/privacy-video-review</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/sample-report</loc>
+    <loc>https://swimsight3d.com/sample-report</loc>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/stroke-analysis</loc>
+    <loc>https://swimsight3d.com/stroke-analysis</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/stroke-analysis/breaststroke</loc>
+    <loc>https://swimsight3d.com/stroke-analysis/breaststroke</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/stroke-analysis/freestyle</loc>
+    <loc>https://swimsight3d.com/stroke-analysis/freestyle</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/stroke-analysis/backstroke</loc>
+    <loc>https://swimsight3d.com/stroke-analysis/backstroke</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/stroke-analysis/butterfly</loc>
+    <loc>https://swimsight3d.com/stroke-analysis/butterfly</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/pricing</loc>
+    <loc>https://swimsight3d.com/pricing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://swim-sight-3d-v1.vercel.app/faq</loc>
+    <loc>https://swimsight3d.com/faq</loc>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import PublicLayout from '@/components/public/PublicLayout';
 import StructuredData from '@/components/seo/StructuredData';
+import { PILOT_MAILTO } from '@/lib/supportConfig';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
 import { homeStructuredData } from './publicStructuredData';
@@ -30,7 +31,7 @@ const proofPoints = [
 
 const workflowSteps = [
   ['Upload video', 'Add race or training footage to a private club workspace. Short side-view clips work best for pilot testing.'],
-  ['Review in Coach Studio', 'Slow the video down, step approximately through moments, save key stamps, and mark frames.'],
+  ['Review in Coach Studio', 'Slow the video down, step frame-by-frame through moments, save key stamps, and mark frames.'],
   ['Add findings and drills', 'Approve AI-assisted draft evidence or create coach findings manually from the video timestamp.'],
   ['Share the plan', 'Finalise a swimmer improvement report with cues, drills, next focus, and selected key moments.'],
 ];
@@ -51,7 +52,7 @@ const faqs = [
 
 function Section({ eyebrow, title, description, children, dark = false }) {
   return (
-    <section className={`${dark ? 'bg-slate-950 text-white' : 'bg-white text-slate-950'} border-b border-slate-200 px-4 py-16`}>
+    <section className={`${dark ? 'bg-slate-950 text-white border-slate-800' : 'bg-white text-slate-950 border-slate-200'} border-b px-4 py-16`}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 max-w-3xl">
           {eyebrow && <div className={`reveal text-xs font-bold uppercase tracking-[0.24em] ${dark ? 'text-cyan-200' : 'text-sky-600'}`}>{eyebrow}</div>}
@@ -100,7 +101,7 @@ export default function HomePage() {
           <div aria-hidden="true" className="absolute inset-0 md:bg-gradient-to-r md:from-[#04060c] md:via-[#04060c]/70 md:to-transparent" />
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#04060c] via-transparent to-[#04060c]/40" />
 
-          <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-7xl items-center px-4 pb-16 pt-24 md:pt-20">
+          <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-16 pt-24 md:pt-20">
             <div className="max-w-xl">
               <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
                 <Waves className="h-3.5 w-3.5" />
@@ -123,11 +124,11 @@ export default function HomePage() {
                 It supports the coach — it does not replace the coach.
               </p>
               <div className="reveal mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-sky-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-sky-500/30 transition-colors hover:bg-sky-400">
-                  View Sample Report <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-                <Link to="/coach-approved-ai" className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-7 py-4 text-base font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20">
-                  How AI Works
+                <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-full bg-sky-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-sky-500/30 transition-colors hover:bg-sky-400">
+                  Book a pilot <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-7 py-4 text-base font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20">
+                  View Sample Report
                 </Link>
                 <Link to="/login" className="inline-flex items-center justify-center rounded-full px-4 py-4 text-sm font-semibold text-slate-200 transition-colors hover:text-white">
                   Log in
@@ -147,8 +148,8 @@ export default function HomePage() {
         <div className="relative border-t border-white/10 bg-[#05070d]">
           <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-6 px-4 py-7 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              [ShieldCheck, 'Private & secure', 'Videos stay private and are never shared.'],
-              [Target, 'Actionable insights', 'Clear cues and drills a coach can use.'],
+              [ShieldCheck, 'Private & secure', 'Videos never leave your private club workspace.'],
+              [Target, 'Cues and drills, not dashboards', 'Feedback a swimmer can act on at the next session.'],
               [Waves, 'Built for swimming', 'Stroke-specific review, not a generic tool.'],
               [Users, 'Coach-first', 'AI assists; the coach approves every finding.'],
             ].map(([Icon, title, desc]) => (
@@ -167,7 +168,7 @@ export default function HomePage() {
       </section>
 
       <section className="border-b border-slate-200 bg-white px-4 py-6">
-        <div className="mx-auto grid max-w-6xl gap-3 md:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {proofPoints.map(([title, description]) => (
             <div key={title} className="reveal rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-bold text-slate-950">{title}</div>
@@ -178,7 +179,7 @@ export default function HomePage() {
       </section>
 
       <Section eyebrow="How it works" title="Turn one video into a clear coaching plan." description="Video in, coach review, approved findings, swimmer report out." >
-        <div id="how-it-works" className="grid gap-4 md:grid-cols-4">
+        <div id="how-it-works" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {workflowSteps.map(([title, description], index) => (
             <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">{index + 1}</div>
@@ -251,7 +252,7 @@ export default function HomePage() {
       </Section>
 
       <Section dark eyebrow="Coach Studio" title="The heart of the product is a structured coach review room." description="A professional workflow for turning video moments into clear feedback. Manual review is first-class, not a fallback.">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MiniCard dark icon={PlayCircle} title="Fullscreen review" description="Review video in a focused workspace with slow motion and approximate frame stepping." />
           <MiniCard dark icon={Clock3} title="Key stamps" description="Capture timestamped moments for catch, breath, kick setup, line reset, turns, and more." />
           <MiniCard dark icon={PencilLine} title="Coach Draw" description="Draw on important frames with coach-created marks that can be included in reports." />
@@ -262,7 +263,7 @@ export default function HomePage() {
       <Section eyebrow="Coach-approved AI" title="AI-assisted evidence. Coach-approved report." description="AI suggests draft findings; coaches approve, edit, or reject each one before it reaches a report.">
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard icon={Brain} title="Draft findings only" description="AI output is treated as evidence for review, not automatic truth." />
-          <MiniCard icon={ShieldCheck} title="Quality gates" description="Weak pose or unreliable evidence becomes manual review with no fake findings." />
+          <MiniCard icon={ShieldCheck} title="Honest about video quality" description="Unclear footage goes to manual coach review — no made-up findings." />
           <MiniCard icon={CheckCircle2} title="Coach final say" description="Reports only show approved coach content, whether AI-assisted or manual." />
         </div>
         <div className="mt-8">
@@ -311,7 +312,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Club workflow" title="For coaches, squads, and clubs that need consistency." description="Organise swimmers and reports across a coaching team — without an engineering control panel.">
+      <Section eyebrow="Club workflow" title="For coaches, squads, and clubs that need consistency." description="Organise swimmers and reports across a coaching team — simple enough to run on pool deck.">
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard icon={Users} title="Squads + profiles" description="Keep swimmers, squad assignment, coach notes, and report history organised." />
           <MiniCard icon={Target} title="Shared technical language" description="Use consistent phases, fault tags, cues, drills, and final report structure." />
@@ -320,7 +321,7 @@ export default function HomePage() {
       </Section>
 
       <Section eyebrow="Stroke coverage" title="Built around the strokes coaches review every week." description="Each stroke page shows the phase structure used for review and reporting.">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {strokeCards.map(([title, href, description]) => (
             <Link key={title} to={href} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
               <div className="text-lg font-bold text-slate-950">{title}</div>
@@ -383,15 +384,15 @@ export default function HomePage() {
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Built for coaches, squads, and clubs</div>
             <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">Turn video into a clearer coaching plan.</h2>
             <p className="mt-4 text-base leading-8 text-slate-300">
-              Start with a sample report, then log in when you are ready to use the coach workflow.
+              Start with the sample report, then book a pilot for your club — we set it up with your coaching team.
             </p>
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
+            <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
+              Book a pilot
+            </a>
+            <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
               View Sample Report
-            </Link>
-            <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
-              Log in
             </Link>
           </div>
         </div>

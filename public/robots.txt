@@ -21,4 +21,4 @@ Disallow: /club-onboarding
 Disallow: /reset-password
 Disallow: /forgot-password
 
-Sitemap: https://swim-sight-3d-v1.vercel.app/sitemap.xml
+Sitemap: https://swimsight3d.com/sitemap.xml

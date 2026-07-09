@@ -61,8 +61,8 @@ export const publicSeoMetadata = {
   },
   pricing: {
     path: '/pricing',
-    title: 'Pricing | Swim Sight 3D Coach and Club Pilot Access',
-    description: 'Swim Sight 3D pricing is being finalised for coach and club pilot access. Explore pilot options for swimming analysis report software.',
+    title: 'Pilot Access | Swim Sight 3D for Coaches and Clubs',
+    description: 'Join the Swim Sight 3D pilot for Australian swim clubs and coaches. See what a pilot includes and book a pilot for your club — pricing is finalised with pilot clubs.',
   },
   faq: {
     path: '/faq',

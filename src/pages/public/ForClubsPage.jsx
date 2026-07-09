@@ -75,7 +75,7 @@ export default function ForClubsPage() {
           </div>
         </div>
       </PublicSection>
-      <PublicSection subtle title="No enterprise overpromise" description="Being prepared for serious pilot clubs. Enterprise operations are scoped directly with the club." />
+      <PublicSection subtle title="Pilot with your club this season" description="We set each pilot up directly with your coaching team — squads, swimmers, and report format — so coaches can start reviewing video in the first session." />
     </PublicLayout>
   );
 }
