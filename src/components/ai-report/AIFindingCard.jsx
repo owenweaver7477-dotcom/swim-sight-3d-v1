@@ -105,7 +105,9 @@ export default function AIFindingCard({
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
-          <Brain className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+          {isAiFinding
+            ? <Brain className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+            : <Pencil className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
           <span className="text-xs font-bold text-foreground">{finding.finding_name}</span>
           {finding.severity && <SeverityBadge severity={finding.severity} />}
           {finding.phase && (
@@ -132,7 +134,9 @@ export default function AIFindingCard({
               </div>
             )}
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Brain className="w-3 h-3 text-primary" /> {isAiFinding ? 'AI draft — verify on video' : 'Coach finding'}
+              {isAiFinding
+                ? <Brain className="w-3 h-3 text-primary" />
+                : <Pencil className="w-3 h-3 text-primary" />} {isAiFinding ? 'AI draft — verify on video' : 'Coach finding'}
             </span>
           </div>
 

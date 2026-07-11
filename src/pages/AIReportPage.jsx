@@ -1062,8 +1062,8 @@ export default function AIReportPage() {
 
           {/* Header */}
           <PageHeader
-            eyebrow="AI Analysis"
-            title={report.title || 'AI Technique Report'}
+            eyebrow={AI_PILOT_LOCKED ? 'Coach Review' : 'AI Analysis'}
+            title={report.title || (AI_PILOT_LOCKED ? 'Coach Review Report' : 'AI Technique Report')}
             subtitle={[swimmer?.name, video?.stroke_type, video?.analysis_type].filter(Boolean).join(' · ')}
           >
             <div className="flex items-center gap-2 flex-wrap">
@@ -1102,7 +1102,7 @@ export default function AIReportPage() {
             selectedFocusCount={report?.review_context?.analysis_focus_areas?.length || 0}
             selectedOutputCount={report?.review_context?.selected_report_outputs?.length || 0}
             estimatedCredits={report?.review_context?.estimated_credit_cost}
-            mode={isManualReviewReport ? 'manual' : 'ai'}
+            mode={AI_PILOT_LOCKED || isManualReviewReport ? 'manual' : 'ai'}
             compact
           />
 
@@ -1765,7 +1765,7 @@ export default function AIReportPage() {
           <div id="section-ai-findings" className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                AI Suggested Findings ({findings.length})
+                {AI_PILOT_LOCKED ? 'Coach Findings' : 'AI Suggested Findings'} ({findings.length})
               </h2>
               {approvedCount > 0 && (
                 <span className="text-[10px] text-green-400 font-medium">{approvedCount} approved</span>
@@ -1941,7 +1941,9 @@ export default function AIReportPage() {
           {/* Footer note */}
           {!isReportFinalised && (
             <div className="text-[10px] text-muted-foreground border-t border-border pt-3">
-              AI findings are suggestions only. All approvals and edits are saved automatically.
+              {AI_PILOT_LOCKED
+                ? 'Every finding is coach-created and coach-approved. Approvals and edits are saved automatically.'
+                : 'AI findings are suggestions only. All approvals and edits are saved automatically.'}
               {report.ai_completed_at && (
                 <span className="ml-1"> · Generated {format(new Date(report.ai_completed_at), 'dd MMM yyyy')}</span>
               )}

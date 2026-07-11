@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, AlertTriangle, X, ClipboardCheck, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 
 const FOCUS_LABEL = {
   body_line: 'Body line', kick: 'Kick', pull: 'Pull / catch',
@@ -41,15 +42,15 @@ export default function FinaliseQualityGate({ report, swimmer, video, findings, 
   const checks = [
     { ok: !!swimmer,                         label: 'Swimmer selected' },
     { ok: !!video?.stroke_type,              label: 'Stroke type selected' },
-    { ok: pendingFindings.length === 0,      label: `All draft AI findings reviewed (${pendingFindings.length} pending)` },
+    { ok: pendingFindings.length === 0,      label: `${AI_PILOT_LOCKED ? 'All findings reviewed' : 'All draft AI findings reviewed'} (${pendingFindings.length} pending)` },
     { ok: hasFindingOrConfirmedNone,         label: `At least one approved finding (${approvedFindings.length} found) or coach confirms none are needed` },
     { ok: approvedFindings.length === 0 || approvedFindings.every(f => f.cue || f.next_focus), label: 'All included findings have a cue or next focus' },
     { ok: hasCoachSummary,                   label: 'Coach summary present' },
     { ok: hasNextFocus,                      label: 'Next focus present' },
     { ok: publicSafeDrills,                  label: 'Selected drills are public-safe' },
     {
-      ok: analysisModeLabelOk,
-      label: `AI result labelled (${report.analysis_mode || 'not set'})`,
+      ok: AI_PILOT_LOCKED ? true : analysisModeLabelOk,
+      label: AI_PILOT_LOCKED ? 'Coach-reviewed report' : `AI result labelled (${report.analysis_mode || 'not set'})`,
     },
     { ok: true,                              label: 'Public disclaimer is included on shared report' },
   ];
