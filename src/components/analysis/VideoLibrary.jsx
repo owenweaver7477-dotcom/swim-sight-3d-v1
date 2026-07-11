@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 import functions from '@/lib/data/functions';
 import { Button } from '@/components/ui/button';
 import {
@@ -189,8 +190,10 @@ function getCoachStatusSummary({
   return {
     tone: 'success',
     label: 'Uploaded — ready for review',
-    detail: 'The private video is ready. Start AI Review or open Coach Studio for manual review.',
-    action: 'Choose AI or Coach Studio',
+    detail: AI_PILOT_LOCKED
+      ? 'The private video is ready. Open Coach Studio to complete a manual coach review.'
+      : 'The private video is ready. Start AI Review or open Coach Studio for manual review.',
+    action: AI_PILOT_LOCKED ? 'Open Coach Studio' : 'Choose AI or Coach Studio',
   };
 }
 

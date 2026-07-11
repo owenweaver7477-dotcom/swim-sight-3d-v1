@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -179,7 +180,7 @@ function SetupDashboard({ club }) {
   const steps = [
     { label: 'Add your first swimmer', cta: 'Add Swimmer', action: () => navigate('/swimmers') },
     { label: 'Upload a video', cta: 'Upload Video', action: () => navigate('/analyse') },
-    { label: 'Send for AI Review', cta: 'Start', action: () => navigate('/analyse') },
+    { label: AI_PILOT_LOCKED ? 'Start a coach review' : 'Send for AI Review', cta: 'Start', action: () => navigate('/analyse') },
     { label: 'Invite a coach', cta: 'Invite', action: () => navigate('/club-settings') },
   ];
   return (

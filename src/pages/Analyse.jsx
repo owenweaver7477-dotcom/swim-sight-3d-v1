@@ -48,6 +48,8 @@ import { AI_CREDIT_COPY, getFeatureGateState, getPlanKey } from '@/lib/plans/fea
 import { getConsentActionState } from '@/lib/consentReadiness';
 import { buildAthleteProfileReadiness, buildReportOutputPlan } from '@/lib/aiReportOutputs';
 import StepBar from '@/components/analysis/AnalyseStepBar';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
+import AIInTestingCard from '@/components/ai/AIInTestingCard';
 
 // ─── Stroke phase sets ────────────────────────────────────────────────────────
 const STROKE_PHASES = {
@@ -1440,24 +1442,26 @@ export default function Analyse() {
                 </SelectContent>
               </Select>
             </div>
-            <SafeAnalyseSection name="AI report output selector">
-              <AIReportOutputSelector
-                stroke={stroke}
-                cameraAngle={angle}
-                videoDurationSeconds={videoDurationSeconds}
-                selectedOutputIds={selectedReportOutputs}
-                onSelectedOutputIdsChange={setSelectedReportOutputs}
-                athleteProfile={athleteProfile}
-                onAthleteProfileChange={setAthleteProfile}
-                selectedPreset={selectedOutputPreset}
-                onSelectedPresetChange={setSelectedOutputPreset}
-                coachConfirmedDraftAI={coachConfirmedDraftAI}
-                onCoachConfirmedDraftAIChange={setCoachConfirmedDraftAI}
-                features={REPORT_OUTPUT_FEATURES}
-                onManualReview={() => createReview.mutate()}
-                manualReviewPending={createReview.isPending}
-              />
-            </SafeAnalyseSection>
+            {!AI_PILOT_LOCKED && (
+              <SafeAnalyseSection name="AI report output selector">
+                <AIReportOutputSelector
+                  stroke={stroke}
+                  cameraAngle={angle}
+                  videoDurationSeconds={videoDurationSeconds}
+                  selectedOutputIds={selectedReportOutputs}
+                  onSelectedOutputIdsChange={setSelectedReportOutputs}
+                  athleteProfile={athleteProfile}
+                  onAthleteProfileChange={setAthleteProfile}
+                  selectedPreset={selectedOutputPreset}
+                  onSelectedPresetChange={setSelectedOutputPreset}
+                  coachConfirmedDraftAI={coachConfirmedDraftAI}
+                  onCoachConfirmedDraftAIChange={setCoachConfirmedDraftAI}
+                  features={REPORT_OUTPUT_FEATURES}
+                  onManualReview={() => createReview.mutate()}
+                  manualReviewPending={createReview.isPending}
+                />
+              </SafeAnalyseSection>
+            )}
             <div>
               <Label className="text-xs text-muted-foreground">Session Title (optional)</Label>
               <Input value={reviewTitle} onChange={e => setReviewTitle(e.target.value)} placeholder="e.g. Adam — Breaststroke Kick — Jun 2026" className="bg-card border-border mt-1" />
@@ -1506,47 +1510,56 @@ export default function Analyse() {
                 {startAiError}
               </div>
             )}
-            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
-              <div className="font-semibold">AI Assist plan note</div>
-              <p className="mt-1">
-                {aiGate.isEnforced && !aiGate.isAllowed
-                  ? `${aiGate.message} Coach Studio/manual review remains available.`
-                  : 'AI review is available for current pilot testing. Coach approval is required before report sharing.'}
-              </p>
-              <p className="mt-1 text-[10px] text-blue-800/80">
-                {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport} {AI_CREDIT_COPY.pilotUnknown}
-              </p>
-            </div>
-            <SafeAnalyseSection name="AI credit indicator">
-              <AICreditIndicator
-                selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0}
-                selectedOutputCount={reportOutputPlan.selected.length}
-                estimatedCredits={reportOutputPlan.estimatedCredits}
-                mode="ai"
+            {AI_PILOT_LOCKED ? (
+              <AIInTestingCard
+                onOpenCoachStudio={() => createReview.mutate()}
+                openPending={createReview.isPending || !stroke || !angle || !videoUploadId}
               />
-            </SafeAnalyseSection>
-            {!consentState.canStartAI && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
-                {consentState.message}
-              </div>
+            ) : (
+              <>
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
+                  <div className="font-semibold">AI Assist plan note</div>
+                  <p className="mt-1">
+                    {aiGate.isEnforced && !aiGate.isAllowed
+                      ? `${aiGate.message} Coach Studio/manual review remains available.`
+                      : 'AI review is available for current pilot testing. Coach approval is required before report sharing.'}
+                  </p>
+                  <p className="mt-1 text-[10px] text-blue-800/80">
+                    {AI_CREDIT_COPY.standardReview} {AI_CREDIT_COPY.manualReport} {AI_CREDIT_COPY.pilotUnknown}
+                  </p>
+                </div>
+                <SafeAnalyseSection name="AI credit indicator">
+                  <AICreditIndicator
+                    selectedFocusCount={reviewContext.analysis_focus_areas?.length || 0}
+                    selectedOutputCount={reportOutputPlan.selected.length}
+                    estimatedCredits={reportOutputPlan.estimatedCredits}
+                    mode="ai"
+                  />
+                </SafeAnalyseSection>
+                {!consentState.canStartAI && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+                    {consentState.message}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button
+                    className="w-full bg-primary text-primary-foreground"
+                    onClick={handleSendForAIReview}
+                    disabled={startAiLoading || !stroke || !angle || !videoUploadId || !consentState.canStartAI || consentQuery.isLoading || !reportOutputPlan.valid || !coachConfirmedDraftAI}
+                  >
+                    {startAiLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending to AI Review...</> : <><Zap className="w-4 h-4 mr-2" />Send for AI Review</>}
+                  </Button>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => createReview.mutate()}
+                    disabled={createReview.isPending || !stroke || !angle || !videoUploadId}
+                  >
+                    {createReview.isPending ? 'Opening...' : 'Open Coach Studio'}
+                  </Button>
+                </div>
+              </>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                className="w-full bg-primary text-primary-foreground"
-                onClick={handleSendForAIReview}
-                disabled={startAiLoading || !stroke || !angle || !videoUploadId || !consentState.canStartAI || consentQuery.isLoading || !reportOutputPlan.valid || !coachConfirmedDraftAI}
-              >
-                {startAiLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending to AI Review...</> : <><Zap className="w-4 h-4 mr-2" />Send for AI Review</>}
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => createReview.mutate()}
-                disabled={createReview.isPending || !stroke || !angle || !videoUploadId}
-              >
-                {createReview.isPending ? 'Opening...' : 'Open Coach Studio'}
-              </Button>
-            </div>
           </div>
         </div>
       )}

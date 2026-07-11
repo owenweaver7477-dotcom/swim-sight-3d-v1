@@ -84,6 +84,21 @@ export default async function handler(req, res) {
 
     await requireClubRole(service, upload.club_id, user.id, COACH_ROLES);
 
+    // Manual-first pilot lock: AI review is locked by default. When neither flag
+    // is enabled we refuse to create a job or contact the Render worker, and
+    // return a coach-safe "in testing" response so the app never depends on the
+    // AI server during the pilot. Re-enable later by setting VITE_ENABLE_AI_REVIEW=true
+    // (mirrors the client flag in src/lib/aiPilotLock.js). No AI code or data is removed.
+    if (!envFlagEnabled(process.env.VITE_ENABLE_AI_REVIEW) && !envFlagEnabled(process.env.AI_REVIEW_ENABLED)) {
+      return sendJson(res, 200, {
+        success: false,
+        locked: true,
+        ai_in_testing: true,
+        manual_review_available: true,
+        user_error_message: 'AI-assisted analysis is in private testing for this pilot. Manual coach review is available for this video.',
+      });
+    }
+
     if (envFlagEnabled(process.env.REQUIRE_CONSENT)) {
       const { data: consentRecord, error: consentError } = await service
         .from('swimmer_consent_records')

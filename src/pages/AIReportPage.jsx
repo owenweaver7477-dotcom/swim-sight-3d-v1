@@ -39,6 +39,8 @@ import { isCoachAppRole, isPilotRole, isAdminRole } from '@/lib/permissions';
 import PhaseBar from '@/components/ai-report/PhaseBar';
 import HydrodynamicReviewPanel from '@/components/ai-report/HydrodynamicReviewPanel';
 import CoachStudioSnapshot from '@/components/ai-report/CoachStudioSnapshot';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
+import AIInTestingCard from '@/components/ai/AIInTestingCard';
 
 // Derive a display status from finding counts
 function getReviewStatus(findings) {
@@ -372,7 +374,8 @@ export default function AIReportPage() {
     autoRetryCount >= AUTO_RETRY_MAX
     || aiJob?.retryable === false
     || Number(aiJob?.attempt_count ?? 1) >= Number(aiJob?.max_attempts ?? 3);
-  const delayedRetryEligible = isWorkerWakingUp && !autoRetryExhausted && !!retryClubId;
+  // Never re-dispatch to the Render worker while the manual-first pilot lock is on.
+  const delayedRetryEligible = !AI_PILOT_LOCKED && isWorkerWakingUp && !autoRetryExhausted && !!retryClubId;
 
   useEffect(() => {
     if (!delayedRetryEligible) return undefined;
@@ -1151,10 +1154,12 @@ export default function AIReportPage() {
 
           <details className="rounded-xl bg-card border border-border overflow-hidden">
             <summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-foreground flex items-center justify-between">
-              AI evidence, quality notes, and report readiness
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${qualityMeta.className}`}>
-                {qualityMeta.label}
-              </span>
+              {AI_PILOT_LOCKED ? 'Review readiness' : 'AI evidence, quality notes, and report readiness'}
+              {!AI_PILOT_LOCKED && (
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${qualityMeta.className}`}>
+                  {qualityMeta.label}
+                </span>
+              )}
             </summary>
             <div className="p-4 border-t border-border space-y-4">
               <div className="p-3 rounded-xl bg-secondary/40 border border-border">
@@ -1169,9 +1174,13 @@ export default function AIReportPage() {
                 sharedLinks={sharedLinks}
               />
 
-              <PoseEvidencePanel report={report} />
+              {!AI_PILOT_LOCKED && <PoseEvidencePanel report={report} />}
 
-              {(aiJob || ['placeholder', 'error', 'manual_review', 'unreliable_pose'].includes(report?.analysis_mode)) && (() => {
+              {AI_PILOT_LOCKED && (
+                <AIInTestingCard onOpenCoachStudio={() => goToStudioStep('video')} />
+              )}
+
+              {!AI_PILOT_LOCKED && (aiJob || ['placeholder', 'error', 'manual_review', 'unreliable_pose'].includes(report?.analysis_mode)) && (() => {
                 // One consolidated coach-facing status card per state (no stacked warnings).
                 const analysisMode = report?.analysis_mode;
                 const s = aiJob?.status;

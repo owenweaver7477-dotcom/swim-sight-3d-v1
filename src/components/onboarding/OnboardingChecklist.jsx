@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle, ChevronRight, X } from 'lucide-react';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 
 const STEPS = [
   {
@@ -56,8 +57,11 @@ const STEPS = [
 
 export default function OnboardingChecklist({ completed, onDismiss }) {
   const navigate = useNavigate();
-  const doneCount = STEPS.filter(s => completed[s.id]).length;
-  const allDone = doneCount === STEPS.length;
+  // Manual-first pilot: drop the AI-review step so onboarding is a pure manual
+  // coach-review checklist (and never stalls waiting for an AI job that can't run).
+  const visibleSteps = AI_PILOT_LOCKED ? STEPS.filter(s => s.id !== 'ai_job') : STEPS;
+  const doneCount = visibleSteps.filter(s => completed[s.id]).length;
+  const allDone = doneCount === visibleSteps.length;
 
   if (allDone) return null;
 
@@ -66,11 +70,11 @@ export default function OnboardingChecklist({ completed, onDismiss }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-xs font-bold uppercase tracking-wider text-primary mb-0.5">Getting Started</div>
-          <div className="text-sm font-semibold text-foreground">Coach Onboarding — {doneCount}/{STEPS.length} complete</div>
+          <div className="text-sm font-semibold text-foreground">Coach Onboarding — {doneCount}/{visibleSteps.length} complete</div>
         </div>
         <div className="flex items-center gap-3">
           <div className="h-1.5 w-24 bg-secondary rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(doneCount / STEPS.length) * 100}%` }} />
+            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(doneCount / visibleSteps.length) * 100}%` }} />
           </div>
           {onDismiss && (
             <button onClick={onDismiss} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -81,7 +85,7 @@ export default function OnboardingChecklist({ completed, onDismiss }) {
       </div>
 
       <div className="space-y-2">
-        {STEPS.map((step, i) => {
+        {visibleSteps.map((step, i) => {
           const done = !!completed[step.id];
           return (
             <div
