@@ -75,7 +75,7 @@ export default function StrokeAnalysisPage() {
         <div className="grid gap-4 md:grid-cols-3">
           {[
             [Target, 'Review the phase', 'Tag the stroke phase and save the moments that support the correction.'],
-            [CheckCircle2, 'Approve the finding', 'Coach-created or AI-assisted findings are reviewed before they reach a report.'],
+            [CheckCircle2, 'Approve the finding', 'Coach-created findings are reviewed before they reach a report.'],
             [FileText, 'Share the plan', 'The final output is a swimmer improvement report with cues, drills, and next focus.'],
           ].map(([Icon, title, description]) => (
             <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  Brain,
   CheckCircle2,
   Clock3,
   FileText,
@@ -32,7 +31,7 @@ const proofPoints = [
 const workflowSteps = [
   ['Upload video', 'Add race or training footage to a private club workspace. Short side-view clips work best for pilot testing.'],
   ['Review in Coach Studio', 'Slow the video down, step frame-by-frame through moments, save key stamps, and mark frames.'],
-  ['Add findings and drills', 'Approve AI-assisted draft evidence or create coach findings manually from the video timestamp.'],
+  ['Add findings and drills', 'Create a coach finding from the video timestamp and connect it to a cue and a drill.'],
   ['Share the plan', 'Finalise a swimmer improvement report with cues, drills, next focus, and selected key moments.'],
 ];
 
@@ -45,8 +44,8 @@ const strokeCards = [
 
 const faqs = [
   ['Does Swim Sight 3D replace the coach?', 'No. It gives coaches a clearer system for reviewing video and sharing improvement plans.'],
-  ['What does the AI do?', 'AI can suggest draft evidence when video quality is suitable. Coaches approve, edit, or reject it.'],
-  ['Is manual review available?', 'Yes. Coach Studio is designed to work even when AI recommends manual review.'],
+  ['Do I need special equipment?', 'No. A short side-view clip from a phone, tablet, or standard camera works well for coach review.'],
+  ['Is this a manual review tool?', 'Yes. Coach Studio is a manual video-review workspace — you mark moments, draw, and write every finding yourself.'],
   ['Are videos private?', 'Yes. Shared reports do not expose private video paths or signed video URLs.'],
 ];
 
@@ -105,23 +104,19 @@ export default function HomePage() {
             <div className="max-w-xl">
               <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
                 <Waves className="h-3.5 w-3.5" />
-                AI suggests. Coaches decide.
+                Coach-led video review
               </div>
               <h1 className="reveal mt-6 text-5xl font-extrabold leading-[1.02] tracking-tight drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-7xl">
-                AI-assisted{' '}
+                See every stroke.{' '}
                 <br className="hidden sm:block" />
-                swim video{' '}
-                <br className="hidden sm:block" />
-                review for{' '}
-                <br className="hidden sm:block" />
-                <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">coaches.</span>
+                <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">Coach every swimmer.</span>
               </h1>
               <p className="reveal mt-6 max-w-md text-base leading-8 text-slate-200 md:text-lg">
-                Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers.
+                Private video review for swim coaches — mark key moments, draw over frames, add findings and drills, and share clean reports with swimmers and parents.
               </p>
               <p className="reveal mt-4 flex items-center gap-2 text-sm text-slate-300">
                 <ShieldCheck className="h-4 w-4 flex-shrink-0 text-cyan-300" />
-                It supports the coach — it does not replace the coach.
+                Every finding is coach-created and coach-approved.
               </p>
               <div className="reveal mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-full bg-sky-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-sky-500/30 transition-colors hover:bg-sky-400">
@@ -151,7 +146,7 @@ export default function HomePage() {
               [ShieldCheck, 'Private & secure', 'Videos never leave your private club workspace.'],
               [Target, 'Cues and drills, not dashboards', 'Feedback a swimmer can act on at the next session.'],
               [Waves, 'Built for swimming', 'Stroke-specific review, not a generic tool.'],
-              [Users, 'Coach-first', 'AI assists; the coach approves every finding.'],
+              [Users, 'Coach-first', 'The coach writes and approves every finding.'],
             ].map(([Icon, title, desc]) => (
               <div key={title} className="reveal flex items-center gap-3">
                 <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-cyan-300 ring-1 ring-white/10">
@@ -247,7 +242,7 @@ export default function HomePage() {
         <div className="grid gap-4 md:grid-cols-3">
           <MiniCard icon={Clock3} title="Moments stay attached to feedback" description="Key timestamps and approximate frames can sit beside the finding, drill, and next focus." />
           <MiniCard icon={FileText} title="Feedback becomes a report" description="The coach output is a readable swimmer improvement plan, not a disconnected video clip." />
-          <MiniCard icon={ShieldCheck} title="Only approved content is shared" description="Draft AI evidence, private coach notes, and rejected findings stay out of public reports." />
+          <MiniCard icon={ShieldCheck} title="Only approved content is shared" description="Private coach notes and rejected findings stay out of public reports." />
         </div>
       </Section>
 
@@ -260,15 +255,15 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Coach-approved AI" title="AI-assisted evidence. Coach-approved report." description="AI suggests draft findings; coaches approve, edit, or reject each one before it reaches a report.">
+      <Section eyebrow="Coach control" title="Every finding is coach-created and coach-approved." description="Nothing reaches a swimmer report unless the coach marks it, writes it, and approves it. You stay in control of every word that goes to a swimmer or parent.">
         <div className="grid gap-4 md:grid-cols-3">
-          <MiniCard icon={Brain} title="Draft findings only" description="AI output is treated as evidence for review, not automatic truth." />
-          <MiniCard icon={ShieldCheck} title="Honest about video quality" description="Unclear footage goes to manual coach review — no made-up findings." />
-          <MiniCard icon={CheckCircle2} title="Coach final say" description="Reports only show approved coach content, whether AI-assisted or manual." />
+          <MiniCard icon={PencilLine} title="Coach-created findings" description="Every observation is written by the coach from the video, in your own words." />
+          <MiniCard icon={ShieldCheck} title="Private by default" description="Videos stay in your private club workspace and are never shared without you." />
+          <MiniCard icon={CheckCircle2} title="Coach final say" description="Reports only ever show the content you approved." />
         </div>
         <div className="mt-8">
           <Link to="/coach-approved-ai" className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-            Read the AI trust explanation
+            Read about trust and privacy
           </Link>
         </div>
       </Section>
@@ -339,7 +334,7 @@ export default function HomePage() {
           <div className="bg-slate-950 p-6 text-white">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Demo report</div>
             <h3 className="mt-3 text-2xl font-bold">Breaststroke · Kick setup</h3>
-            <p className="mt-2 text-sm text-slate-300">AI-assisted evidence supports coach review. Final report content is coach-approved.</p>
+            <p className="mt-2 text-sm text-slate-300">Every finding is coach-created. Final report content is coach-approved.</p>
           </div>
           <div className="grid gap-4 p-6 md:grid-cols-2">
             {[

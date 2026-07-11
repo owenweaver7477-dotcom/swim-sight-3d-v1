@@ -23,9 +23,9 @@ const featureGroups = [
     points: ['Fullscreen review', 'Coach Draw', 'Manual findings from moments'],
   },
   {
-    title: 'AI-Assisted Evidence',
+    title: 'Coach Findings',
     icon: Brain,
-    description: 'AI can suggest draft findings when evidence quality is strong enough, while coaches keep final control.',
+    description: 'Coaches create technical findings from video moments and keep full control of every report.',
     points: ['Draft findings only', 'Quality-gated review', 'Manual review when evidence is weak'],
   },
   {
@@ -51,7 +51,7 @@ export default function FeaturesPage() {
       <PublicHero
         eyebrow="Features"
         title="Video review, coach findings, and swimmer reports in one workflow."
-        description="Private video review, Coach Studio, AI-assisted evidence, and swimmer reports — one workflow."
+        description="Private video review, Coach Studio, coach findings, and swimmer reports — one workflow."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
@@ -83,10 +83,10 @@ export default function FeaturesPage() {
             </div>
             <h2 className="mt-4 text-2xl font-bold text-slate-950">Built around coach decisions.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Video, AI, findings, drills, and reports follow one rule: the coach reviews evidence before it's shared.
+              Video, findings, drills, and reports follow one rule: the coach reviews everything before it's shared.
             </p>
             <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-800">
-              AI suggests. Coaches decide. <Link to="/coach-approved-ai" className="text-sky-700 hover:text-sky-900">Read the trust explanation.</Link>
+              Coach-created. Coach-approved. <Link to="/coach-approved-ai" className="text-sky-700 hover:text-sky-900">Read about trust and privacy.</Link>
             </div>
           </div>
           <div className="grid gap-4">

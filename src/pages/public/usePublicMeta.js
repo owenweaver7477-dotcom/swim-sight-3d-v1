@@ -49,7 +49,7 @@ export default function usePublicMeta(input, legacyDescription) {
   useEffect(() => {
     const {
       title = 'Swim Sight 3D',
-      description = 'AI-assisted swimming analysis report software for serious coaches and clubs.',
+      description = 'Coach-led swim video review software for serious coaches and clubs.',
       path = '/',
       canonicalPath = path,
       image = '/og-swim-sight-3d.png',

@@ -10,24 +10,24 @@ const faqGroups = [
   {
     category: 'Product',
     items: [
-      ['Does Swim Sight 3D replace the coach?', 'No. The product is built around coach approval. AI can assist, but coaches decide what is supported by the video and what appears in a report.'],
-      ['Is manual review available?', 'Yes. Coach Studio supports manual video review, timestamps, key moments, drawing, findings, drills, and reports without relying on AI.'],
-      ['What does the "3D" in the name mean?', 'Swim Sight 3D is built around coach-reviewed video and visual evidence today, with 3D and biomechanics analysis as the future direction. Current pilot reports are video-based coach reviews — not lab-grade 3D measurement.'],
+      ['Does Swim Sight 3D replace the coach?', 'No. Swim Sight 3D is a manual review tool. The coach marks moments, writes every finding, and decides what appears in a report.'],
+      ['Is this a manual review tool?', 'Yes. Coach Studio is a manual video-review workspace — timestamps, key moments, drawing, coach findings, drills, and reports, all created by the coach.'],
+      ['What does the "3D" in the name mean?', 'Swim Sight 3D is built around coach-reviewed video and visual evidence. It is the product name; pilot reports are video-based coach reviews, not lab-grade 3D measurement.'],
       ['What video length works best?', 'For pilot testing, short 5–15 second clips, side view, and 720p or compressed 1080p footage are recommended.'],
     ],
   },
   {
-    category: 'AI + Coach Approval',
+    category: 'Coach review',
     items: [
-      ['What does AI do?', 'AI can analyse suitable video and create draft evidence or findings when pose quality is strong enough. Weak evidence becomes manual review, not fake findings.'],
-      ['Can coaches edit findings?', 'Yes. Coaches can approve, edit, reject, or create manual findings before finalising a report.'],
+      ['How are findings created?', 'The coach creates every finding by hand from the video — mark the moment, draw on the frame, and write the observation, cue, and drill.'],
+      ['Can coaches edit findings?', 'Yes. Coaches write, edit, reject, or reorder findings before finalising a report.'],
     ],
   },
   {
     category: 'Privacy',
     items: [
       ['Are videos private?', 'Videos stay inside the authenticated club workflow. Shared reports never expose private paths or signed URLs — see the privacy page.'],
-      ['What is excluded from shared reports?', 'Shared reports exclude private paths, signed URLs, raw AI output, rejected findings, and internal coach notes.'],
+      ['What is excluded from shared reports?', 'Shared reports exclude private paths, signed URLs, rejected findings, and internal coach notes.'],
     ],
   },
   {

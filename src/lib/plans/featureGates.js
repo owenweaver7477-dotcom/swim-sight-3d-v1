@@ -35,7 +35,7 @@ export const PLAN_DEFINITIONS = {
     key: PLAN_KEYS.CLUB_PRO,
     label: 'Club Pro',
     shortLabel: 'Club Pro',
-    description: 'Club workspace, squads, multi-coach roles, progress history, and higher future AI allowance.',
+    description: 'Club workspace, squads, multi-coach roles, progress history, and club report management.',
     summary: 'Club workflow layer for squads and staff.',
     ctaLabel: 'Request club pilot',
   },

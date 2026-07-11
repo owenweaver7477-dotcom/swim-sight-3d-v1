@@ -26,7 +26,7 @@ const publicReportItems = [
 const excludedItems = [
   'Private video paths',
   'Signed video URLs',
-  'Raw AI output',
+  'Internal review notes',
   'Rejected findings',
   'Calibration feedback',
   'Internal coach notes not selected for the report',
@@ -66,7 +66,7 @@ export default function PrivacyVideoReviewPage() {
             </div>
           </div>
           <div className="mt-5 grid gap-2">
-            {['Shared reports only show coach-approved content.', 'Private video paths and signed URLs are not included in public reports.', 'Raw AI output and rejected findings stay out of swimmer-facing reports.'].map((item) => (
+            {['Shared reports only show coach-approved content.', 'Private video paths and signed URLs are not included in public reports.', 'Rejected findings and internal review notes stay out of swimmer-facing reports.'].map((item) => (
               <div key={item} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-800">
                 <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" />
                 {item}
@@ -102,7 +102,7 @@ export default function PrivacyVideoReviewPage() {
               ['Coaches review video', 'Video review, key stamps, Coach Draw, findings, and drills happen inside the app.'],
               ['Reports are separate', 'The shared report is a public-safe summary of approved feedback, not a public video library.'],
               ['Links can be managed', 'Shared report links can be created, copied, and managed from the finalised report workflow.'],
-              ['Manual review is supported', 'Coaches can create a full report even when AI is not used or evidence is limited.'],
+              ['Manual review is the workflow', 'Coaches create the full report by hand — mark moments, add findings, finalise.'],
             ].map(([title, description]) => (
               <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 className="text-base font-bold text-slate-950">{title}</h3>
@@ -153,19 +153,19 @@ export default function PrivacyVideoReviewPage() {
         </div>
       </PublicSection>
 
-      <PublicSection title="Coach-approved content rule" description="AI can assist the review process, but Swim Sight 3D is built around the coach deciding what belongs in the final swimmer-facing report.">
+      <PublicSection title="Coach-approved content rule" description="Swim Sight 3D is built around the coach deciding what belongs in the final swimmer-facing report.">
         <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10">
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">AI suggests. Coaches decide.</div>
+              <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Coach-created. Coach-approved.</div>
               <h2 className="mt-3 text-3xl font-bold">The coach controls what is finalised and shared.</h2>
               <p className="mt-4 text-sm leading-7 text-slate-300">
-                Raw AI output, rejected findings, and private coach notes are not intended for the public report. Coaches approve, edit, or create the final findings before sharing.
+                Rejected findings and private coach notes are not intended for the public report. Coaches write, approve, and edit the final findings before sharing.
               </p>
             </div>
             <div className="grid gap-3">
               {[
-                ['Draft evidence', 'AI-assisted findings start as review material, not public report content.'],
+                ['Draft evidence', 'Coach findings start as review material, not public report content.'],
                 ['Coach review', 'The coach checks the video, edits language, and selects what belongs.'],
                 ['Shared report', 'The swimmer or parent sees the final approved improvement plan.'],
               ].map(([title, description]) => (
@@ -195,7 +195,7 @@ export default function PrivacyVideoReviewPage() {
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link to="/coach-approved-ai" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">
-            Read coach-approved AI <ArrowRight className="ml-2 inline h-4 w-4" />
+            Trust and privacy <ArrowRight className="ml-2 inline h-4 w-4" />
           </Link>
           <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
           <Link to="/for-clubs" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">For clubs</Link>

@@ -47,7 +47,7 @@ function EmptyState() {
         Club progress uses real coach-approved reports only. Charts unlock after at least three finalised reports exist.
       </p>
       <Link to="/ai-reviews">
-        <Button size="sm" className="mt-2">Open AI Reviews</Button>
+        <Button size="sm" className="mt-2">Open Coach Studio</Button>
       </Link>
     </div>
   );
@@ -196,7 +196,7 @@ export default function ClubProgress() {
       <div className="mb-5 flex flex-wrap gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
         <Shield className="w-4 h-4 text-primary mt-0.5" />
         <p className="text-[10px] text-muted-foreground flex-1 leading-relaxed">
-          No fake charts here. Pending AI reports, rejected findings, deleted reports, and weak-pose drafts are excluded.
+          No fake charts here. Pending reports, rejected findings, and deleted reports are excluded.
         </p>
       </div>
 
@@ -279,7 +279,7 @@ export default function ClubProgress() {
                 </div>
 
                 <div className="p-4 rounded-xl bg-white border border-border">
-                  <div className="text-xs font-bold text-foreground mb-3">Manual vs AI-Assisted Reviews</div>
+                  <div className="text-xs font-bold text-foreground mb-3">Reviews</div>
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={progress.modeCounts}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />

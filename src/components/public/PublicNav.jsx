@@ -7,7 +7,7 @@ const navItems = [
   { to: '/features', label: 'Features' },
   { to: '/for-coaches', label: 'Coaches' },
   { to: '/for-clubs', label: 'Clubs' },
-  { to: '/coach-approved-ai', label: 'AI + Trust' },
+  { to: '/coach-approved-ai', label: 'Trust & Privacy' },
   { to: '/sample-report', label: 'Sample Report' },
   { to: '/stroke-analysis', label: 'Stroke Analysis' },
   { to: '/pricing', label: 'Pilot Access' },
@@ -49,7 +49,7 @@ export default function PublicNav() {
           />
           <span>
             <span className={`block text-sm font-bold leading-tight ${dark ? 'text-white' : 'text-slate-950'}`}>Swim Sight 3D</span>
-            <span className={`block text-[10px] font-semibold uppercase tracking-[0.2em] ${dark ? 'text-cyan-300/80' : 'text-slate-500'}`}>Coach-approved analysis</span>
+            <span className={`block text-[10px] font-semibold uppercase tracking-[0.2em] ${dark ? 'text-cyan-300/80' : 'text-slate-500'}`}>Coach-led video review</span>
           </span>
         </Link>
 

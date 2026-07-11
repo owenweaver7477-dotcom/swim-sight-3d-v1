@@ -1,13 +1,13 @@
 export const publicSeoMetadata = {
   home: {
     path: '/',
-    title: 'Swim Sight 3D | AI-Assisted Swim Video Review for Coaches',
-    description: 'Upload a swim clip, review AI-assisted draft findings, approve the report, and send clear next steps to swimmers.',
+    title: 'Swim Sight 3D | Coach-Led Swim Video Review Software',
+    description: 'Private, coach-led swim video review. Mark key moments, draw over frames, add coach findings and drills, and share clean reports with swimmers and parents.',
   },
   features: {
     path: '/features',
-    title: 'Features | Swim Sight 3D Swimming Video Analysis Software',
-    description: 'Explore Swim Sight 3D features for coach video review, key moments, Coach Draw, AI-assisted findings, drill suggestions, swimmer reports, and club workflows.',
+    title: 'Features | Swim Sight 3D Swim Video Review Software',
+    description: 'Explore Swim Sight 3D features for coach video review, key moments, Coach Draw, coach findings, drill-linked feedback, swimmer reports, and club workflows.',
   },
   coaches: {
     path: '/for-coaches',
@@ -21,13 +21,13 @@ export const publicSeoMetadata = {
   },
   coachApprovedAI: {
     path: '/coach-approved-ai',
-    title: 'Coach-Approved AI Swimming Analysis | Swim Sight 3D',
-    description: 'Learn how Swim Sight 3D uses coach-approved AI swimming analysis, manual review, video quality gates, private swim video review, and public-safe swimmer reports.',
+    title: 'Trust and Privacy | Swim Sight 3D',
+    description: 'How Swim Sight 3D keeps coaches in control: every finding is coach-created and coach-approved, videos stay private, and shared reports show approved content only.',
   },
   privacyVideoReview: {
     path: '/privacy-video-review',
     title: 'Privacy and Video Review | Swim Sight 3D',
-    description: 'Learn how Swim Sight 3D handles private swim video review, coach-approved shared reports, signed video URLs, raw AI output, rejected findings, and public-safe report links.',
+    description: 'How Swim Sight 3D handles private swim video review, coach-approved shared reports, signed video URLs, rejected findings, and public-safe report links.',
   },
   sampleReport: {
     path: '/sample-report',
@@ -67,6 +67,6 @@ export const publicSeoMetadata = {
   faq: {
     path: '/faq',
     title: 'FAQ | Swim Sight 3D Swimming Analysis Software',
-    description: 'Answers about Swim Sight 3D AI-assisted swimming analysis, coach approval, manual review, private videos, squads, reports, and pilot access.',
+    description: 'Answers about Swim Sight 3D coach-led swim video review, coach approval, manual review, private videos, squads, reports, and pilot access.',
   },
 };

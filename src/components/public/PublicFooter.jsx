@@ -17,11 +17,11 @@ export default function PublicFooter() {
             />
             <div>
               <div className="text-sm font-bold text-white">Swim Sight 3D</div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">AI suggests. Coaches decide.</div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Coach-led video review.</div>
             </div>
           </div>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
-            AI-assisted swimming analysis report software for serious coaches and clubs. Built around coach-approved feedback, private video handling, and clear swimmer improvement reports.
+            Private, coach-led swim video review software for serious coaches and clubs. Built around coach-created feedback, private video handling, and clear swimmer improvement reports.
           </p>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-400">
             Built for Australian swim clubs and coaches.
@@ -42,7 +42,7 @@ export default function PublicFooter() {
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Product</div>
           <div className="mt-3 grid gap-2 text-sm">
             <Link to="/features" className="hover:text-white">Features</Link>
-            <Link to="/coach-approved-ai" className="hover:text-white">AI + Trust</Link>
+            <Link to="/coach-approved-ai" className="hover:text-white">Trust & Privacy</Link>
             <Link to="/privacy-video-review" className="hover:text-white">Privacy + Video Review</Link>
             <Link to="/sample-report" className="hover:text-white">Sample Report</Link>
             <Link to="/stroke-analysis" className="hover:text-white">Stroke Analysis</Link>

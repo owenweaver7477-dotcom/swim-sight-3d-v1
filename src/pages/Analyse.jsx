@@ -452,7 +452,7 @@ export default function Analyse() {
       const seconds = video.duration || 0;
       setVideoDurationSeconds(Number.isFinite(seconds) ? Number(seconds.toFixed(2)) : null);
       if (seconds > 15) {
-        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. AI Review works best with 5-15 second clips; longer videos can upload and process more slowly. Trim to one swimmer, side-view, 720p/1080p MP4 for faster testing.`);
+        setDurationWarning(`This clip is ${Math.round(seconds)} seconds. Short 5-15 second clips review fastest; longer videos can upload more slowly. Trim to one swimmer, side-view, 720p/1080p MP4 for faster testing.`);
       }
     };
     video.onerror = () => URL.revokeObjectURL(url);
@@ -1380,7 +1380,7 @@ export default function Analyse() {
           </p>
           {swimmers.length === 0 ? (
             <div className="p-5 rounded-xl bg-card border border-border text-center text-xs text-muted-foreground">
-              Add a swimmer first, then upload a video to trigger AI Analysis.
+              Add a swimmer first, then upload a video to start a coach review.
             </div>
           ) : (
             <SafeAnalyseSection name="Video library">

@@ -131,7 +131,7 @@ export default function StrokeDetailPage({ stroke }) {
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">Report structure</div>
             <h2 className="mt-3 text-2xl font-bold text-slate-950">From phase to swimmer plan.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Findings can be AI-assisted or manual, but every report item should be coach-reviewed before it is finalised or shared.
+              Every finding is coach-created, and every report item should be coach-reviewed before it is finalised or shared.
             </p>
             <Link to="/sample-report" className="mt-5 inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
               View sample report

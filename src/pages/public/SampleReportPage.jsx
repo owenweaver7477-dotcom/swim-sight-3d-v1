@@ -127,7 +127,7 @@ export default function SampleReportPage() {
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
                 This public demo shows how Swim Sight 3D turns coach-reviewed video moments into findings, cues, drills, and a swimmer improvement plan.
               </p>
-              <p className="mt-3 text-sm font-semibold text-cyan-100">AI-assisted evidence supports coach review. Coaches decide what appears in the final report.</p>
+              <p className="mt-3 text-sm font-semibold text-cyan-100">Every finding is coach-created. Coaches decide what appears in the final report.</p>
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
               <div className="grid gap-3 text-sm">
@@ -208,7 +208,7 @@ export default function SampleReportPage() {
             </div>
             <div>
               <p className="text-base leading-8 text-slate-700">
-                Sample reports show only coach-approved content. Private video paths, raw AI output, rejected findings, calibration notes, and internal coach notes are not included.
+                Sample reports show only coach-approved content. Private video paths, rejected findings, and internal coach notes are not included.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>

@@ -23,7 +23,7 @@ export default function ForCoachesPage() {
       <PublicHero
         eyebrow="For coaches"
         title="Turn swim video into clearer coach feedback."
-        description="Key moments, drawing tools, and AI-assisted draft evidence — feedback swimmers actually understand."
+        description="Key moments, drawing tools, and coach findings — feedback swimmers actually understand."
         actions={
           <>
             <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
@@ -83,9 +83,9 @@ export default function ForCoachesPage() {
           ))}
         </div>
       </PublicSection>
-      <PublicSection subtle title="AI is an assistant inside the coach workflow" description="Strong evidence → AI draft findings. Weak evidence → full manual review.">
+      <PublicSection subtle title="You stay in control of every finding" description="Swim Sight 3D is a manual review workspace — the coach marks moments, draws, and writes every finding before it reaches a report.">
         <Link to="/coach-approved-ai" className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-          Read how coach-approved AI works
+          Read about trust and privacy
         </Link>
       </PublicSection>
     </PublicLayout>

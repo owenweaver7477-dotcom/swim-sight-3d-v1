@@ -166,7 +166,7 @@ function NoClubDashboard() {
         <Waves className="w-7 h-7 text-primary" />
       </div>
       <h1 className="text-xl font-bold text-slate-900 mb-2">Welcome to Swim Sight 3D</h1>
-      <p className="text-sm text-slate-500 mb-8 max-w-sm mx-auto leading-relaxed">Create a club workspace to start managing swimmers, uploading footage, and running AI-assisted reviews.</p>
+      <p className="text-sm text-slate-500 mb-8 max-w-sm mx-auto leading-relaxed">Create a club workspace to start managing swimmers, uploading footage, and running coach reviews.</p>
       <Button onClick={() => navigate('/club-onboarding')} className="bg-primary text-white">
         <Plus className="w-4 h-4 mr-2" /> Create Club Workspace
       </Button>
@@ -283,7 +283,7 @@ export default function TeamDashboard() {
   const priorityItems = [
     awaitingReview.length > 0 && {
       icon: Brain, iconColor: 'text-amber-500', urgent: true, badge: 'Review needed', badgeTone: 'amber',
-      label: `${awaitingReview.length} AI report${awaitingReview.length > 1 ? 's' : ''} awaiting coach review`,
+      label: `${awaitingReview.length} report${awaitingReview.length > 1 ? 's' : ''} awaiting coach review`,
       meta: `${pendingAIFindings.length} finding${pendingAIFindings.length !== 1 ? 's' : ''} need approval`,
       cta: 'Open Coach Studio', onClick: () => navigate('/ai-reviews'),
     },
@@ -295,7 +295,7 @@ export default function TeamDashboard() {
     },
     readyVideos.length > 0 && {
       icon: Video, iconColor: 'text-cyan-600', urgent: false, badge: 'Review suggested', badgeTone: 'cyan',
-      label: `${readyVideos.length} uploaded video${readyVideos.length > 1 ? 's' : ''} ready for AI Review`,
+      label: `${readyVideos.length} uploaded video${readyVideos.length > 1 ? 's' : ''} ready for review`,
       meta: 'Preview the clip, then use AI assistance or Coach Studio review',
       cta: 'Review Video', onClick: () => navigate('/analyse'),
     },
@@ -308,7 +308,7 @@ export default function TeamDashboard() {
     processingVideos.length > 0 && {
       icon: Loader2, iconColor: 'text-blue-500', urgent: false, badge: 'Processing', badgeTone: 'blue',
       label: `${processingVideos.length} video${processingVideos.length > 1 ? 's' : ''} processing`,
-      meta: 'AI analysis in progress',
+      meta: 'Review in progress',
       cta: 'Monitor', onClick: () => navigate('/analyse'),
     },
     dueForReview.length > 0 && {
@@ -347,7 +347,7 @@ export default function TeamDashboard() {
             </span>.
           </h1>
           <p className="mt-2 max-w-lg text-sm text-slate-500">
-            Review AI-assisted findings, approve what you agree with, and share coach-approved reports.
+            Review your findings, approve what you agree with, and share coach-approved reports.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button size="sm" className="h-9 bg-primary text-xs text-white shadow-md shadow-primary/20 hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
@@ -378,7 +378,7 @@ export default function TeamDashboard() {
           <Upload className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-slate-900">Start a new AI analysis</div>
+          <div className="text-sm font-bold text-slate-900">Start a new review</div>
           <div className="text-xs text-slate-500">Upload a short swim clip to begin — the coach reviews and approves every finding.</div>
         </div>
         <span className="hidden flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-primary/90 sm:inline-flex">
@@ -406,7 +406,7 @@ export default function TeamDashboard() {
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircle2 className="h-6 w-6" /></span>
                 <div>
                   <div className="text-sm font-bold text-emerald-900">You&apos;re all caught up</div>
-                  <div className="text-[11px] text-emerald-700">No AI reports are waiting for coach decisions right now.</div>
+                  <div className="text-[11px] text-emerald-700">No reports are waiting for coach decisions right now.</div>
                 </div>
                 <Button size="sm" className="h-8 bg-primary text-xs text-white hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
                   <Upload className="mr-1.5 h-3.5 w-3.5" /> Start a new analysis
@@ -435,7 +435,7 @@ export default function TeamDashboard() {
               <div className="mt-2.5 border-t border-slate-100 pt-2.5 text-[10px] text-slate-400">
                 {reviewTotal === 0
                   ? 'Nothing in the review pipeline right now.'
-                  : `${reviewTotal} item${reviewTotal === 1 ? '' : 's'} in the review pipeline${activeJobs.length > 0 ? ` · ${activeJobs.length} AI job${activeJobs.length === 1 ? '' : 's'} active` : ''}.`}
+                  : `${reviewTotal} item${reviewTotal === 1 ? '' : 's'} in the review pipeline${activeJobs.length > 0 ? ` · ${activeJobs.length} in progress` : ''}.`}
               </div>
             </div>
           </SectionCard>
@@ -452,7 +452,7 @@ export default function TeamDashboard() {
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-4 w-4" /></span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-xs font-semibold text-slate-800">{r.swimmerName}</div>
-                      <div className="truncate text-[10px] text-slate-500">{r.title || 'AI Report'}</div>
+                      <div className="truncate text-[10px] text-slate-500">{r.title || 'Coach review report'}</div>
                     </div>
                     <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Open →</button>
                   </div>

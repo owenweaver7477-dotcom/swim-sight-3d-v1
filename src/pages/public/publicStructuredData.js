@@ -15,7 +15,7 @@ export function homeStructuredData() {
       '@type': 'WebSite',
       name: 'Swim Sight 3D',
       url: SITE_URL,
-      description: 'AI-assisted swimming analysis report software for coaches and clubs.',
+      description: 'Coach-led swim video review software for coaches and clubs.',
       inLanguage: 'en-AU',
     },
     {
@@ -25,7 +25,7 @@ export function homeStructuredData() {
       applicationCategory: 'SportsApplication',
       operatingSystem: 'Web',
       url: SITE_URL,
-      description: 'AI-assisted swimming analysis report software that helps swim coaches review video, approve findings, assign drills, and create swimmer improvement reports.',
+      description: 'Coach-led swim video review software that helps swim coaches review video, mark key moments, add coach findings, assign drills, and create swimmer improvement reports.',
     },
   ];
 }

@@ -1035,7 +1035,7 @@ export default function AIReportPage() {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-        <span className="text-sm text-muted-foreground">Loading AI report…</span>
+        <span className="text-sm text-muted-foreground">Loading review…</span>
       </div>
     );
   }

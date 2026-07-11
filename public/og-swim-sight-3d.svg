@@ -22,11 +22,11 @@
   </g>
   <rect x="74" y="72" width="1052" height="486" rx="34" fill="#0F172A" fill-opacity="0.72" stroke="white" stroke-opacity="0.12"/>
   <text x="112" y="139" fill="#67E8F9" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="6">SWIM SIGHT 3D</text>
-  <text x="112" y="236" fill="white" font-family="Inter, Arial, sans-serif" font-size="62" font-weight="800">AI-assisted swimming</text>
-  <text x="112" y="306" fill="white" font-family="Inter, Arial, sans-serif" font-size="62" font-weight="800">analysis reports</text>
-  <text x="112" y="376" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="500">for serious coaches and clubs</text>
-  <rect x="112" y="428" width="375" height="54" rx="27" fill="#67E8F9"/>
-  <text x="140" y="464" fill="#020617" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">AI suggests. Coaches decide.</text>
+  <text x="112" y="236" fill="white" font-family="Inter, Arial, sans-serif" font-size="62" font-weight="800">Coach-led swim</text>
+  <text x="112" y="306" fill="white" font-family="Inter, Arial, sans-serif" font-size="62" font-weight="800">video review</text>
+  <text x="112" y="376" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="500">for coaches, clubs, and swimmers</text>
+  <rect x="112" y="428" width="360" height="54" rx="27" fill="#67E8F9"/>
+  <text x="140" y="464" fill="#020617" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">Every finding coach-approved.</text>
   <g transform="translate(760 130)">
     <rect width="270" height="310" rx="26" fill="#020617" stroke="#67E8F9" stroke-opacity="0.34"/>
     <rect x="28" y="34" width="214" height="118" rx="18" fill="#0F172A" stroke="white" stroke-opacity="0.12"/>

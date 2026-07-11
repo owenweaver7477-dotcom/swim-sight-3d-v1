@@ -41,7 +41,7 @@ const GROUP_LABELS = {
 function ReliabilityLabel({ report, job }) {
   const summary = job?.callback_summary || {};
   if (PROCESSING_JOB_STATUSES.includes(job?.status)) {
-    return <span className="text-[10px] font-medium text-blue-700">AI processing in progress</span>;
+    return <span className="text-[10px] font-medium text-blue-700">Review in progress</span>;
   }
   if (['error', 'timed_out'].includes(job?.status) || report.analysis_mode === 'error') {
     return <span className="text-[10px] font-medium text-red-600">Processing failed — retry or complete manual review</span>;
@@ -72,11 +72,11 @@ function DeleteModal({ report, onConfirm, onCancel, isDeleting }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onCancel}>
       <div className="bg-white border border-slate-200 rounded-xl p-5 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-3">
-          <div className="text-sm font-semibold text-slate-900">Delete AI Report?</div>
+          <div className="text-sm font-semibold text-slate-900">Delete report?</div>
           <button onClick={onCancel} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
         </div>
         <p className="text-xs text-slate-500 leading-relaxed mb-4">
-          Removes <strong>"{report.title || 'AI Report'}"</strong> from review queues and sharing. The video can be re-analysed. This cannot be undone.
+          Removes <strong>"{report.title || 'Coach review report'}"</strong> from review lists and sharing. The video stays available for review. This cannot be undone.
         </p>
         <div className="flex gap-2 justify-end">
           <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onCancel}>Cancel</Button>
@@ -289,7 +289,7 @@ export default function AIReportsListPage() {
     <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
       <PageHeader
         title="Coach Studio"
-        subtitle="Open video reviews, approve AI-assisted drafts, or complete premium manual analysis."
+        subtitle="Open video reviews, add coach findings, and finalise swimmer reports."
         action={
           <Link to="/analyse">
             <Button size="sm" className="bg-primary text-white text-xs h-8">
@@ -302,7 +302,7 @@ export default function AIReportsListPage() {
       <PilotReadinessWarning className="mb-4" />
 
       <div className="mb-5 text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg px-4 py-2.5">
-        AI assists when evidence is strong. Coach Studio remains the main review workspace.
+        Coach Studio is your manual review workspace.
       </div>
 
       {isLoading ? (
@@ -315,7 +315,7 @@ export default function AIReportsListPage() {
           <Brain className="w-9 h-9 text-slate-300 mx-auto mb-3" />
           <div className="text-sm font-semibold text-slate-700 mb-1">No coach reviews yet</div>
           <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto mb-4">
-            Upload a video in Analyse, then open Coach Studio with AI assistance or manual review.
+            Upload a video in Analyse, then open Coach Studio to review it.
           </p>
           <Link to="/analyse">
             <Button size="sm" className="bg-primary text-white">
