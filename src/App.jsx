@@ -219,7 +219,7 @@ const AuthenticatedApp = () => {
           <Route path="/upload" element={<Navigate to="/analyse" replace />} />
           <Route path="/analysis" element={<Navigate to="/analyse" replace />} />
           <Route path="/setup" element={<Navigate to="/analyse" replace />} />
-          <Route path="/branded-report" element={<Navigate to="/report" replace />} />
+          <Route path="/branded-report" element={<Navigate to="/ai-reviews" replace />} />
           <Route path="/model" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route element={<RoleProtectedRoute allowedRoles={OWNER_ADMIN_ROLES} />}>
