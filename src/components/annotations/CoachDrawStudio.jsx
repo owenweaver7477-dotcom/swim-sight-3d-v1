@@ -205,6 +205,12 @@ export default function CoachDrawStudio({
   const [markerCue, setMarkerCue] = useState('');
   const [markerIncludeInReport, setMarkerIncludeInReport] = useState(false);
   const [controlsExpanded, setControlsExpanded] = useState(false);
+  // Video-first: the findings drawer starts open on desktop and collapsed on
+  // tablet/phone so the video dominates; the coach toggles it from the top bar.
+  const [panelOpen, setPanelOpen] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return true;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
   const fps = estimateFps(video);
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
   const [selectedDrills, setSelectedDrills] = useState(
@@ -646,7 +652,7 @@ export default function CoachDrawStudio({
   };
 
   const renderVideoSurface = (ref, isFullscreen = false) => (
-    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[48vh] lg:min-h-[72vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
+    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[48vh] lg:min-h-[78vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
       {signedVideoUrl ? (
         <video
           ref={ref}
@@ -897,14 +903,19 @@ export default function CoachDrawStudio({
               {video?.stroke_type && <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs text-slate-200">{video.stroke_type}</span>}
               <span className="rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2.5 py-0.5 font-mono text-xs text-cyan-200">{formatTimestamp(timestamp)}</span>
             </div>
-            <Button size="sm" variant="outline" className="h-11 px-4 text-sm font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={closeFullscreen}>
-              <X className="mr-1.5 h-4 w-4" /> Exit Review
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-11 px-3 text-sm font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={() => setPanelOpen((open) => !open)}>
+                <SlidersHorizontal className="mr-1.5 h-4 w-4" /> {panelOpen ? 'Hide findings' : 'Show findings'}
+              </Button>
+              <Button size="sm" variant="outline" className="h-11 px-4 text-sm font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={closeFullscreen}>
+                <X className="mr-1.5 h-4 w-4" /> Exit Review
+              </Button>
+            </div>
           </div>
 
           {/* Scrollable workspace body */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="mx-auto max-w-[1600px] space-y-4">
+            <div className={`mx-auto space-y-4 ${panelOpen ? 'max-w-[1600px]' : 'max-w-none'}`}>
               {readOnly && (
                 <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3">
                   <div className="flex items-center gap-2 text-sm font-bold text-amber-100">
@@ -935,41 +946,46 @@ export default function CoachDrawStudio({
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
-                {/* LEFT: video + playback */}
-                <div className="space-y-3">
+              <div className={`grid grid-cols-1 gap-4 ${panelOpen ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''}`}>
+                {/* LEFT: video + a slim docked control bar (speed / frame-step / seek).
+                    Kept docked below the video — never a floating overlay — so it can't
+                    clash with the top-right drawing toolbar or feel awkward on iPad. */}
+                <div className="space-y-2">
                   {renderVideoSurface(fullscreenVideoRef, true)}
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Speed</span>
-                        {PLAYBACK_SPEEDS.map((speed) => (
-                          <button
-                            key={speed}
-                            type="button"
-                            onClick={() => setPlaybackRate(speed)}
-                            className={`h-11 min-w-[3rem] rounded-md px-2 text-xs font-semibold transition-colors ${playbackRate === speed ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-slate-200 hover:bg-white/10'}`}
-                          >
-                            {speed}x
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" className="h-11 px-3 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(-1)} disabled={!signedVideoUrl}>
-                          <Rewind className="mr-1 h-4 w-4" /> 1s
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-11 px-3 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(1)} disabled={!signedVideoUrl}>
-                          <FastForward className="mr-1 h-4 w-4" /> 1s
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Speed</span>
+                    {PLAYBACK_SPEEDS.map((speed) => (
+                      <button
+                        key={speed}
+                        type="button"
+                        onClick={() => setPlaybackRate(speed)}
+                        className={`h-9 min-w-[2.5rem] rounded-md px-1.5 text-xs font-semibold transition-colors ${playbackRate === speed ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-slate-200 hover:bg-white/10'}`}
+                      >
+                        {speed}x
+                      </button>
+                    ))}
+                    <span className="mx-0.5 hidden h-6 w-px bg-white/10 sm:block" />
+                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(-APPROX_FRAME_STEP)} disabled={!signedVideoUrl} title="Step back one frame">
+                      <SkipBack className="mr-1 h-4 w-4" /> Frame
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(APPROX_FRAME_STEP)} disabled={!signedVideoUrl} title="Step forward one frame">
+                      <SkipForward className="mr-1 h-4 w-4" /> Frame
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(-1)} disabled={!signedVideoUrl} title="Back one second">
+                      <Rewind className="mr-1 h-4 w-4" /> 1s
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(1)} disabled={!signedVideoUrl} title="Forward one second">
+                      <FastForward className="mr-1 h-4 w-4" /> 1s
+                    </Button>
                   </div>
                 </div>
 
                 {/* RIGHT: Mark this moment (compact so the video stays the hero).
-                    When read-only, the whole panel is non-interactive so a locked report
-                    can never silently swallow a phase/drill/Add-Finding click. */}
-                <div className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
+                    Hidden (not unmounted) when the drawer is collapsed so in-progress
+                    finding input is preserved. When read-only, the whole panel is
+                    non-interactive so a locked report can never silently swallow a
+                    phase/drill/Add-Finding click. */}
+                <div className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${panelOpen ? '' : 'hidden'} ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
                   <div className="text-sm font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'Add Coach Finding'}</div>
 
                   {reviewMode === 'ai' && findings.length > 0 && onReviewAISuggestions && (
@@ -1031,20 +1047,29 @@ export default function CoachDrawStudio({
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-300">Coach cue <span className="text-slate-500">(optional)</span></div>
-                    <Input
-                      value={markerCue}
-                      onChange={(e) => setMarkerCue(e.target.value)}
-                      maxLength={160}
-                      className="h-10 bg-white text-sm text-slate-950"
-                      placeholder="What should the swimmer feel or do?"
-                    />
-                  </div>
+                  <details className="group rounded-lg border border-white/10 bg-white/5">
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
+                      <span>Coach cue {markerCue.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
+                      <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+                    </summary>
+                    <div className="px-3 pb-3">
+                      <Input
+                        value={markerCue}
+                        onChange={(e) => setMarkerCue(e.target.value)}
+                        maxLength={160}
+                        className="h-10 bg-white text-sm text-slate-950"
+                        placeholder="What should the swimmer feel or do?"
+                      />
+                    </div>
+                  </details>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs font-semibold text-slate-300">Drills{selectedDrills.length > 0 ? ` (${selectedDrills.length})` : ''}</div>
+                  <details className="group rounded-lg border border-white/10 bg-white/5">
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
+                      <span>Drills{selectedDrills.length > 0 ? ` (${selectedDrills.length})` : ''}</span>
+                      <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+                    </summary>
+                    <div className="space-y-2 px-3 pb-3">
+                    <div className="flex items-center justify-end gap-2">
                       <div className="flex gap-0.5 rounded-md bg-white/5 p-0.5">
                         <button
                           type="button"
@@ -1212,11 +1237,16 @@ export default function CoachDrawStudio({
                         </div>
                       </div>
                     )}
-                  </div>
+                    </div>
+                  </details>
 
                   {linkedEvidenceOptions.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-xs font-semibold text-slate-300">Linked image <span className="text-slate-500">(evidence)</span></div>
+                    <details className="group rounded-lg border border-white/10 bg-white/5">
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
+                        <span>Linked image {effectiveLinkId ? <span className="text-cyan-300">· linked</span> : <span className="text-slate-500">(evidence)</span>}</span>
+                        <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+                      </summary>
+                      <div className="space-y-1.5 px-3 pb-3">
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         <button
                           type="button"
@@ -1243,7 +1273,8 @@ export default function CoachDrawStudio({
                       <div className="text-[10px] text-slate-400">
                         {effectiveLinkId ? '✓ Image linked to this finding' : 'This finding will have no image.'}
                       </div>
-                    </div>
+                      </div>
+                    </details>
                   )}
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
