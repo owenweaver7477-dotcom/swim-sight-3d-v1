@@ -7,6 +7,7 @@ import {
   LockKeyhole,
 } from 'lucide-react';
 import CoachWorkflowChecklist from './CoachWorkflowChecklist';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 
 const FINAL_REPORT_STATUSES = new Set(['coach_approved', 'finalised', 'published', 'shared']);
 const ACTIVE_AI_STATUSES = new Set([
@@ -154,6 +155,12 @@ export default function CoachStudioWorkflowPanel({
     },
   ];
 
+  // Manual-first pilot: drop the AI-assisted draft step and the AI status row so
+  // the workflow guide reads as a pure manual coach-review checklist.
+  const visibleSections = AI_PILOT_LOCKED
+    ? sections.filter(section => section.title !== 'AI-assisted draft review')
+    : sections;
+
   const readiness = [
     ['Video ready', Boolean(video)],
     ['Consent ready', consentReady],
@@ -163,7 +170,7 @@ export default function CoachStudioWorkflowPanel({
     ['Coach decisions complete', findings.length > 0 && pendingFindings.length === 0],
     ['Report approved', reportFinal],
     ['Share / export checked', activeShare],
-  ];
+  ].filter(([label]) => !AI_PILOT_LOCKED || label !== 'AI status clear');
 
   const quickSteps = [
     {
@@ -242,7 +249,7 @@ export default function CoachStudioWorkflowPanel({
           </div>
 
           <div className="mt-3 grid gap-2 md:grid-cols-2">
-            {sections.map((section, index) => {
+            {visibleSections.map((section, index) => {
               const Icon = statusIcon(section.status);
               return (
                 <div key={section.title} className="rounded-lg border border-slate-200 bg-white p-3">

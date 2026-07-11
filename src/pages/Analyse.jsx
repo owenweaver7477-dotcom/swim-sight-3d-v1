@@ -1304,7 +1304,7 @@ export default function Analyse() {
                 <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="font-semibold">{uploadStatusMessage || 'Video uploaded. Ready for review.'}</div>
-                  <div className="mt-1 text-[10px] text-green-700">Next: configure the review, send for AI Review, or open Coach Studio for manual review.</div>
+                  <div className="mt-1 text-[10px] text-green-700">{AI_PILOT_LOCKED ? 'Next: confirm the review details, then open Coach Studio for a manual coach review.' : 'Next: configure the review, send for AI Review, or open Coach Studio for manual review.'}</div>
                 </div>
               </div>
               {uploadedUrl && (
@@ -1374,7 +1374,9 @@ export default function Analyse() {
             <h2 className="text-sm font-bold text-foreground">Video Library — Review Status</h2>
           </div>
           <p className="mb-4 text-xs text-muted-foreground leading-relaxed">
-            Uploaded videos stay visible here. Use the next-action message on each card to preview, open Coach Studio, send for AI Review, retry AI, or remove failed uploads.
+            {AI_PILOT_LOCKED
+              ? 'Uploaded videos stay visible here. Use the next-action button on each card to preview, open Coach Studio, or remove failed uploads.'
+              : 'Uploaded videos stay visible here. Use the next-action message on each card to preview, open Coach Studio, send for AI Review, retry AI, or remove failed uploads.'}
           </p>
           {swimmers.length === 0 ? (
             <div className="p-5 rounded-xl bg-card border border-border text-center text-xs text-muted-foreground">
@@ -1400,23 +1402,31 @@ export default function Analyse() {
             <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
           <h2 className="text-lg font-bold text-foreground mb-1">Configure Review</h2>
-          <p className="text-xs text-muted-foreground mb-5">Confirm the stroke, camera angle, and exactly what the AI-assisted draft should look for before opening manual review or sending the uploaded video for AI Review.</p>
+          <p className="text-xs text-muted-foreground mb-5">
+            {AI_PILOT_LOCKED
+              ? 'Confirm the stroke, camera angle, and analysis type, then open Coach Studio to complete a manual coach review.'
+              : 'Confirm the stroke, camera angle, and exactly what the AI-assisted draft should look for before opening manual review or sending the uploaded video for AI Review.'}
+          </p>
           <div className="space-y-4">
-            <SafeAnalyseSection name="Review setup">
-              <ReviewSetupPanel
-                videoUploadId={videoUploadId}
-                value={reviewContext}
-                onChange={setReviewContext}
-                stroke={stroke}
-                cameraAngle={angle}
-              />
-            </SafeAnalyseSection>
-            <SafeAnalyseSection name="Analysis focus checklist">
-              <AnalysisFocusChecklist
-                value={reviewContext.analysis_focus_areas}
-                onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
-              />
-            </SafeAnalyseSection>
+            {!AI_PILOT_LOCKED && (
+              <SafeAnalyseSection name="Review setup">
+                <ReviewSetupPanel
+                  videoUploadId={videoUploadId}
+                  value={reviewContext}
+                  onChange={setReviewContext}
+                  stroke={stroke}
+                  cameraAngle={angle}
+                />
+              </SafeAnalyseSection>
+            )}
+            {!AI_PILOT_LOCKED && (
+              <SafeAnalyseSection name="Analysis focus checklist">
+                <AnalysisFocusChecklist
+                  value={reviewContext.analysis_focus_areas}
+                  onChange={(analysis_focus_areas) => setReviewContext(current => ({ ...current, analysis_focus_areas }))}
+                />
+              </SafeAnalyseSection>
+            )}
             <div>
               <Label className="text-xs text-muted-foreground">Stroke</Label>
               <Select value={stroke} onValueChange={setStroke}>

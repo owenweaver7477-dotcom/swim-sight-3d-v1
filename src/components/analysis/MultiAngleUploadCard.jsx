@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { uploadPrivateVideo } from '@/lib/data/videoUploads';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -143,7 +144,7 @@ export default function MultiAngleUploadCard({
         },
       });
       setStatus('done');
-      setStatusMessage('Video uploaded. Ready for AI Review.');
+      setStatusMessage(AI_PILOT_LOCKED ? 'Video uploaded. Ready for Coach Studio.' : 'Video uploaded. Ready for AI Review.');
       onUploaded(angleKey, record, isPrimary);
     } catch (err) {
       setStatus('error');

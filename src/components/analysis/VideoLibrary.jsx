@@ -322,7 +322,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             <span>{upload.upload_error || upload.ai_error_message || 'Upload failed before the private video was ready. Retry from the upload form or delete this failed row.'}</span>
           </div>
           <Button size="sm" variant="outline" className="w-full h-8 text-xs" disabled>
-            <Brain className="w-3 h-3 mr-1.5" /> AI Review unavailable until upload completes
+            <Brain className="w-3 h-3 mr-1.5" /> {AI_PILOT_LOCKED ? 'Coach Studio available once upload completes' : 'AI Review unavailable until upload completes'}
           </Button>
         </div>
       );
@@ -349,7 +349,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-600" />
             <span>AI processing timed out. Retry AI Review with this private video, or continue with manual review.</span>
           </div>
-          {canTriggerAI && (
+          {canTriggerAI && !AI_PILOT_LOCKED && (
             <Button size="sm" variant="outline"
               className="w-full h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
               onClick={() => onStartReview(upload)}>
@@ -368,7 +368,9 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
         <Button size="sm" variant="outline"
           className="w-full h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
           onClick={() => onStartReview(upload)}>
-          <RotateCw className="w-3 h-3 mr-1.5" /> Configure AI retry
+          {AI_PILOT_LOCKED
+            ? <><Play className="w-3 h-3 mr-1.5" /> Open Coach Studio</>
+            : <><RotateCw className="w-3 h-3 mr-1.5" /> Configure AI retry</>}
         </Button>
       );
     }
@@ -386,7 +388,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
               <Play className="w-3 h-3 mr-1.5" /> Continue in Coach Studio
             </Button>
           )}
-          {canTriggerAI && (
+          {canTriggerAI && !AI_PILOT_LOCKED && (
             <Button size="sm" variant="outline"
               className="w-full h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
               onClick={() => onStartReview(upload)}>
@@ -463,6 +465,15 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
           />
           {cancelMessage && <p className="text-[10px] leading-4 text-amber-800" role="status">{cancelMessage}</p>}
         </div>
+      );
+    }
+
+    if (AI_PILOT_LOCKED && hasPrivateObject) {
+      return (
+        <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
+          onClick={() => onStartReview(upload)}>
+          <Play className="w-3 h-3 mr-1.5" /> Open Coach Studio
+        </Button>
       );
     }
 
