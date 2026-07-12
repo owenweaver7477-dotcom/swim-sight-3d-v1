@@ -11,12 +11,17 @@ import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
 import {
   BookmarkPlus,
   CheckCircle2,
+  Circle,
   Download,
   FastForward,
   Gauge,
   Lock,
   Maximize2,
+  Minus,
+  MoveUpRight,
+  Pause,
   PencilLine,
+  Play,
   Plus,
   Rewind,
   Search,
@@ -217,6 +222,9 @@ export default function CoachDrawStudio({
   );
   const [timestamp, setTimestamp] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
+  // Custom playback UI (fullscreen uses its own controls, not the native bar).
+  const [duration, setDuration] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const [title, setTitle] = useState('');
   const [coachNote, setCoachNote] = useState('');
   const [includeInReport, setIncludeInReport] = useState(false);
@@ -652,6 +660,20 @@ export default function CoachDrawStudio({
     syncTimestamp(current);
   };
 
+  const seekTo = (seconds) => {
+    const current = activeVideo();
+    if (!current || !Number.isFinite(seconds)) return;
+    current.currentTime = Math.max(0, Math.min(current.duration || Number.MAX_SAFE_INTEGER, seconds));
+    syncTimestamp(current);
+  };
+
+  const togglePlay = () => {
+    const current = activeVideo();
+    if (!current) return;
+    if (current.paused) current.play?.()?.catch?.(() => {});
+    else current.pause();
+  };
+
   const pauseAndCapture = () => {
     const current = activeVideo();
     current?.pause();
@@ -874,22 +896,34 @@ export default function CoachDrawStudio({
   };
 
   const renderVideoSurface = (ref, isFullscreen = false) => (
-    <div className={`relative overflow-hidden bg-black ${isFullscreen ? 'rounded-xl min-h-[48vh] lg:min-h-[78vh]' : 'rounded-lg'}`} style={{ aspectRatio: '16/9' }}>
+    <div
+      className={`relative overflow-hidden bg-black ${
+        isFullscreen
+          ? `rounded-xl ${currentStep === 'findings' ? 'h-[36vh] lg:h-[42vh]' : 'h-[44vh] lg:h-[62vh]'}`
+          : 'rounded-lg'
+      }`}
+      style={isFullscreen ? undefined : { aspectRatio: '16/9' }}
+    >
       {signedVideoUrl ? (
         <video
           ref={ref}
           src={signedVideoUrl}
           crossOrigin="anonymous"
-          controls={!drawing}
+          // Fullscreen uses the custom playback row + scrubber below the video
+          // (matching the approved reference); the inline legacy view keeps the
+          // native controls.
+          controls={!drawing && !isFullscreen}
           playsInline
           // While drawing, the video must not intercept pointer/touch/stylus events —
           // on iPad the native video layer otherwise swallows them before the canvas.
           className={`w-full h-full object-contain ${drawing ? 'pointer-events-none' : ''}`}
           onTimeUpdate={(event) => syncTimestamp(event.currentTarget)}
-          onLoadedMetadata={(event) => syncTimestamp(event.currentTarget)}
+          onLoadedMetadata={(event) => { syncTimestamp(event.currentTarget); setDuration(event.currentTarget.duration || 0); }}
+          onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
           onSeeked={(event) => syncTimestamp(event.currentTarget)}
-          onPause={(event) => syncTimestamp(event.currentTarget)}
-          onPlay={(event) => syncTimestamp(event.currentTarget)}
+          onPause={(event) => { syncTimestamp(event.currentTarget); setPlaying(false); }}
+          onPlay={(event) => { syncTimestamp(event.currentTarget); setPlaying(true); }}
+          onClick={isFullscreen && !drawing ? togglePlay : undefined}
         />
       ) : signedVideoError ? (
         <div className="h-full flex items-center justify-center text-xs text-red-300 px-4 text-center">
@@ -898,6 +932,31 @@ export default function CoachDrawStudio({
       ) : (
         <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
           Loading private video preview...
+        </div>
+      )}
+
+      {/* Vertical draw rail over the LEFT edge of the video (reference layout).
+          Tapping a tool enters Coach Draw mode; the full annotation toolbar then
+          takes over. Hidden while drawing and on read-only reports. */}
+      {isFullscreen && !drawing && !readOnly && signedVideoUrl && (
+        <div className="absolute left-2 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1 rounded-xl border border-white/10 bg-slate-950/70 p-1 backdrop-blur-sm">
+          {[
+            [PencilLine, 'Coach Draw'],
+            [Minus, 'Line'],
+            [MoveUpRight, 'Arrow'],
+            [Circle, 'Circle'],
+          ].map(([Icon, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={startDrawing}
+              title={`${label} — opens drawing tools`}
+              aria-label={`${label} — opens drawing tools`}
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-sky-500/20 hover:text-white"
+            >
+              <Icon className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+            </button>
+          ))}
         </div>
       )}
 
@@ -1117,59 +1176,59 @@ export default function CoachDrawStudio({
               {actionFeedback.type === 'success' ? '✓ ' : '⚠ '}{actionFeedback.msg}
             </div>
           )}
-          {/* Top bar — brand/swimmer, 3-step navigation, saved status + actions */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/10 px-4 py-2.5 sm:px-6">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Coach Studio</span>
-              {swimmer?.name && <span className="truncate text-sm font-semibold">{swimmer.name}</span>}
-              {video?.stroke_type && <span className="hidden rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs text-slate-200 md:inline">{video.stroke_type}</span>}
-              <span className="hidden rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2.5 py-0.5 font-mono text-xs text-cyan-200 sm:inline">{formatTimestamp(timestamp)}</span>
+          {/* Top bar — three zones: back · title + stepper · status/actions (reference shell) */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-white/10 px-5 py-2.5 sm:px-7">
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={closeFullscreen}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+              >
+                <span aria-hidden="true">‹</span> Back to Reviews
+              </button>
             </div>
-            {/* Step navigation */}
-            <div className="order-3 flex w-full items-center justify-center gap-1 sm:order-none sm:w-auto" role="tablist" aria-label="Coach Studio steps">
-              {STUDIO_STEPS.map((step, index) => {
-                const active = currentStep === step.key;
-                const complete = index < stepIndex;
-                return (
-                  <React.Fragment key={step.key}>
-                    {index > 0 && <span className={`h-px w-4 sm:w-6 ${complete || active ? 'bg-sky-400/70' : 'bg-white/15'}`} aria-hidden="true" />}
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => goToStep(step.key)}
-                      className={`flex min-h-10 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-all motion-reduce:transition-none ${active ? 'scale-100 bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                    >
-                      <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-colors ${active ? 'bg-sky-500 text-white' : complete ? 'bg-emerald-500/80 text-slate-950' : 'bg-white/10 text-slate-300'}`}>
-                        {complete ? '✓' : index + 1}
-                      </span>
-                      <span className="hidden md:inline">{step.label}</span>
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="text-sm font-bold uppercase tracking-[0.2em] text-white">Coach Studio</span>
+              {/* Stepper — numbered circles, thin connectors, no pill (reference style) */}
+              <div className="flex items-center" role="tablist" aria-label="Coach Studio steps">
+                {STUDIO_STEPS.map((step, index) => {
+                  const active = currentStep === step.key;
+                  const complete = index < stepIndex;
+                  return (
+                    <React.Fragment key={step.key}>
+                      {index > 0 && <span className={`mx-2 h-px w-8 sm:w-12 ${complete || active ? 'bg-sky-400/60' : 'bg-white/15'}`} aria-hidden="true" />}
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => goToStep(step.key)}
+                        className="group flex items-center gap-1.5 py-0.5 transition-transform motion-reduce:transform-none"
+                      >
+                        <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors ${active ? 'bg-sky-500 text-white ring-2 ring-sky-500/30' : complete ? 'bg-emerald-500 text-slate-950' : 'border border-white/25 bg-transparent text-slate-400'}`}>
+                          {complete ? '✓' : index + 1}
+                        </span>
+                        <span className={`hidden text-[13px] font-semibold md:inline ${active ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{step.label}</span>
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Saved status */}
-              <span className={`hidden items-center gap-1 text-xs font-semibold sm:flex ${(savingFinding || savingMarker || drawingSaving || savingFindingDetails || savingComments) ? 'text-slate-300' : 'text-emerald-300'}`} role="status">
+            <div className="flex items-center justify-end gap-2">
+              <span className={`hidden items-center gap-1 text-xs font-semibold lg:flex ${(savingFinding || savingMarker || drawingSaving || savingFindingDetails || savingComments) ? 'text-slate-400' : 'text-emerald-300'}`} role="status">
                 {(savingFinding || savingMarker || drawingSaving || savingFindingDetails || savingComments) ? 'Saving…' : '✓ Saved'}
               </span>
-              {currentStep === 'analysis' && (
-                <Button size="sm" variant="outline" className="hidden h-10 px-3 text-xs font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20 lg:inline-flex" onClick={() => setPanelOpen((open) => !open)}>
-                  <SlidersHorizontal className="mr-1.5 h-4 w-4" /> {panelOpen ? 'Hide moments' : 'Show moments'}
-                </Button>
-              )}
-              <Button size="sm" variant="outline" className="h-10 px-3 text-xs font-semibold border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={closeFullscreen}>
-                <X className="mr-1.5 h-4 w-4" /> Exit Review
+              <Button size="sm" variant="outline" className="h-10 px-3 text-xs font-semibold border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={closeFullscreen}>
+                Exit Review
               </Button>
               {stepIndex < STUDIO_STEPS.length - 1 ? (
-                <Button size="sm" className="h-10 bg-sky-500 px-3 text-xs font-bold text-white hover:bg-sky-400" onClick={goNextStep}>
-                  Next: {STUDIO_STEPS[stepIndex + 1].label}
+                <Button size="sm" className="h-10 bg-sky-500 px-3.5 text-xs font-bold text-white hover:bg-sky-400" onClick={goNextStep}>
+                  Next: {STUDIO_STEPS[stepIndex + 1].label} →
                 </Button>
               ) : (
                 <Button
                   size="sm"
-                  className="h-10 bg-sky-500 px-3 text-xs font-bold text-white hover:bg-sky-400"
+                  className="h-10 bg-sky-500 px-3.5 text-xs font-bold text-white hover:bg-sky-400"
                   onClick={() => {
                     if (reportFinalised) { setFinaliseFlow('ready'); return; }
                     if (onFinaliseReport && canFinalise) { setFinaliseFlow('confirm'); return; }
@@ -1177,15 +1236,59 @@ export default function CoachDrawStudio({
                     onFinalise?.();
                   }}
                 >
-                  {reportFinalised ? 'View Report' : 'Finalise Report'}
+                  {reportFinalised ? 'View Report' : 'Finalise Report ✓'}
                 </Button>
               )}
             </div>
           </div>
 
+          {/* Swimmer context row — structured page header (reference), not top-bar pills */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/5 bg-white/[0.02] px-5 py-2.5 sm:px-7">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-200" aria-hidden="true">
+                {(swimmer?.name || 'S').split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <div className="truncate text-[15px] font-semibold leading-tight text-white">{swimmer?.name || 'Swimmer'}</div>
+                <div className="truncate text-xs text-slate-400">
+                  {[video?.analysis_type, video?.created_date ? new Date(video.created_date).toLocaleDateString() : null, duration ? formatTimestamp(duration) : null].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+            </div>
+            <span className="min-w-4 flex-1" />
+            {video?.stroke_type && (
+              <span className="rounded-lg border border-white/15 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-200">
+                <span className="mr-1.5 text-[10px] uppercase tracking-wider text-slate-500">Stroke</span>{video.stroke_type}
+              </span>
+            )}
+            {video?.camera_angle && (
+              <span className="hidden rounded-lg border border-white/15 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-200 sm:inline-block">
+                <span className="mr-1.5 text-[10px] uppercase tracking-wider text-slate-500">View</span>{video.camera_angle}
+              </span>
+            )}
+            {currentStep === 'analysis' && (
+              <Button size="sm" variant="outline" className="hidden h-9 border-white/20 bg-white/5 px-2.5 text-[11px] font-semibold text-white hover:bg-white/10 lg:inline-flex" onClick={() => setPanelOpen((open) => !open)}>
+                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> {panelOpen ? 'Hide moments' : `Moments (${keyMoments.length})`}
+              </Button>
+            )}
+          </div>
+
+          {/* Slim reopen tab when the Key Moments drawer is collapsed (reference behaviour). */}
+          {currentStep === 'analysis' && !panelOpen && (
+            <button
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              className="fixed right-0 top-1/2 z-[110] -translate-y-1/2 rounded-l-lg border border-r-0 border-white/15 bg-slate-900/90 px-1.5 py-4 text-[11px] font-semibold text-slate-200 backdrop-blur transition-colors hover:bg-slate-800 motion-reduce:transition-none"
+              style={{ writingMode: 'vertical-rl' }}
+              aria-label={`Show key moments (${keyMoments.length})`}
+            >
+              Moments ({keyMoments.length})
+            </button>
+          )}
+
           {/* Scrollable workspace body */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className={`mx-auto space-y-4 ${panelOpen ? 'max-w-[1600px]' : 'max-w-none'}`}>
+            <div className="space-y-4">
               {readOnly && (
                 <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3">
                   <div className="flex items-center gap-2 text-sm font-bold text-amber-100">
@@ -1219,10 +1322,10 @@ export default function CoachDrawStudio({
               <div
                 className={`grid grid-cols-1 gap-4 ${
                   currentStep === 'analysis'
-                    ? (panelOpen ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : '')
+                    ? (panelOpen ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,25%)]' : '')
                     : currentStep === 'findings'
-                      ? 'lg:grid-cols-[280px_minmax(0,1fr)_340px] xl:grid-cols-[300px_minmax(0,1fr)_360px]'
-                      : 'lg:grid-cols-[minmax(0,1fr)_420px]'
+                      ? 'lg:grid-cols-[minmax(250px,26%)_minmax(0,1fr)_minmax(300px,30%)]'
+                      : 'lg:grid-cols-2'
                 }`}
               >
                 {/* STEP 2 ONLY: findings list with screenshots. Kept mounted (hidden via
@@ -1296,57 +1399,122 @@ export default function CoachDrawStudio({
                     with the top-right drawing toolbar on iPad. */}
                 <div key="video-col" className={currentStep === 'drills' ? 'hidden' : 'min-w-0 space-y-2'}>
                   {renderVideoSurface(fullscreenVideoRef, true)}
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Speed</span>
-                    {PLAYBACK_SPEEDS.map((speed) => (
-                      <button
-                        key={speed}
-                        type="button"
-                        onClick={() => setPlaybackRate(speed)}
-                        className={`h-9 min-w-[2.5rem] rounded-md px-1.5 text-xs font-semibold transition-colors ${playbackRate === speed ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-slate-200 hover:bg-white/10'}`}
-                      >
-                        {speed}x
-                      </button>
-                    ))}
-                    <span className="mx-0.5 hidden h-6 w-px bg-white/10 sm:block" />
-                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(-APPROX_FRAME_STEP)} disabled={!signedVideoUrl} title="Step back one frame">
-                      <SkipBack className="mr-1 h-4 w-4" /> Frame
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(APPROX_FRAME_STEP)} disabled={!signedVideoUrl} title="Step forward one frame">
-                      <SkipForward className="mr-1 h-4 w-4" /> Frame
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(-1)} disabled={!signedVideoUrl} title="Back one second">
-                      <Rewind className="mr-1 h-4 w-4" /> 1s
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-10 px-2.5 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => seekBy(1)} disabled={!signedVideoUrl} title="Forward one second">
-                      <FastForward className="mr-1 h-4 w-4" /> 1s
-                    </Button>
+                  {/* Playback row — play/pause · frame step · time/duration · speed · fullscreen */}
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
+                    <button
+                      type="button"
+                      onClick={togglePlay}
+                      disabled={!signedVideoUrl}
+                      title={playing ? 'Pause' : 'Play'}
+                      aria-label={playing ? 'Pause' : 'Play'}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500 text-white transition-colors hover:bg-sky-400 disabled:opacity-40"
+                    >
+                      {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+                    </button>
+                    <button type="button" onClick={() => seekBy(-APPROX_FRAME_STEP)} disabled={!signedVideoUrl} title="Previous frame" aria-label="Previous frame" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-200 transition-colors hover:bg-white/10 disabled:opacity-40">
+                      <SkipBack className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => seekBy(APPROX_FRAME_STEP)} disabled={!signedVideoUrl} title="Next frame" aria-label="Next frame" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-200 transition-colors hover:bg-white/10 disabled:opacity-40">
+                      <SkipForward className="h-4 w-4" />
+                    </button>
+                    <span className="px-1 font-mono text-xs text-slate-300">
+                      {formatTimestamp(timestamp)} <span className="text-slate-500">/ {formatTimestamp(duration || 0)}</span>
+                    </span>
+                    <span className="min-w-2 flex-1" />
+                    <select
+                      value={playbackRate}
+                      onChange={(e) => setPlaybackRate(Number(e.target.value))}
+                      aria-label="Playback speed"
+                      className="h-10 rounded-lg border border-white/15 bg-slate-900/70 px-2 text-xs font-semibold text-slate-200"
+                    >
+                      {PLAYBACK_SPEEDS.map((speed) => (
+                        <option key={speed} value={speed}>{speed}x</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => { const v = activeVideo(); v?.requestFullscreen?.(); }}
+                      disabled={!signedVideoUrl}
+                      title="Fullscreen video"
+                      aria-label="Fullscreen video"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-200 transition-colors hover:bg-white/10 disabled:opacity-40"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
                   </div>
-                  {/* Step 1: stroke-phase buttons under the timeline. Selecting a phase
-                      feeds Add Moment / Add Finding (same markerLabel state as before). */}
+                  {/* Timeline — thin scrubber with coloured moment markers and click-to-seek */}
+                  <div
+                    className="relative h-7 cursor-pointer select-none px-1"
+                    role="slider"
+                    aria-label="Video timeline"
+                    aria-valuemin={0}
+                    aria-valuemax={Math.round(duration || 0)}
+                    aria-valuenow={Math.round(timestamp || 0)}
+                    tabIndex={0}
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+                      if (duration > 0) seekTo(ratio * duration);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowLeft') seekBy(-APPROX_FRAME_STEP);
+                      if (e.key === 'ArrowRight') seekBy(APPROX_FRAME_STEP);
+                    }}
+                  >
+                    <div className="absolute inset-x-1 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/10" aria-hidden="true" />
+                    <div
+                      className="absolute left-1 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-sky-500/80"
+                      style={{ width: `calc(${duration > 0 ? Math.min(100, (timestamp / duration) * 100) : 0}% - 0px)` }}
+                      aria-hidden="true"
+                    />
+                    {duration > 0 && keyMoments.map((m, index) => (
+                      <span
+                        key={m.id}
+                        title={`${m.phase} · ${formatTimestamp(m.seconds)}`}
+                        className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-950 ${MOMENT_COLORS[index % MOMENT_COLORS.length]}`}
+                        style={{ left: `${Math.min(100, Math.max(0, (m.seconds / duration) * 100))}%` }}
+                        aria-hidden="true"
+                      />
+                    ))}
+                    {duration > 0 && (
+                      <span
+                        className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-sky-400 shadow"
+                        style={{ left: `${Math.min(100, (timestamp / duration) * 100)}%` }}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  {/* Step 1: stroke-phase row spanning the video width (reference layout).
+                      Selecting a phase feeds Add Moment / Add Finding (same markerLabel state). */}
                   {currentStep === 'analysis' && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {isIM && IM_SEGMENTS.map((segment) => (
-                        <button
-                          key={segment.key}
-                          type="button"
-                          onClick={() => selectImSegment(segment.key)}
-                          className={`min-h-9 rounded-md border px-2 text-[11px] font-semibold transition-colors ${imSegment === segment.key ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/50'}`}
-                        >
-                          {segment.label}
-                        </button>
-                      ))}
-                      {quickLabels.map((label) => (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => togglePhase(label)}
-                          disabled={readOnly}
-                          className={`min-h-9 rounded-md border px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-50 ${markerLabel === label ? 'border-sky-400 bg-sky-500 text-white' : 'border-white/15 bg-white/5 text-slate-300 hover:border-sky-300/50'}`}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                    <div className="space-y-1.5">
+                      {isIM && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {IM_SEGMENTS.map((segment) => (
+                            <button
+                              key={segment.key}
+                              type="button"
+                              onClick={() => selectImSegment(segment.key)}
+                              className={`min-h-9 rounded-md border px-2 text-[11px] font-semibold transition-colors ${imSegment === segment.key ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/50'}`}
+                            >
+                              {segment.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="grid grid-flow-col auto-cols-fr gap-1.5 overflow-x-auto">
+                        {quickLabels.map((label) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => togglePhase(label)}
+                            disabled={readOnly}
+                            className={`min-h-10 truncate rounded-lg border px-2 text-xs font-semibold transition-colors disabled:opacity-50 ${markerLabel === label ? 'border-sky-400 bg-sky-500 text-white' : 'border-white/10 bg-white/5 text-slate-300 hover:border-sky-300/50 hover:text-white'}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1383,7 +1551,7 @@ export default function CoachDrawStudio({
                             value={customMomentName}
                             onChange={(e) => setCustomMomentName(e.target.value)}
                             maxLength={80}
-                            className="h-10 bg-white text-sm text-slate-950"
+                            className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                             placeholder="Moment name (e.g. First breath)"
                           />
                           <div className="flex items-center gap-2 text-[11px] text-slate-300">
@@ -1395,7 +1563,7 @@ export default function CoachDrawStudio({
                             value={customMomentNote}
                             onChange={(e) => setCustomMomentNote(e.target.value)}
                             maxLength={150}
-                            className="h-10 bg-white text-sm text-slate-950"
+                            className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                             placeholder="Note (optional)"
                           />
                           <div className="flex gap-2">
@@ -1467,7 +1635,7 @@ export default function CoachDrawStudio({
                           value={editObservation}
                           onChange={(e) => setEditObservation(e.target.value)}
                           maxLength={200}
-                          className="min-h-[64px] bg-white text-sm text-slate-950"
+                          className="min-h-[64px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                           placeholder="What did you notice?"
                         />
                       </div>
@@ -1477,7 +1645,7 @@ export default function CoachDrawStudio({
                           value={editCue}
                           onChange={(e) => setEditCue(e.target.value)}
                           maxLength={200}
-                          className="h-10 bg-white text-sm text-slate-950"
+                          className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                           placeholder="What should the swimmer feel or do?"
                         />
                       </div>
@@ -1543,7 +1711,7 @@ export default function CoachDrawStudio({
                             value={editNotes}
                             onChange={(e) => setEditNotes(e.target.value)}
                             maxLength={300}
-                            className="min-h-[56px] bg-white text-sm text-slate-950"
+                            className="min-h-[56px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                             placeholder="Add any extra notes about this finding…"
                           />
                         </div>
@@ -1622,7 +1790,7 @@ export default function CoachDrawStudio({
                       value={markerNote}
                       onChange={(e) => setMarkerNote(e.target.value)}
                       maxLength={150}
-                      className="min-h-[64px] bg-white text-sm text-slate-950"
+                      className="min-h-[64px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                       placeholder="What did you notice?"
                     />
                   </div>
@@ -1637,7 +1805,7 @@ export default function CoachDrawStudio({
                         value={markerCue}
                         onChange={(e) => setMarkerCue(e.target.value)}
                         maxLength={160}
-                        className="h-10 bg-white text-sm text-slate-950"
+                        className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                         placeholder="What should the swimmer feel or do?"
                       />
                     </div>
@@ -1718,7 +1886,7 @@ export default function CoachDrawStudio({
                           <Input
                             value={drillQuery}
                             onChange={(e) => setDrillQuery(e.target.value)}
-                            className="h-11 bg-white pl-8 text-sm text-slate-950"
+                            className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500 pl-8"
                             placeholder="Search drills (e.g. narrow knee, timing, catch)"
                           />
                         </div>
@@ -1768,28 +1936,28 @@ export default function CoachDrawStudio({
                           value={customDrillTitle}
                           onChange={(e) => setCustomDrillTitle(e.target.value)}
                           maxLength={120}
-                          className="h-11 bg-white text-sm text-slate-950"
+                          className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                           placeholder="Custom drill title (e.g. Narrow-knee band kick)"
                         />
                         <Textarea
                           value={customDrillSummary}
                           onChange={(e) => setCustomDrillSummary(e.target.value)}
                           maxLength={400}
-                          className="min-h-[56px] bg-white text-sm text-slate-950"
+                          className="min-h-[56px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                           placeholder="How to do it / description"
                         />
                         <Input
                           value={customDrillCue}
                           onChange={(e) => setCustomDrillCue(e.target.value)}
                           maxLength={160}
-                          className="h-11 bg-white text-sm text-slate-950"
+                          className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                           placeholder="Coaching cue (optional)"
                         />
                         <Input
                           value={customDrillWhy}
                           onChange={(e) => setCustomDrillWhy(e.target.value)}
                           maxLength={200}
-                          className="h-11 bg-white text-sm text-slate-950"
+                          className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                           placeholder="Why this helps / focus (optional)"
                         />
                         <div className="flex gap-2">
@@ -1966,7 +2134,7 @@ export default function CoachDrawStudio({
                                 <Input
                                   value={drillQuery}
                                   onChange={(e) => setDrillQuery(e.target.value)}
-                                  className="h-10 bg-white pl-8 text-sm text-slate-950"
+                                  className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500 pl-8"
                                   placeholder="Search drills…"
                                 />
                               </div>
@@ -2015,33 +2183,43 @@ export default function CoachDrawStudio({
                   </div>
                   <div className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
                     <div className="space-y-1.5">
-                      <div className="text-xs font-semibold text-slate-300">Private Notes <span className="text-slate-500">(Coach Only)</span></div>
+                      <div className="text-[13px] font-semibold text-slate-200">Private Notes <span className="font-normal text-slate-500">(Coach Only)</span></div>
                       <Textarea
                         value={privateNotes}
                         onChange={(e) => { setPrivateNotes(e.target.value); setCommentsDirty(true); }}
                         maxLength={1000}
-                        className="min-h-[72px] bg-white text-sm text-slate-950"
+                        className="min-h-[88px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                         placeholder="Notes for you — never shown to swimmers or parents."
                       />
+                      <div className="text-right text-[10px] text-slate-500">{privateNotes.length} / 1000</div>
                     </div>
                     <div className="space-y-1.5">
-                      <div className="text-xs font-semibold text-slate-300">Swimmer Feedback <span className="text-slate-500">(Shown in Report)</span></div>
+                      <div className="text-[13px] font-semibold text-slate-200">Swimmer Feedback <span className="font-normal text-slate-500">(Shown in Report)</span></div>
                       <Textarea
                         value={swimmerFeedback}
                         onChange={(e) => { setSwimmerFeedback(e.target.value); setCommentsDirty(true); }}
                         maxLength={1500}
-                        className="min-h-[72px] bg-white text-sm text-slate-950"
+                        className="min-h-[88px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
                         placeholder="What should the swimmer focus on? This appears in the shared report."
                       />
+                      <div className="text-right text-[10px] text-slate-500">{swimmerFeedback.length} / 1500</div>
                     </div>
-                    <Button
-                      size="sm"
-                      className="h-10 w-full bg-cyan-400 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
-                      onClick={handleSaveComments}
-                      disabled={readOnly || savingComments || !commentsDirty}
-                    >
-                      {savingComments ? 'Saving…' : commentsDirty ? 'Save Comments' : '✓ Comments saved'}
-                    </Button>
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        role="status"
+                        className={`text-[11px] font-semibold ${savingComments ? 'text-slate-400' : commentsDirty ? 'text-amber-300' : 'text-emerald-300'}`}
+                      >
+                        {savingComments ? 'Saving…' : commentsDirty ? 'Unsaved changes' : '✓ Saved'}
+                      </span>
+                      <Button
+                        size="sm"
+                        className="h-9 bg-sky-500 px-4 text-xs font-semibold text-white hover:bg-sky-400 disabled:opacity-40"
+                        onClick={handleSaveComments}
+                        disabled={readOnly || savingComments || !commentsDirty}
+                      >
+                        Save Comments
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
                     <div>
@@ -2058,10 +2236,13 @@ export default function CoachDrawStudio({
                           {first ? (
                             <div className="overflow-hidden rounded-lg border border-white/10 bg-slate-900/50">
                               {firstThumb && <img src={firstThumb} alt="" className="aspect-video w-full object-cover" />}
-                              <div className="space-y-1.5 p-2.5">
+                              <div className="space-y-1.5 p-3">
                                 <div className="flex items-center gap-1.5">
                                   <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden="true" />
-                                  <span className="text-xs font-bold text-white">{tagLabel(first.stroke_phase || first.phase || 'Finding')}</span>
+                                  <span className="text-[13px] font-bold text-white">{tagLabel(first.stroke_phase || first.phase || 'Finding')}</span>
+                                  {Number.isFinite(Number(first.timestamp_seconds ?? first.timestamp_start)) && (
+                                    <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(Number(first.timestamp_seconds ?? first.timestamp_start) || 0)}</span>
+                                  )}
                                 </div>
                                 <p className="text-[11px] leading-4 text-slate-300">{first.observation || first.coach_sees || ''}</p>
                                 {(first.correction_cue || first.cue) && (
@@ -2136,63 +2317,23 @@ export default function CoachDrawStudio({
             </div>
           </div>
 
-          {/* Sticky poolside action bar — always-visible primary actions for iPad. Hidden
-              while drawing so it never overlaps the annotation toolbar. */}
-          {!drawing && (readOnly ? (
-            <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-slate-950/95 px-4 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
+          {/* Slim read-only strip — the only persistent footer. The old four-button
+              sticky bar was removed: actions live contextually inside each step
+              (Add Moment in the moments drawer, Coach Draw on the video rail,
+              Add Finding in the findings list, Finalise in step 3 / top bar). */}
+          {!drawing && readOnly && (
+            <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-slate-950/95 px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
               <div className="flex items-center gap-2 text-xs font-semibold text-amber-200">
                 <Lock className="h-4 w-4 flex-shrink-0" />
                 <span>Report is read-only — open a draft review to add findings, phase moments, or drawings.</span>
               </div>
               {reportFinalised && (onFinaliseReport || onFinalise) && (
-                <Button className="h-10 flex-shrink-0 rounded-xl border border-white/15 bg-white/5 text-xs font-semibold text-white hover:bg-white/10" onClick={() => setFinaliseFlow('ready')}>
+                <Button className="h-9 flex-shrink-0 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-white hover:bg-white/10" onClick={() => setFinaliseFlow('ready')}>
                   <CheckCircle2 className="mr-1.5 h-4 w-4 text-emerald-300" /> View report
                 </Button>
               )}
             </div>
-          ) : (
-            <div className="flex items-stretch gap-2 border-t border-white/10 bg-slate-950/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
-              {onSaveMarker && (
-                <Button
-                  className="h-12 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
-                  onClick={() => capturePhaseMoment()}
-                  disabled={!signedVideoUrl || !canEdit || savingMarker}
-                >
-                  <BookmarkPlus className="h-5 w-5 text-cyan-300" />
-                  {savingMarker ? 'Saving…' : 'Phase Moment'}
-                </Button>
-              )}
-              <Button
-                className="h-12 flex-1 flex-col gap-0.5 rounded-xl bg-cyan-400 text-[11px] font-semibold leading-tight text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
-                onClick={addFindingInline}
-                disabled={!signedVideoUrl || !canEdit || savingFinding || (!markerNote.trim() && !phaseSelected)}
-              >
-                <Plus className="h-5 w-5" />
-                {savingFinding ? 'Adding…' : 'Add Finding'}
-              </Button>
-              <Button
-                className="h-12 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10 disabled:opacity-50"
-                onClick={startDrawing}
-                disabled={!signedVideoUrl || !canEdit}
-              >
-                <PencilLine className="h-5 w-5 text-cyan-300" />
-                Coach Draw
-              </Button>
-              {(onFinaliseReport || onFinalise) && (
-                <Button
-                  className="h-12 flex-1 flex-col gap-0.5 rounded-xl border border-white/15 bg-white/5 text-[11px] font-semibold leading-tight text-white hover:bg-white/10"
-                  onClick={() => {
-                    if (reportFinalised) { setFinaliseFlow('ready'); return; }
-                    if (onFinaliseReport && canFinalise) { setFinaliseFlow('confirm'); return; }
-                    closeFullscreen(); onFinalise?.();
-                  }}
-                >
-                  <CheckCircle2 className="h-5 w-5 text-emerald-300" />
-                  {reportFinalised ? 'View' : 'Finalise'}
-                </Button>
-              )}
-            </div>
-          ))}
+          )}
         </div>,
         document.body
       )}
