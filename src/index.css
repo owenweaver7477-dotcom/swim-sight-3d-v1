@@ -207,3 +207,20 @@
     transition: none !important;
   }
 }
+
+/* Coach Studio step transitions — professional, restrained (220ms slide + fade).
+   CSS animations replay when an element's display toggles from none, so the
+   step panels re-enter with this every time the coach switches steps. */
+@keyframes ssd-step-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+.ssd-step-enter { animation: ssd-step-in 220ms ease both; }
+@keyframes ssd-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ssd-fade-enter { animation: ssd-fade-in 180ms ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .ssd-step-enter, .ssd-fade-enter { animation: none; }
+}

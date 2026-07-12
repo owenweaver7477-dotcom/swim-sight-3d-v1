@@ -235,7 +235,6 @@ export default function CoachDrawStudio({
     () => (typeof savedDraft.phase === 'string' && savedDraft.phase !== 'Key frame' ? savedDraft.phase : ''),
   );
   const [markerNote, setMarkerNote] = useState(() => (typeof savedDraft.note === 'string' ? savedDraft.note : ''));
-  const [markerCue, setMarkerCue] = useState('');
   const [markerIncludeInReport, setMarkerIncludeInReport] = useState(false);
   const [controlsExpanded, setControlsExpanded] = useState(false);
   // Video-first: the findings drawer starts open on desktop and collapsed on
@@ -275,7 +274,7 @@ export default function CoachDrawStudio({
   const [drillFindingId, setDrillFindingId] = useState(null);
   const fps = estimateFps(video);
   const approxFrame = Math.max(0, Math.round((timestamp || 0) * fps));
-  const [selectedDrills, setSelectedDrills] = useState(
+  const [selectedDrills] = useState(
     () => (Array.isArray(savedDraft.selectedDrills) ? savedDraft.selectedDrills.filter((drill) => drill && drill.title) : []),
   );
   const [drillQuery, setDrillQuery] = useState('');
@@ -288,16 +287,14 @@ export default function CoachDrawStudio({
   const [addedFindingCount, setAddedFindingCount] = useState(0);
   const [lastCapturedMomentId, setLastCapturedMomentId] = useState(null);
   const [finaliseFlow, setFinaliseFlow] = useState('idle'); // idle | confirm | saving | ready
-  const [drillMode, setDrillMode] = useState(() => (savedDraft.drillMode === 'custom' ? 'custom' : 'suggested')); // 'suggested' | 'custom'
+  const [drillMode] = useState(() => (savedDraft.drillMode === 'custom' ? 'custom' : 'suggested')); // 'suggested' | 'custom' (legacy draft field)
   const [customDrillTitle, setCustomDrillTitle] = useState('');
   const [customDrillSummary, setCustomDrillSummary] = useState('');
   const [customDrillCue, setCustomDrillCue] = useState('');
-  const [customDrillWhy, setCustomDrillWhy] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
   const [drawingSaving, setDrawingSaving] = useState(false);
   const [reopenConfirm, setReopenConfirm] = useState(false);
-  const [linkChoice, setLinkChoice] = useState('auto'); // 'auto' | 'none' | <annotationId>
-  const phaseSelected = Boolean(markerLabel && markerLabel.trim());
+  const [linkChoice] = useState('auto'); // 'auto' | 'none' | <annotationId> (always auto since the create form was unified)
   // Finalised/shared reports are read-only. canEdit (passed by the parent) already folds
   // in !isReportFinalised, so !canEdit here means "cannot save into this report".
   const readOnly = !canEdit;
@@ -315,36 +312,6 @@ export default function CoachDrawStudio({
     limit: 40,
   });
   const drillListForPicker = rankedDrills.length ? rankedDrills : recommendedDrillsFor(isIM ? phaseStrokeKey : video?.stroke_type, markerLabel);
-  const isDrillSelected = (id) => selectedDrills.some((drill) => drill.id === id);
-  const addLibraryDrill = (drill) => {
-    if (!drill) return;
-    setSelectedDrills((prev) => (prev.some((item) => item.id === drill.id) ? prev : [...prev, {
-      id: drill.id,
-      title: drill.title,
-      summary: drillSummary(drill) || drill.report_summary || drill.purpose || '',
-      cue: drill.coaching_cue || '',
-      why: '',
-      custom: false,
-    }]));
-  };
-  const addCustomDrill = () => {
-    const title = customDrillTitle.trim();
-    if (!title) return;
-    const id = `custom-${title.toLowerCase()}`;
-    setSelectedDrills((prev) => (prev.some((item) => item.id === id) ? prev : [...prev, {
-      id,
-      title,
-      summary: customDrillSummary.trim(),
-      cue: customDrillCue.trim(),
-      why: customDrillWhy.trim(),
-      custom: true,
-    }]));
-    setCustomDrillTitle('');
-    setCustomDrillSummary('');
-    setCustomDrillCue('');
-    setCustomDrillWhy('');
-  };
-  const removeDrill = (id) => setSelectedDrills((prev) => prev.filter((drill) => drill.id !== id));
   // Clicking a phase selects it; clicking the selected phase again clears it.
   const togglePhase = (label) => setMarkerLabel((prev) => (prev === label ? '' : label));
   // Switching IM segment clears the phase if it isn't valid for the new segment.
@@ -378,13 +345,6 @@ export default function CoachDrawStudio({
     recentDrills.push({ id: `recent-${key}`, title, summary: finding.linked_drill_summary || '', custom: true });
   });
 
-  // Add an already-normalised drill (from a favourite/recent chip) to the finding.
-  const addNormalizedDrill = (drill) => {
-    if (!drill?.title) return;
-    setSelectedDrills((prev) => (prev.some((item) => item.id === drill.id) ? prev : [...prev, {
-      id: drill.id, title: drill.title, summary: drill.summary || '', cue: drill.cue || '', why: '', custom: !!drill.custom,
-    }]));
-  };
   // Key moments come from saved key_frame annotations (which carry a captured thumbnail),
   // not from findings — so the strip shows real screenshots.
   const keyMoments = (keyStamps || []).map((a) => ({
@@ -528,6 +488,46 @@ export default function CoachDrawStudio({
     }
   };
 
+  // Create a finding from the blank editor (step 2). Same fields as edit; the
+  // nearest captured moment auto-links as evidence; drills attach in step 3.
+  const handleCreateFinding = async () => {
+    if (!onCreateFinding || readOnly) return;
+    const current = activeVideo();
+    current?.pause();
+    const currentTime = current?.currentTime || timestamp || 0;
+    setSavingFinding(true);
+    setActionFeedback(null);
+    try {
+      const created = await onCreateFinding({
+        timestampSeconds: currentTime,
+        phaseLabel: editPhase ? tagLabel(editPhase) : '',
+        note: editObservation,
+        cue: editCue.trim() || null,
+        severity: editSeverity,
+        coachNotes: editNotes.trim() || undefined,
+        drills: [],
+        keyStampLinkId: effectiveLinkId || null,
+      });
+      // Tags ride on raw_ai_payload.fault_tags — the create path doesn't take them,
+      // so attach via the content-only update once the finding exists (non-fatal).
+      if (created?.id && editTags.length && onUpdateFinding) {
+        try { await onUpdateFinding(created, { faultTags: editTags }); } catch { /* tags can be re-added in edit */ }
+      }
+      setAddedFindingCount((n) => n + 1);
+      setLastCapturedMomentId(null);
+      if (created?.id) {
+        setSelectedFindingId(created.id);
+      } else {
+        clearFindingSelection();
+      }
+      setActionFeedback({ type: 'success', msg: 'Finding added' });
+    } catch (error) {
+      setActionFeedback({ type: 'error', msg: `Could not save the finding: ${readableError(error)}. Your notes are kept — please try again.` });
+    } finally {
+      setSavingFinding(false);
+    }
+  };
+
   // Custom moment (step 1): a named key moment at the current video time.
   // Uses the exact same save path as phase moments — title is free text.
   const handleSaveCustomMoment = async () => {
@@ -606,7 +606,7 @@ export default function CoachDrawStudio({
     if (commentsDirty) return;
     setSwimmerFeedback(report?.coach_summary || '');
     setPrivateNotes(report?.review_context?.private_coach_notes || '');
-  }, [report?.coach_summary, report?.review_context?.private_coach_notes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [report?.coach_summary, report?.review_context?.private_coach_notes]);
 
   // True fullscreen: lock the background page scroll while the workspace is open,
   // and always restore it on exit/unmount so the coach is never trapped.
@@ -691,62 +691,6 @@ export default function CoachDrawStudio({
         inlineVideoRef.current.currentTime = currentTime;
       }
       setFullscreenOpen(false);
-    }
-  };
-
-  // Preferred path: save the coach finding inline (timestamp + phase + note + drill)
-  // WITHOUT leaving fullscreen. Falls back to the page form if no inline saver is wired.
-  const addFindingInline = async () => {
-    const current = activeVideo();
-    const currentTime = current?.currentTime || timestamp || 0;
-    current?.pause();
-    setTimestamp(currentTime);
-    onCaptureTimestamp?.(currentTime);
-    if (!onCreateFinding) { startFindingFromMoment(); return; }
-    setSavingFinding(true);
-    setActionFeedback(null);
-    try {
-      // Include any custom drill the coach typed but did not press "Add drill" on, so
-      // their work is never silently dropped. First drill is Primary; the rest Additional.
-      const typedCustom = customDrillTitle.trim();
-      const pendingCustom = typedCustom
-        ? [{
-            id: `custom-${typedCustom.toLowerCase()}`,
-            title: typedCustom,
-            summary: customDrillSummary.trim(),
-            cue: customDrillCue.trim(),
-            why: customDrillWhy.trim(),
-            custom: true,
-          }]
-        : [];
-      const drillsToSend = [
-        ...selectedDrills,
-        ...pendingCustom.filter((pending) => !selectedDrills.some((drill) => drill.id === pending.id)),
-      ];
-      await onCreateFinding({
-        timestampSeconds: currentTime,
-        phaseLabel: phaseSelected ? markerLabel : '',
-        note: markerNote,
-        cue: markerCue.trim() || null,
-        drills: drillsToSend,
-        keyStampLinkId: effectiveLinkId || null,
-      });
-      setAddedFindingCount((n) => n + 1);
-      setActionFeedback({ type: 'success', msg: 'Finding added' });
-      setMarkerNote('');
-      setMarkerCue('');
-      setLinkChoice('auto');
-      setSelectedDrills([]);
-      setCustomDrillTitle('');
-      setCustomDrillSummary('');
-      setCustomDrillCue('');
-      setCustomDrillWhy('');
-      setLastCapturedMomentId(null);
-    } catch (error) {
-      console.warn('Finding was not saved.', error?.message || error);
-      setActionFeedback({ type: 'error', msg: `Could not save the finding: ${readableError(error)}. Your note and drills are kept — please try again.` });
-    } finally {
-      setSavingFinding(false);
     }
   };
 
@@ -899,7 +843,7 @@ export default function CoachDrawStudio({
     <div
       className={`relative overflow-hidden bg-black ${
         isFullscreen
-          ? `rounded-xl ${currentStep === 'findings' ? 'h-[36vh] lg:h-[42vh]' : 'h-[44vh] lg:h-[62vh]'}`
+          ? `rounded-xl ${currentStep === 'findings' ? 'h-[34vh] lg:h-[40vh]' : 'h-[42vh] lg:h-[54vh]'}`
           : 'rounded-lg'
       }`}
       style={isFullscreen ? undefined : { aspectRatio: '16/9' }}
@@ -1320,9 +1264,9 @@ export default function CoachDrawStudio({
                 </div>
               )}
               <div
-                className={`grid grid-cols-1 gap-4 ${
+                className={`grid grid-cols-1 gap-5 ${
                   currentStep === 'analysis'
-                    ? (panelOpen ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,25%)]' : '')
+                    ? (panelOpen ? 'lg:grid-cols-[minmax(0,1fr)_minmax(300px,27%)]' : '')
                     : currentStep === 'findings'
                       ? 'lg:grid-cols-[minmax(250px,26%)_minmax(0,1fr)_minmax(300px,30%)]'
                       : 'lg:grid-cols-2'
@@ -1330,11 +1274,11 @@ export default function CoachDrawStudio({
               >
                 {/* STEP 2 ONLY: findings list with screenshots. Kept mounted (hidden via
                     CSS) so switching steps never remounts anything. */}
-                <div key="findings-list" className={currentStep === 'findings' ? 'space-y-2' : 'hidden'}>
+                <div key="findings-list" className={currentStep === 'findings' ? 'ssd-step-enter space-y-2.5' : 'hidden'}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-sm font-bold uppercase tracking-wider">Findings</div>
-                      <div className="text-[10px] text-slate-400">Review key moments and add your findings.</div>
+                      <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Findings</div>
+                      <div className="text-[11px] text-slate-400">Review key moments and add your findings.</div>
                     </div>
                     <Button
                       size="sm"
@@ -1348,8 +1292,11 @@ export default function CoachDrawStudio({
                   </div>
                   <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
                     {sortedFindings.length === 0 && (
-                      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400">
-                        No findings yet. Pick a moment on the video, then use Add Finding.
+                      <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-center">
+                        <div className="text-sm font-semibold text-slate-200">No findings yet</div>
+                        <p className="mx-auto mt-1.5 max-w-[220px] text-[11px] leading-5 text-slate-400">
+                          Pause the video on the moment that matters, then describe what you see on the right and press Create Finding.
+                        </p>
                       </div>
                     )}
                     {sortedFindings.map((finding) => {
@@ -1526,14 +1473,17 @@ export default function CoachDrawStudio({
                     phase/drill/Add-Finding click. */}
                 <div
                   key="right-panel"
-                  className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${
+                  className={`ssd-step-enter self-start rounded-2xl border border-white/10 bg-white/5 p-4 ${
                     currentStep === 'drills' ? 'hidden' : (currentStep === 'analysis' && !panelOpen) ? 'hidden' : ''
                   } ${readOnly ? 'pointer-events-none opacity-60' : ''}`}
                 >
+                  {/* Keyed wrapper: switching step / selecting a finding remounts the
+                      content with a quick fade (professional, 180ms, reduced-motion aware). */}
+                  <div key={currentStep === 'analysis' ? 'moments' : (editorFinding?.id || 'create')} className="ssd-fade-enter space-y-3.5">
                   {currentStep === 'analysis' ? (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-bold uppercase tracking-wider">Key Moments</div>
+                        <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Key Moments</div>
                         <Button
                           size="sm"
                           variant="outline"
@@ -1578,8 +1528,11 @@ export default function CoachDrawStudio({
                       )}
                       <div className="max-h-[48vh] space-y-1.5 overflow-y-auto pr-1">
                         {keyMoments.length === 0 && (
-                          <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-[11px] leading-4 text-slate-400">
-                            No moments yet. Pause on the moment that matters and use Add Moment or Custom Moment.
+                          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-center">
+                            <div className="text-sm font-semibold text-slate-200">No moments yet</div>
+                            <p className="mx-auto mt-1.5 max-w-[210px] text-[11px] leading-5 text-slate-400">
+                              Play the swim, pause on the moment that matters, then press Add Moment — or name it with Custom Moment.
+                            </p>
                           </div>
                         )}
                         {keyMoments.map((m, index) => (
@@ -1611,7 +1564,7 @@ export default function CoachDrawStudio({
                   ) : editorFinding ? (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0 text-sm font-bold uppercase tracking-wider">
+                        <div className="min-w-0 text-[15px] font-bold uppercase tracking-[0.14em]">
                           Edit Finding <span className="text-cyan-300">· {tagLabel(editorFinding.stroke_phase || editorFinding.phase || 'Finding')}</span>
                         </div>
                         <button
@@ -1734,401 +1687,233 @@ export default function CoachDrawStudio({
                     </>
                   ) : (
                     <>
-                  <div className="text-sm font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'Add Coach Finding'}</div>
-
-                  {reviewMode === 'ai' && findings.length > 0 && onReviewAISuggestions && (
-                    <div className="flex items-center justify-between gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2">
-                      <div className="text-[11px] text-cyan-100">
-                        {findings.length} AI suggestion{findings.length > 1 ? 's' : ''} to review
+                      {/* CREATE mode — the same editor as edit, blank. The old bulky
+                          create form (phase chips + drills + linked image) was removed:
+                          drills attach in step 3, the moment image auto-links. */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[15px] font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'New Finding'}</div>
+                        <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-[10px] text-cyan-200">{formatTimestamp(timestamp)}</span>
                       </div>
-                      <Button size="sm" variant="outline" className="h-8 flex-shrink-0 border-cyan-300/40 bg-white/5 text-[11px] text-white hover:bg-white/10" onClick={onReviewAISuggestions}>
-                        Review
-                      </Button>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs font-semibold text-slate-300">Stroke phase</div>
-                      {phaseSelected && (
-                        <button type="button" onClick={() => setMarkerLabel('')} className="text-[10px] font-semibold text-cyan-300 hover:text-cyan-200">
-                          Clear phase
-                        </button>
-                      )}
-                    </div>
-                    {isIM && (
-                      <div className="flex gap-1.5">
-                        {IM_SEGMENTS.map((segment) => (
-                          <button
-                            key={segment.key}
-                            type="button"
-                            onClick={() => selectImSegment(segment.key)}
-                            className={`min-h-10 flex-1 rounded-lg border px-2 text-xs font-semibold transition-colors ${imSegment === segment.key ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
-                          >
-                            {segment.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-1.5">
-                      {quickLabels.map((label) => (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => togglePhase(label)}
-                          className={`min-h-10 rounded-full border px-3 text-xs font-semibold transition-colors ${markerLabel === label ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                      <p className="text-[11px] leading-4 text-slate-400">
+                        Scrub to the moment on the video, pick the technique area, and describe what you see. Drills attach in the next step.
+                      </p>
+                      {reviewMode === 'ai' && sortedFindings.length > 0 && onReviewAISuggestions && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 w-full border-cyan-300/40 bg-white/5 text-[11px] text-white hover:bg-white/10"
+                          onClick={onReviewAISuggestions}
                         >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-300">Coach observation</div>
-                    <Textarea
-                      value={markerNote}
-                      onChange={(e) => setMarkerNote(e.target.value)}
-                      maxLength={150}
-                      className="min-h-[64px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                      placeholder="What did you notice?"
-                    />
-                  </div>
-
-                  <details className="group rounded-lg border border-white/10 bg-white/5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
-                      <span>Coach cue {markerCue.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
-                      <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
-                    </summary>
-                    <div className="px-3 pb-3">
-                      <Input
-                        value={markerCue}
-                        onChange={(e) => setMarkerCue(e.target.value)}
-                        maxLength={160}
-                        className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                        placeholder="What should the swimmer feel or do?"
-                      />
-                    </div>
-                  </details>
-
-                  <details className="group rounded-lg border border-white/10 bg-white/5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
-                      <span>Drills{selectedDrills.length > 0 ? ` (${selectedDrills.length})` : ''}</span>
-                      <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
-                    </summary>
-                    <div className="space-y-2 px-3 pb-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="flex gap-0.5 rounded-md bg-white/5 p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setDrillMode('suggested')}
-                          className={`rounded px-2 py-1 text-[10px] font-semibold transition-colors ${drillMode === 'suggested' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300 hover:bg-white/10'}`}
-                        >
-                          Suggested
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDrillMode('custom')}
-                          className={`rounded px-2 py-1 text-[10px] font-semibold transition-colors ${drillMode === 'custom' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300 hover:bg-white/10'}`}
-                        >
-                          Custom drill
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Selected drills — the first is the Primary Drill, the rest Additional. */}
-                    {selectedDrills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedDrills.map((drill, drillIndex) => (
-                          <span key={drill.id} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 py-1 pl-2 pr-1 text-[11px] font-semibold text-cyan-100">
-                            <span className="rounded-sm bg-cyan-400/30 px-1 text-[9px] uppercase tracking-wide text-cyan-50">{drillIndex === 0 ? 'Primary' : `Drill ${drillIndex + 1}`}</span>
-                            <span className="max-w-[9rem] truncate">{drill.title}</span>
-                            <button type="button" onClick={() => removeDrill(drill.id)} className="flex h-5 w-5 items-center justify-center rounded-full text-cyan-100 hover:bg-cyan-400/30" aria-label={`Remove ${drill.title}`}>
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Favourite drills — one-tap add (club-scoped). */}
-                    {favouriteDrillList.length > 0 && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-300"><Star className="h-3 w-3 fill-amber-300" /> Favourites</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {favouriteDrillList.map((drill) => (
-                            <button key={drill.id} type="button" onClick={() => addNormalizedDrill(drill)} className="inline-flex max-w-[11rem] items-center gap-1 rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-1 text-[11px] font-semibold text-amber-100 hover:bg-amber-400/20">
-                              <Plus className="h-3 w-3 flex-shrink-0" /><span className="truncate">{drill.title}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Recently used drills in this report. */}
-                    {recentDrills.length > 0 && (
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Recent</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {recentDrills.slice(0, 6).map((drill) => (
-                            <button key={drill.id} type="button" onClick={() => addNormalizedDrill(drill)} className="inline-flex max-w-[11rem] items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:border-cyan-300/40">
-                              <Plus className="h-3 w-3 flex-shrink-0" /><span className="truncate">{drill.title}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {drillMode === 'suggested' ? (
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                          <Input
-                            value={drillQuery}
-                            onChange={(e) => setDrillQuery(e.target.value)}
-                            className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500 pl-8"
-                            placeholder="Search drills (e.g. narrow knee, timing, catch)"
-                          />
-                        </div>
-                        <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-slate-900/40 p-1">
-                          {drillListForPicker.length === 0 ? (
-                            <div className="px-2 py-3 text-center text-[11px] text-slate-400">No drills match — try another word.</div>
-                          ) : (
-                            drillListForPicker.map((drill) => {
-                              const active = isDrillSelected(drill.id);
-                              const favourited = isLibraryFavourited(drill.id);
-                              return (
-                                <div key={drill.id} className={`flex items-center gap-1 rounded-md transition-colors ${active ? 'bg-cyan-400/20' : 'hover:bg-white/5'}`}>
-                                  <button
-                                    type="button"
-                                    onClick={() => (active ? removeDrill(drill.id) : addLibraryDrill(drill))}
-                                    className="flex min-w-0 flex-1 items-start gap-2 px-2.5 py-2 text-left"
-                                  >
-                                    <span className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${active ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/25 text-transparent'}`}>✓</span>
-                                    <span className="min-w-0">
-                                      <span className="block text-xs font-semibold text-white">{drill.title}</span>
-                                      {(drill.report_summary || drill.purpose) && (
-                                        <span className="block truncate text-[10px] text-slate-400">{drill.report_summary || drill.purpose}</span>
-                                      )}
-                                    </span>
-                                  </button>
-                                  {canManageFavourites && (
-                                    <button
-                                      type="button"
-                                      onClick={() => onToggleFavourite?.({ id: drill.id })}
-                                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:text-amber-300"
-                                      title={favourited ? 'Remove from favourites' : 'Add to favourites'}
-                                      aria-label={favourited ? 'Remove from favourites' : 'Add to favourites'}
-                                    >
-                                      <Star className={`h-4 w-4 ${favourited ? 'fill-amber-300 text-amber-300' : ''}`} />
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-400">Tap to add one or more drills.</div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Input
-                          value={customDrillTitle}
-                          onChange={(e) => setCustomDrillTitle(e.target.value)}
-                          maxLength={120}
-                          className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="Custom drill title (e.g. Narrow-knee band kick)"
-                        />
-                        <Textarea
-                          value={customDrillSummary}
-                          onChange={(e) => setCustomDrillSummary(e.target.value)}
-                          maxLength={400}
-                          className="min-h-[56px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="How to do it / description"
-                        />
-                        <Input
-                          value={customDrillCue}
-                          onChange={(e) => setCustomDrillCue(e.target.value)}
-                          maxLength={160}
-                          className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="Coaching cue (optional)"
-                        />
-                        <Input
-                          value={customDrillWhy}
-                          onChange={(e) => setCustomDrillWhy(e.target.value)}
-                          maxLength={200}
-                          className="h-11 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="Why this helps / focus (optional)"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-10 flex-1 border-cyan-300/40 bg-white/5 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
-                            onClick={addCustomDrill}
-                            disabled={!customDrillTitle.trim()}
-                          >
-                            <Plus className="mr-1.5 h-4 w-4" /> Add this drill
-                          </Button>
-                          {canManageFavourites && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-10 flex-shrink-0 border-amber-300/40 bg-amber-400/10 px-3 text-xs font-semibold text-amber-100 hover:bg-amber-400/20 disabled:opacity-50"
-                              onClick={() => onSaveCustomFavourite?.({ title: customDrillTitle, summary: customDrillSummary, cue: customDrillCue })}
-                              disabled={!customDrillTitle.trim()}
-                              title="Save as favourite"
-                            >
-                              <Star className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    </div>
-                  </details>
-
-                  {linkedEvidenceOptions.length > 0 && (
-                    <details className="group rounded-lg border border-white/10 bg-white/5">
-                      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
-                        <span>Linked image {effectiveLinkId ? <span className="text-cyan-300">· linked</span> : <span className="text-slate-500">(evidence)</span>}</span>
-                        <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
-                      </summary>
-                      <div className="space-y-1.5 px-3 pb-3">
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        <button
-                          type="button"
-                          onClick={() => setLinkChoice('none')}
-                          className={`flex h-16 w-16 flex-shrink-0 flex-col items-center justify-center rounded-lg border text-[10px] font-semibold transition-colors ${linkChoice === 'none' ? 'border-cyan-400 bg-cyan-400/20 text-cyan-100' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/40'}`}
-                        >
-                          No image
-                        </button>
-                        {linkedEvidenceOptions.map((ev) => (
-                          <button
-                            key={ev.id}
-                            type="button"
-                            onClick={() => setLinkChoice(ev.id)}
-                            title={ev.label}
-                            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border transition-colors ${effectiveLinkId === ev.id ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/15 hover:border-cyan-300/40'}`}
-                          >
-                            <img src={ev.thumb} alt="" className="h-full w-full object-cover" />
-                            <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[8px] font-mono text-white">
-                              {ev.kind === 'drawing' ? 'Draw' : formatTimestamp(ev.seconds)}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        {effectiveLinkId ? '✓ Image linked to this finding' : 'This finding will have no image.'}
-                      </div>
-                      </div>
-                    </details>
-                  )}
-
-                  <div className="space-y-2 border-t border-white/10 pt-3">
-                    <Button className="h-12 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={addFindingInline} disabled={readOnly || !signedVideoUrl || savingFinding || (!markerNote.trim() && !phaseSelected)}>
-                      <Plus className="mr-1.5 h-5 w-5" /> {readOnly ? 'Report is read-only' : (savingFinding ? 'Adding…' : 'Add Finding')}
-                    </Button>
-                    {!readOnly && (!markerNote.trim() && !phaseSelected) && (
-                      <p className="text-[10px] text-slate-400">Pick a phase or type a note to add a finding.</p>
-                    )}
-                    {addedFindingCount > 0 && (
-                      <p className="text-[11px] font-semibold text-emerald-300">✓ {addedFindingCount} finding{addedFindingCount > 1 ? 's' : ''} added to this report.</p>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      {onSaveMarker && (
-                        <Button size="sm" variant="outline" className="min-h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => capturePhaseMoment()} disabled={!signedVideoUrl || !canEdit || savingMarker}>
-                          <BookmarkPlus className="mr-1.5 h-4 w-4 text-cyan-300" /> {savingMarker ? 'Saving…' : 'Save Phase Moment'}
+                          Review AI-suggested findings (coach approval required)
                         </Button>
                       )}
-                      <Button size="sm" variant="outline" className="min-h-11 text-xs border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={startDrawing} disabled={!signedVideoUrl || !canEdit}>
-                        <PencilLine className="mr-1.5 h-4 w-4 text-cyan-300" /> Coach Draw
-                      </Button>
-                    </div>
-                  </div>
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Observation</div>
+                        <Textarea
+                          value={editObservation}
+                          onChange={(e) => setEditObservation(e.target.value)}
+                          maxLength={200}
+                          className="min-h-[72px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
+                          placeholder="What did you notice at this moment?"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Coach Cue <span className="text-slate-500">(optional)</span></div>
+                        <Input
+                          value={editCue}
+                          onChange={(e) => setEditCue(e.target.value)}
+                          maxLength={200}
+                          className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
+                          placeholder="What should the swimmer feel or do?"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Severity</div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {SEVERITY_OPTIONS.map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => setEditSeverity(option)}
+                              className={`min-h-10 rounded-lg border px-2 text-xs font-semibold capitalize transition-colors ${editSeverity === option ? 'border-amber-400 bg-amber-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-amber-300/50'}`}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Technique Area</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {quickLabels.map((label) => {
+                            const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                            const active = String(editPhase || '').toLowerCase().replace(/[^a-z0-9]+/g, '_') === key;
+                            return (
+                              <button
+                                key={label}
+                                type="button"
+                                onClick={() => setEditPhase(active ? '' : key)}
+                                className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Tags <span className="text-slate-500">(optional)</span></div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[...new Set([...FINDING_TAGS, ...editTags])].map((tag) => {
+                            const active = editTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => setEditTags(active ? editTags.filter((t) => t !== tag) : [...editTags, tag])}
+                                className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-sky-400 bg-sky-400/90 text-slate-950' : 'border-white/15 bg-white/5 text-slate-300 hover:border-sky-300/50'}`}
+                              >
+                                {tagLabel(tag)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <details className="group rounded-lg border border-white/10 bg-white/5">
+                        <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
+                          <span>Notes {editNotes.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
+                          <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+                        </summary>
+                        <div className="px-3 pb-3">
+                          <Textarea
+                            value={editNotes}
+                            onChange={(e) => setEditNotes(e.target.value)}
+                            maxLength={300}
+                            className="min-h-[56px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
+                            placeholder="Add any extra notes about this finding…"
+                          />
+                        </div>
+                      </details>
+                      <div className="space-y-2 border-t border-white/10 pt-3">
+                        <Button
+                          className="h-11 w-full bg-sky-500 text-sm font-semibold text-white hover:bg-sky-400 disabled:opacity-50"
+                          onClick={handleCreateFinding}
+                          disabled={readOnly || !signedVideoUrl || savingFinding || (!editObservation.trim() && !editPhase)}
+                        >
+                          {readOnly ? 'Report is read-only' : savingFinding ? 'Adding…' : 'Create Finding'}
+                        </Button>
+                        {!readOnly && !editObservation.trim() && !editPhase && (
+                          <p className="text-[10px] leading-4 text-slate-500">Pick a technique area or write an observation to create a finding.</p>
+                        )}
+                        {addedFindingCount > 0 && (
+                          <p className="text-[11px] font-semibold text-emerald-300">✓ {addedFindingCount} finding{addedFindingCount > 1 ? 's' : ''} added to this report.</p>
+                        )}
+                      </div>
                     </>
                   )}
+                  </div>
                 </div>
 
                 {/* STEP 3 ONLY: Drills — attached per finding (primary + additional,
                     the existing storage model), plus the searchable library. */}
-                <div key="drills-col" className={currentStep === 'drills' ? `min-w-0 space-y-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}` : 'hidden'}>
+                <div key="drills-col" className={currentStep === 'drills' ? `ssd-step-enter min-w-0 space-y-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}` : 'hidden'}>
                   {(() => {
                     const drillFinding = sortedFindings.find((f) => f.id === (drillFindingId || selectedFindingId)) || sortedFindings[0] || null;
                     const attached = findingDrillList(drillFinding);
+                    const attachDrill = (drill) => {
+                      if (!drill?.title || savingFindingDetails) return;
+                      if (attached.some((d) => d.title === drill.title)) return;
+                      writeFindingDrills(drillFinding, [...attached, { title: drill.title, summary: drill.summary || null, cue: drill.cue || null, id: drill.custom ? null : (drill.id || null) }]);
+                    };
+                    const submitCustomDrill = () => {
+                      const title = customDrillTitle.trim();
+                      if (!title) return;
+                      attachDrill({ title, summary: customDrillSummary.trim() || null, cue: customDrillCue.trim() || null, custom: true });
+                      setCustomDrillTitle(''); setCustomDrillSummary(''); setCustomDrillCue('');
+                    };
                     return (
                       <>
                         <div>
-                          <div className="text-sm font-bold uppercase tracking-wider">Drills</div>
-                          <div className="text-[10px] text-slate-400">Attach drills to support each finding.</div>
+                          <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Drills</div>
+                          <div className="text-[11px] text-slate-400">Attach drills to support each finding.</div>
                         </div>
                         {sortedFindings.length === 0 ? (
-                          <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs text-slate-400">No findings yet — add findings first, then attach drills here.</p>
-                            <Button size="sm" variant="outline" className="h-9 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10" onClick={() => goToStep('findings')}>
+                          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-6 text-center">
+                            <div className="text-sm font-semibold text-slate-200">No findings to work from</div>
+                            <p className="mx-auto mt-1.5 max-w-[260px] text-[11px] leading-5 text-slate-400">
+                              Drills attach to findings. Go back one step, create a finding from a key moment, then pick its drills here.
+                            </p>
+                            <Button size="sm" variant="outline" className="mt-3 h-9 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10" onClick={() => goToStep('findings')}>
                               Go to Findings
                             </Button>
                           </div>
                         ) : (
                           <>
-                            <div className="flex flex-wrap gap-1.5">
-                              {sortedFindings.map((finding) => {
-                                const active = drillFinding?.id === finding.id;
-                                const seconds = Number(finding.timestamp_seconds ?? finding.timestamp_start ?? NaN);
-                                return (
-                                  <button
-                                    key={finding.id}
-                                    type="button"
-                                    onClick={() => setDrillFindingId(finding.id)}
-                                    className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
-                                  >
-                                    {tagLabel(finding.stroke_phase || finding.phase || 'Finding')}{Number.isFinite(seconds) ? ` · ${formatTimestamp(seconds)}` : ''}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <div className="space-y-2">
-                              {attached.length === 0 && (
-                                <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-[11px] text-slate-400">
-                                  No drills attached to this finding yet. Add one from the library below.
-                                </div>
-                              )}
-                              {attached.map((drill, index) => (
-                                <div key={`${drill.title}-${index}`} className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="rounded-sm bg-cyan-400/30 px-1 text-[9px] uppercase tracking-wide text-cyan-100">{index === 0 ? 'Primary' : `Drill ${index + 1}`}</span>
-                                      <span className="text-xs font-bold text-white">{drill.title}</span>
-                                    </div>
-                                    {drill.summary && <div className="mt-0.5 line-clamp-2 text-[10px] leading-4 text-slate-400">{drill.summary}</div>}
+                            {/* Working set: which finding you're attaching to + what's attached */}
+                            <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {sortedFindings.map((finding) => {
+                                  const active = drillFinding?.id === finding.id;
+                                  const seconds = Number(finding.timestamp_seconds ?? finding.timestamp_start ?? NaN);
+                                  return (
+                                    <button
+                                      key={finding.id}
+                                      type="button"
+                                      onClick={() => setDrillFindingId(finding.id)}
+                                      className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                                    >
+                                      {tagLabel(finding.stroke_phase || finding.phase || 'Finding')}{Number.isFinite(seconds) ? ` · ${formatTimestamp(seconds)}` : ''}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div className="space-y-2">
+                                {attached.length === 0 && (
+                                  <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.03] p-4 text-center text-[11px] leading-5 text-slate-400">
+                                    Nothing attached to this finding yet.<br />Pick a drill from the library — the first becomes the Primary drill in the report.
                                   </div>
-                                  {index > 0 && (
+                                )}
+                                {attached.map((drill, index) => (
+                                  <div key={`${drill.title}-${index}`} className="flex items-start gap-2 rounded-xl border border-white/10 bg-slate-900/50 p-3">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="rounded-sm bg-cyan-400/30 px-1 text-[9px] uppercase tracking-wide text-cyan-100">{index === 0 ? 'Primary' : `Drill ${index + 1}`}</span>
+                                        <span className="text-[13px] font-bold text-white">{drill.title}</span>
+                                      </div>
+                                      {drill.summary && <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-400">{drill.summary}</div>}
+                                    </div>
+                                    {index > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => { const next = [...attached]; const [item] = next.splice(index, 1); next.splice(index - 1, 0, item); writeFindingDrills(drillFinding, next); }}
+                                        disabled={savingFindingDetails}
+                                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-white/10 hover:text-white disabled:opacity-40"
+                                        title="Move up"
+                                        aria-label={`Move ${drill.title} up`}
+                                      >
+                                        ↑
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
-                                      onClick={() => { const next = [...attached]; const [item] = next.splice(index, 1); next.splice(index - 1, 0, item); writeFindingDrills(drillFinding, next); }}
+                                      onClick={() => writeFindingDrills(drillFinding, attached.filter((_, i) => i !== index))}
                                       disabled={savingFindingDetails}
-                                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-white/10 hover:text-white disabled:opacity-40"
-                                      title="Move up"
-                                      aria-label={`Move ${drill.title} up`}
+                                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-40"
+                                      title="Remove drill"
+                                      aria-label={`Remove ${drill.title}`}
                                     >
-                                      ↑
+                                      <X className="h-3.5 w-3.5" />
                                     </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => writeFindingDrills(drillFinding, attached.filter((_, i) => i !== index))}
-                                    disabled={savingFindingDetails}
-                                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-40"
-                                    title="Remove drill"
-                                    aria-label={`Remove ${drill.title}`}
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              ))}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
-                              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Drill Library</div>
+                            {/* Drill Library — the asset browser: search, favourites, recents, full list, custom */}
+                            <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-300">Drill Library</div>
+                                <span className="text-[10px] text-slate-500">{drillListForPicker.length} drills</span>
+                              </div>
                               <div className="relative">
                                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                 <Input
@@ -2138,25 +1923,75 @@ export default function CoachDrawStudio({
                                   placeholder="Search drills…"
                                 />
                               </div>
-                              <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-slate-900/40 p-1">
+                              {(favouriteDrillList.length > 0 || recentDrills.length > 0) && (
+                                <div className="space-y-1.5">
+                                  {favouriteDrillList.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Favourites</span>
+                                      {favouriteDrillList.slice(0, 6).map((drill) => (
+                                        <button
+                                          key={drill.id}
+                                          type="button"
+                                          onClick={() => attachDrill(drill)}
+                                          disabled={savingFindingDetails || attached.some((d) => d.title === drill.title)}
+                                          className="min-h-8 rounded-full border border-amber-300/30 bg-amber-400/10 px-2.5 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-400/20 disabled:opacity-40"
+                                          title={`Attach ${drill.title}`}
+                                        >
+                                          ★ {drill.title}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {recentDrills.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Recent</span>
+                                      {recentDrills.slice(0, 6).map((drill) => (
+                                        <button
+                                          key={drill.id}
+                                          type="button"
+                                          onClick={() => attachDrill(drill)}
+                                          disabled={savingFindingDetails || attached.some((d) => d.title === drill.title)}
+                                          className="min-h-8 rounded-full border border-white/15 bg-white/5 px-2.5 text-[11px] font-semibold text-slate-200 transition-colors hover:border-cyan-300/50 disabled:opacity-40"
+                                          title={`Attach ${drill.title}`}
+                                        >
+                                          {drill.title}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              <div className="max-h-[34vh] space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-slate-900/40 p-1.5">
                                 {drillListForPicker.length === 0 ? (
-                                  <div className="px-2 py-3 text-center text-[11px] text-slate-400">No drills match — try another word.</div>
+                                  <div className="px-2 py-4 text-center text-[11px] text-slate-400">No drills match — try another word, or add a custom drill below.</div>
                                 ) : (
                                   drillListForPicker.map((drill) => {
                                     const already = attached.some((d) => d.title === drill.title);
+                                    const favourited = isLibraryFavourited(drill.id);
                                     return (
-                                      <div key={drill.id} className="flex items-center gap-1 rounded-md hover:bg-white/5">
+                                      <div key={drill.id} className="group flex items-center gap-1 rounded-lg transition-colors hover:bg-white/5">
                                         <div className="min-w-0 flex-1 px-2.5 py-2">
                                           <div className="text-xs font-semibold text-white">{drill.title}</div>
                                           {(drill.report_summary || drill.purpose) && (
                                             <div className="truncate text-[10px] text-slate-400">{drill.report_summary || drill.purpose}</div>
                                           )}
                                         </div>
+                                        {canManageFavourites && (
+                                          <button
+                                            type="button"
+                                            onClick={() => onToggleFavourite?.({ id: drill.id })}
+                                            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md hover:bg-white/10"
+                                            title={favourited ? 'Remove from favourites' : 'Add to favourites'}
+                                            aria-label={favourited ? `Remove ${drill.title} from favourites` : `Add ${drill.title} to favourites`}
+                                          >
+                                            <Star className={`h-4 w-4 ${favourited ? 'fill-amber-300 text-amber-300' : 'text-slate-500'}`} />
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => !already && writeFindingDrills(drillFinding, [...attached, { title: drill.title, summary: drillSummary(drill), id: drill.id }])}
                                           disabled={already || savingFindingDetails}
-                                          className={`mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded disabled:opacity-60 ${already ? 'text-emerald-300' : 'bg-cyan-400/20 text-cyan-200 hover:bg-cyan-400/40'}`}
+                                          className={`mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md disabled:opacity-60 ${already ? 'text-emerald-300' : 'bg-cyan-400/20 text-cyan-200 hover:bg-cyan-400/40'}`}
                                           title={already ? 'Already attached' : `Add ${drill.title}`}
                                           aria-label={already ? 'Already attached' : `Add ${drill.title}`}
                                         >
@@ -2167,6 +2002,57 @@ export default function CoachDrawStudio({
                                   })
                                 )}
                               </div>
+                              <details className="group rounded-xl border border-white/10 bg-white/5">
+                                <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
+                                  <span>Write a custom drill</span>
+                                  <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+                                </summary>
+                                <div className="space-y-2 px-3 pb-3">
+                                  <Input
+                                    value={customDrillTitle}
+                                    onChange={(e) => setCustomDrillTitle(e.target.value)}
+                                    maxLength={80}
+                                    className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
+                                    placeholder="Drill name"
+                                  />
+                                  <Input
+                                    value={customDrillSummary}
+                                    onChange={(e) => setCustomDrillSummary(e.target.value)}
+                                    maxLength={160}
+                                    className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
+                                    placeholder="What it works on (optional)"
+                                  />
+                                  <Input
+                                    value={customDrillCue}
+                                    onChange={(e) => setCustomDrillCue(e.target.value)}
+                                    maxLength={120}
+                                    className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
+                                    placeholder="Coaching cue (optional)"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      className="h-9 flex-1 bg-cyan-400 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
+                                      onClick={submitCustomDrill}
+                                      disabled={!customDrillTitle.trim() || savingFindingDetails}
+                                    >
+                                      Add to this finding
+                                    </Button>
+                                    {canManageFavourites && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 flex-shrink-0 border-amber-300/40 bg-white/5 text-xs font-semibold text-amber-100 hover:bg-amber-400/10 disabled:opacity-50"
+                                        onClick={() => onSaveCustomFavourite?.({ title: customDrillTitle.trim(), summary: customDrillSummary.trim(), cue: customDrillCue.trim() })}
+                                        disabled={!customDrillTitle.trim()}
+                                        title="Save this drill to the club favourites"
+                                      >
+                                        <Star className="mr-1 h-3.5 w-3.5" /> Favourite
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </details>
                             </div>
                           </>
                         )}
@@ -2176,12 +2062,12 @@ export default function CoachDrawStudio({
                 </div>
 
                 {/* STEP 3 ONLY: Coach comments + live report preview + finalise. */}
-                <div key="comments-col" className={currentStep === 'drills' ? 'space-y-3' : 'hidden'}>
+                <div key="comments-col" className={currentStep === 'drills' ? 'ssd-step-enter space-y-3' : 'hidden'}>
                   <div>
-                    <div className="text-sm font-bold uppercase tracking-wider">Coach Comments</div>
-                    <div className="text-[10px] text-slate-400">Add private notes and swimmer-ready feedback.</div>
+                    <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Coach Comments</div>
+                    <div className="text-[11px] text-slate-400">Add private notes and swimmer-ready feedback.</div>
                   </div>
-                  <div className={`space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
+                  <div className={`space-y-3.5 rounded-2xl border border-white/10 bg-white/5 p-4 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
                     <div className="space-y-1.5">
                       <div className="text-[13px] font-semibold text-slate-200">Private Notes <span className="font-normal text-slate-500">(Coach Only)</span></div>
                       <Textarea
@@ -2221,10 +2107,10 @@ export default function CoachDrawStudio({
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div>
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-300">Report Preview</div>
-                      <div className="text-[10px] text-slate-400">This is how your report will look for swimmers and parents.</div>
+                      <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-300">Report Preview</div>
+                      <div className="text-[11px] text-slate-400">This is how your report will look for swimmers and parents.</div>
                     </div>
                     {(() => {
                       const approved = sortedFindings.filter((f) => f.approval_status === 'approved');
@@ -2261,8 +2147,11 @@ export default function CoachDrawStudio({
                               </div>
                             </div>
                           ) : (
-                            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-[11px] text-slate-400">
-                              No approved findings yet — the shared report will show your summary once findings are added.
+                            <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-center">
+                              <div className="text-sm font-semibold text-slate-200">Nothing to preview yet</div>
+                              <p className="mx-auto mt-1.5 max-w-[240px] text-[11px] leading-5 text-slate-400">
+                                The shared report shows approved findings with their cues and drills. Create findings in step 2 and they appear here.
+                              </p>
                             </div>
                           )}
                           <p className="text-[10px] leading-4 text-slate-500">
