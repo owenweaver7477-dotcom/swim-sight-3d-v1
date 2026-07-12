@@ -542,6 +542,49 @@ export default function AIReportPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
   });
 
+  // Full finding-details editor (fullscreen Coach Studio step 2). Writes CONTENT
+  // fields only — approval_status is deliberately never touched here, so the
+  // coach-approval flow is unchanged. Tags live in raw_ai_payload (merged, never
+  // public: the sanitizer strips the whole payload).
+  const updateFindingDetails = useMutation({
+    mutationFn: async ({ finding, details }) => {
+      const mergedPayload = {
+        ...(finding.raw_ai_payload || {}),
+        ...(details.faultTags !== undefined
+          ? { fault_tags: details.faultTags, fault_tag: details.faultTags?.[0] || null }
+          : {}),
+      };
+      const updated = await entities.Finding.update(finding.id, {
+        ...(details.observation !== undefined ? { observation: details.observation } : {}),
+        ...(details.cue !== undefined ? { cue: details.cue } : {}),
+        ...(details.severity !== undefined ? { severity: details.severity } : {}),
+        ...(details.phase !== undefined ? { phase: details.phase } : {}),
+        ...(details.coachNotes !== undefined ? { coach_notes: details.coachNotes } : {}),
+        ...(details.nextFocus !== undefined ? { next_focus: details.nextFocus } : {}),
+        ...(details.drill !== undefined ? { drill: details.drill } : {}),
+        ...(details.linkedDrillId !== undefined ? { linked_drill_id: details.linkedDrillId } : {}),
+        ...(details.linkedDrillTitle !== undefined ? { linked_drill_title: details.linkedDrillTitle } : {}),
+        ...(details.linkedDrillSummary !== undefined ? { linked_drill_summary: details.linkedDrillSummary } : {}),
+        ...(details.faultTags !== undefined || details.extraDrills !== undefined
+          ? {
+            raw_ai_payload: {
+              ...mergedPayload,
+              ...(details.extraDrills !== undefined ? { extra_drills: details.extraDrills } : {}),
+            },
+          }
+          : {}),
+      });
+      await logFeedback(updated, 'edited', {
+        coach_edit_summary: 'Finding details edited in Coach Studio.',
+        coach_final_observation: updated.observation || updated.coach_sees || null,
+        coach_final_cue: updated.correction_cue || updated.cue || null,
+        coach_final_drill: updated.drill || null,
+      });
+      return updated;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-findings', reportId] }),
+  });
+
   const createAnnotation = useMutation({
     mutationFn: ({
       drawingData,
@@ -639,6 +682,27 @@ export default function AIReportPage() {
       next_focus: nextFocus,
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] }),
+  });
+
+  // Coach Studio step 3 (Drills & Comments) save. Swimmer Feedback = coach_summary
+  // (exactly what the shared report shows). Private Notes live inside the report's
+  // review_context jsonb (no schema change) — MERGED with the existing context so the
+  // analysis config keys are never clobbered. The public token endpoint's column
+  // allowlist excludes review_context entirely, so private notes can never leak.
+  const updateReportComments = useMutation({
+    mutationFn: ({ swimmerFeedback, privateNotes: notes }) => entities.Report.update(reportId, {
+      ...(swimmerFeedback !== undefined ? { coach_summary: swimmerFeedback } : {}),
+      review_context: {
+        ...(report?.review_context || {}),
+        private_coach_notes: notes ?? '',
+      },
+    }),
+    onSuccess: (_updated, variables) => {
+      // Keep the page-level summary state in sync — finalise writes coach_summary
+      // from page state, so a stale value here would clobber the fullscreen save.
+      if (variables?.swimmerFeedback !== undefined) setCoachSummary(variables.swimmerFeedback);
+      return queryClient.invalidateQueries({ queryKey: ['ai-report', reportId] });
+    },
   });
 
   // Accepts an optional explicit payload (used by the fullscreen workspace to save a
@@ -741,7 +805,7 @@ export default function AIReportPage() {
   // phase, note, and one or more selected drills — without leaving fullscreen. The first
   // drill is the Primary Drill (stored on linked_drill_*); the rest become Additional
   // Drills on raw_ai_payload.extra_drills (no schema change).
-  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, cue, drills = [], keyStampLinkId }) => {
+  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, cue, drills = [], keyStampLinkId, severity, coachNotes }) => {
     const phaseKey = mapPhaseLabelToKey(phaseLabel);
     const list = (Array.isArray(drills) ? drills : []).filter(drill => drill && drill.title);
     const primary = list[0] || null;
@@ -751,6 +815,8 @@ export default function AIReportPage() {
       phase: phaseKey || null,
       observation: (note || '').trim() || (phaseKey ? `Coach marked ${labelFromKey(phaseKey)} for review.` : '') || 'Coach note',
       keyStampLinkId: keyStampLinkId || null,
+      ...(severity ? { severity } : {}),
+      ...(coachNotes !== undefined ? { coachNotes } : {}),
       drill: primary?.title || '',
       // Library drills keep their id link; custom (coach-written) drills have no library id.
       linkedDrill: primary && !primary.custom && primary.id ? { id: primary.id, title: primary.title } : null,
@@ -1432,6 +1498,13 @@ export default function AIReportPage() {
                 }}
                 onSaveMarker={(payload) => createStudioMarker.mutateAsync(payload)}
                 onSaveAnnotation={(payload) => createAnnotation.mutateAsync(payload)}
+                report={report}
+                annotations={videoAnnotations}
+                onUpdateFinding={(finding, details) => updateFindingDetails.mutateAsync({ finding, details })}
+                onDeleteFinding={(finding) => rejectFinding.mutateAsync({ finding, reason: 'coach_removed', note: finding.coach_notes })}
+                savingFindingDetails={updateFindingDetails.isPending}
+                onSaveComments={(payload) => updateReportComments.mutateAsync(payload)}
+                savingComments={updateReportComments.isPending}
               />
               <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Film className="w-3.5 h-3.5" />{video.original_filename || 'Untitled'}</span>
