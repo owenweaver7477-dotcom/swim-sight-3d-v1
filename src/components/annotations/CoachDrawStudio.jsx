@@ -1993,7 +1993,7 @@ export default function CoachDrawStudio({
                           <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-6 text-center">
                             <div className="text-sm font-semibold text-slate-200">No findings to work from</div>
                             <p className="mx-auto mt-1.5 max-w-[260px] text-[11px] leading-5 text-slate-400">
-                              Drills attach to findings. Go back one step, create a finding from a key moment, then pick its drills here.
+                              Drills attach to your moments' findings. Go back one step, create a finding from a moment, then pick its drills here.
                             </p>
                             <Button size="sm" variant="outline" className="mt-3 h-9 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10" onClick={() => goToStep('findings')}>
                               Go to Findings
@@ -2001,24 +2001,87 @@ export default function CoachDrawStudio({
                           </div>
                         ) : (
                           <>
-                            {/* Working set: which finding you're attaching to + what's attached */}
+                            {/* Working set: the same MOMENT cards as step 2 — the coach
+                                assigns drills per moment; drills store on that moment's
+                                finding (existing linked_drill + extra_drills model). */}
                             <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-                              <div className="flex flex-wrap gap-1.5">
-                                {sortedFindings.map((finding) => {
+                              <div className="flex gap-2 overflow-x-auto pb-1">
+                                {[...keyMoments].sort((x, y) => x.seconds - y.seconds).map((moment) => {
+                                  const linked = moment.findingId ? sortedFindings.find((f) => f.id === moment.findingId) || null : null;
+                                  const active = linked && drillFinding?.id === linked.id;
+                                  const drillCount = linked ? findingDrillList(linked).length : 0;
+                                  return (
+                                    <button
+                                      key={moment.id}
+                                      type="button"
+                                      onClick={() => {
+                                        if (linked) { setDrillFindingId(linked.id); return; }
+                                        // No finding yet — jump back to Findings with this moment open.
+                                        selectMoment(moment);
+                                        goToStep('findings');
+                                      }}
+                                      title={linked ? `Assign drills to ${moment.phase}` : `${moment.phase} has no finding yet — create one in Findings`}
+                                      className={`w-28 flex-shrink-0 rounded-xl border p-1.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-cyan-400/80 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]' : linked ? 'border-white/10 bg-white/5 hover:border-cyan-300/50' : 'border-dashed border-white/15 bg-white/[0.03] opacity-60 hover:opacity-90'}`}
+                                    >
+                                      {moment.thumb ? (
+                                        <img src={moment.thumb} alt="" className="h-12 w-full rounded-lg border border-white/10 object-cover" />
+                                      ) : (
+                                        <div className="flex h-12 w-full items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-[9px] text-slate-500">No image</div>
+                                      )}
+                                      <div className="mt-1 truncate text-[10px] font-bold text-white">{moment.phase}</div>
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="font-mono text-[9px] text-cyan-200">{formatTimestamp(moment.seconds)}</span>
+                                        {linked ? (
+                                          <span className={`rounded px-1 text-[8px] font-bold ${drillCount ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
+                                            {drillCount ? `${drillCount} drill${drillCount > 1 ? 's' : ''}` : 'No drills'}
+                                          </span>
+                                        ) : (
+                                          <span className="rounded bg-white/10 px-1 text-[8px] font-bold text-slate-400">No finding</span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                                {unlinkedFindings.map((finding) => {
                                   const active = drillFinding?.id === finding.id;
                                   const seconds = Number(finding.timestamp_seconds ?? finding.timestamp_start ?? NaN);
+                                  const drillCount = findingDrillList(finding).length;
+                                  const thumb = findingThumbById.get(finding.id) || null;
                                   return (
                                     <button
                                       key={finding.id}
                                       type="button"
                                       onClick={() => setDrillFindingId(finding.id)}
-                                      className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                                      title={`Assign drills to ${tagLabel(finding.stroke_phase || finding.phase || 'Finding')}`}
+                                      className={`w-28 flex-shrink-0 rounded-xl border p-1.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-cyan-400/80 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]' : 'border-white/10 bg-white/5 hover:border-cyan-300/50'}`}
                                     >
-                                      {tagLabel(finding.stroke_phase || finding.phase || 'Finding')}{Number.isFinite(seconds) ? ` · ${formatTimestamp(seconds)}` : ''}
+                                      {thumb ? (
+                                        <img src={thumb} alt="" className="h-12 w-full rounded-lg border border-white/10 object-cover" />
+                                      ) : (
+                                        <div className="flex h-12 w-full items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-[9px] text-slate-500">No image</div>
+                                      )}
+                                      <div className="mt-1 truncate text-[10px] font-bold text-white">{tagLabel(finding.stroke_phase || finding.phase || 'Finding')}</div>
+                                      <div className="flex items-center justify-between gap-1">
+                                        {Number.isFinite(seconds) && <span className="font-mono text-[9px] text-cyan-200">{formatTimestamp(seconds)}</span>}
+                                        <span className={`rounded px-1 text-[8px] font-bold ${drillCount ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
+                                          {drillCount ? `${drillCount} drill${drillCount > 1 ? 's' : ''}` : 'No drills'}
+                                        </span>
+                                      </div>
                                     </button>
                                   );
                                 })}
                               </div>
+                              {drillFinding && (
+                                <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                                  <span className="font-semibold">Drills for</span>
+                                  <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-semibold text-cyan-200">
+                                    {momentByFindingId.get(drillFinding.id)?.phase || tagLabel(drillFinding.stroke_phase || drillFinding.phase || 'Finding')}
+                                  </span>
+                                  <span className="font-mono text-[10px] text-cyan-200">
+                                    {formatTimestamp(Number(drillFinding.timestamp_seconds ?? drillFinding.timestamp_start ?? 0) || 0)}
+                                  </span>
+                                </div>
+                              )}
                               <div className="space-y-2">
                                 {attached.length === 0 && (
                                   <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.03] p-4 text-center text-[11px] leading-5 text-slate-400">
