@@ -252,6 +252,9 @@ export default function CoachDrawStudio({
   );
   // Step 2 editor: which existing finding is selected (null = create a new one).
   const [selectedFindingId, setSelectedFindingId] = useState(null);
+  // The Analysis Moment the coach is working from in step 2. Moments are the source:
+  // selecting a moment without a finding opens Create pre-linked to that exact moment.
+  const [selectedMomentId, setSelectedMomentId] = useState(null);
   // Editable copies of the selected finding's content fields (loaded on select).
   const [editObservation, setEditObservation] = useState('');
   const [editCue, setEditCue] = useState('');
@@ -353,6 +356,9 @@ export default function CoachDrawStudio({
     phase: a.title || a.frame_label || 'Key moment',
     note: a.coach_note || '',
     thumb: (typeof a.thumbnail_data_url === 'string' && a.thumbnail_data_url.startsWith('data:image/')) ? a.thumbnail_data_url : null,
+    // The moment→finding link (video_annotations.finding_id, set when a finding is
+    // created from this moment). This makes moments the SOURCE of the findings step.
+    findingId: a.finding_id || null,
   }));
 
   // Linked evidence for the finding: default ('auto') is the just-captured moment, else the
@@ -436,15 +442,29 @@ export default function CoachDrawStudio({
   );
   const editorFinding = selectedFindingId ? sortedFindings.find((f) => f.id === selectedFindingId) || null : null;
 
+  // Moments are the source of the findings step: each Analysis Moment card either
+  // opens its existing finding (Edit) or a Create editor pre-linked to that moment.
+  const momentByFindingId = new Map();
+  keyMoments.forEach((m) => { if (m.findingId && !momentByFindingId.has(m.findingId)) momentByFindingId.set(m.findingId, m); });
+  const selectedMoment = selectedMomentId ? keyMoments.find((m) => m.id === selectedMomentId) || null : null;
+  // Legacy fallback: findings that predate the moment-first flow (no linked moment)
+  // must stay reachable and editable.
+  const unlinkedFindings = sortedFindings.filter((f) => !momentByFindingId.has(f.id));
+
+  // In blank create mode with typed text, switching cards would clobber the shared
+  // editor fields — confirm before discarding the coach's unsaved work.
+  const confirmDiscardCreateText = () => {
+    if (selectedFindingId || readOnly) return true;
+    if (!(editObservation.trim() || editCue.trim() || editNotes.trim())) return true;
+    return window.confirm('Discard your unsaved new finding?');
+  };
+
   // Select a finding: load its content into the editable fields and seek the video
   // to its moment so the coach can re-check (and draw on) the exact frame.
   const selectFinding = (finding) => {
     if (!finding) return;
-    // In blank create mode with typed text, switching to a finding would clobber the
-    // shared editor fields — confirm before discarding the coach's unsaved work.
-    if (!selectedFindingId && !readOnly && (editObservation.trim() || editCue.trim() || editNotes.trim())) {
-      if (!window.confirm('Discard your unsaved new finding?')) return;
-    }
+    if (!confirmDiscardCreateText()) return;
+    setSelectedMomentId(momentByFindingId.get(finding.id)?.id || null);
     setSelectedFindingId(finding.id);
     setEditObservation(finding.observation || finding.coach_sees || '');
     setEditCue(finding.correction_cue || finding.cue || '');
@@ -467,8 +487,33 @@ export default function CoachDrawStudio({
   };
   const clearFindingSelection = () => {
     setSelectedFindingId(null);
+    setSelectedMomentId(null);
     setLinkedFindingId('');
     setEditObservation(''); setEditCue(''); setEditSeverity('medium'); setEditPhase(''); setEditTags([]); setEditNotes('');
+  };
+
+  // Select an Analysis Moment card: with a finding → edit it; without → open the
+  // Create editor anchored to that exact moment (seeked, pre-linked, phase preselected).
+  const selectMoment = (moment) => {
+    if (!moment) return;
+    const linked = moment.findingId ? sortedFindings.find((f) => f.id === moment.findingId) || null : null;
+    if (linked) { selectFinding(linked); return; }
+    if (!confirmDiscardCreateText()) return;
+    setSelectedFindingId(null);
+    setSelectedMomentId(moment.id);
+    setLinkChoice(moment.id);
+    setEditObservation(''); setEditCue(''); setEditSeverity('medium'); setEditTags([]); setEditNotes('');
+    // Phase moments preselect their technique area; custom moments leave it open.
+    const matchedLabel = quickLabels.find((label) => label.toLowerCase() === String(moment.phase || '').toLowerCase());
+    setEditPhase(matchedLabel ? matchedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : '');
+    if (Number.isFinite(moment.seconds)) {
+      const current = activeVideo();
+      if (current) {
+        current.pause();
+        current.currentTime = Math.max(0, moment.seconds);
+        syncTimestamp(current);
+      }
+    }
   };
 
   const handleSaveFindingDetails = async () => {
@@ -499,13 +544,17 @@ export default function CoachDrawStudio({
     }
   };
 
-  // Create a finding from the blank editor (step 2). Same fields as edit; the
-  // nearest captured moment auto-links as evidence; drills attach in step 3.
+  // Create a finding for the selected Analysis Moment (step 2). One-to-one: the
+  // finding takes the MOMENT's timestamp and links that exact moment as evidence,
+  // so the report screenshot is always the annotated moment image. Drills attach
+  // in step 3.
   const handleCreateFinding = async () => {
     if (!onCreateFinding || readOnly) return;
     const current = activeVideo();
     current?.pause();
-    const currentTime = current?.currentTime || timestamp || 0;
+    const currentTime = selectedMoment && Number.isFinite(selectedMoment.seconds)
+      ? selectedMoment.seconds
+      : (current?.currentTime || timestamp || 0);
     setSavingFinding(true);
     setActionFeedback(null);
     try {
@@ -517,7 +566,7 @@ export default function CoachDrawStudio({
         severity: editSeverity,
         coachNotes: editNotes.trim() || undefined,
         drills: [],
-        keyStampLinkId: effectiveLinkId || null,
+        keyStampLinkId: selectedMomentId || effectiveLinkId || null,
       });
       // Tags ride on raw_ai_payload.fault_tags — the create path doesn't take them,
       // so attach via the content-only update once the finding exists (non-fatal).
@@ -1287,68 +1336,100 @@ export default function CoachDrawStudio({
                 {/* STEP 2 ONLY: findings list with screenshots. Kept mounted (hidden via
                     CSS) so switching steps never remounts anything. */}
                 <div key="findings-list" className={currentStep === 'findings' ? 'ssd-step-enter space-y-2.5' : 'hidden'}>
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Findings</div>
-                      <div className="text-[11px] text-slate-400">Review key moments and add your findings.</div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 flex-shrink-0 border-cyan-300/40 bg-white/5 px-2.5 text-xs font-semibold text-white hover:bg-white/10"
-                      onClick={clearFindingSelection}
-                      disabled={readOnly}
-                    >
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Add Finding
-                    </Button>
+                  <div>
+                    <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Moments</div>
+                    <div className="text-[11px] text-slate-400">Your Analysis moments — add a finding to each one that matters.</div>
                   </div>
                   <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
-                    {sortedFindings.length === 0 && (
+                    {keyMoments.length === 0 && (
                       <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-center">
-                        <div className="text-sm font-semibold text-slate-200">No findings yet</div>
+                        <div className="text-sm font-semibold text-slate-200">No moments yet</div>
                         <p className="mx-auto mt-1.5 max-w-[220px] text-[11px] leading-5 text-slate-400">
-                          Pause the video on the moment that matters, then describe what you see on the right and press Create Finding.
+                          Create moments in Analysis before adding findings.
                         </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-3 h-9 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10"
+                          onClick={() => goToStep('analysis')}
+                        >
+                          ‹ Back to Analysis
+                        </Button>
                       </div>
                     )}
-                    {sortedFindings.map((finding) => {
-                      const active = selectedFindingId === finding.id;
-                      const thumb = findingThumbById.get(finding.id) || null;
-                      const seconds = Number(finding.timestamp_seconds ?? finding.timestamp_start ?? NaN);
-                      const payload = finding.raw_ai_payload || {};
-                      const tags = Array.isArray(payload.fault_tags) ? payload.fault_tags : (payload.fault_tag ? [payload.fault_tag] : []);
+                    {[...keyMoments].sort((a, b) => a.seconds - b.seconds).map((moment) => {
+                      const linked = moment.findingId ? sortedFindings.find((f) => f.id === moment.findingId) || null : null;
+                      const active = selectedMomentId === moment.id || (linked && selectedFindingId === linked.id);
+                      const annotated = Boolean(linked && (annotations || []).some((a) =>
+                        a.finding_id === linked.id && (a.annotation_type === 'coach_draw' || a.annotation_type === 'body_line')));
                       return (
                         <button
-                          key={finding.id}
+                          key={moment.id}
                           type="button"
-                          onClick={() => selectFinding(finding)}
+                          onClick={() => selectMoment(moment)}
                           className={`w-full rounded-xl border p-2.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-sky-400/70 bg-sky-400/10 shadow-[0_0_0_1px_rgba(56,189,248,0.25)]' : 'border-white/10 bg-white/5 hover:border-sky-300/40 hover:bg-white/[0.08]'}`}
                         >
                           <div className="flex gap-2.5">
-                            {thumb ? (
-                              <img src={thumb} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg border border-white/10 object-cover" />
+                            {moment.thumb ? (
+                              <img src={moment.thumb} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg border border-white/10 object-cover" />
                             ) : (
                               <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-[9px] text-slate-500">No image</div>
                             )}
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className={`h-2 w-2 flex-shrink-0 rounded-full ${finding.severity === 'high' || finding.severity === 'critical' ? 'bg-orange-400' : finding.severity === 'low' ? 'bg-emerald-400' : 'bg-amber-300'}`} />
-                                <span className="text-xs font-bold text-white">{tagLabel(finding.stroke_phase || finding.phase || 'Finding')}</span>
-                                {Number.isFinite(seconds) && <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(seconds)}</span>}
+                                <span className="truncate text-xs font-bold text-white">{moment.phase}</span>
+                                <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(moment.seconds)}</span>
+                                {annotated && <PencilLine className="h-3 w-3 flex-shrink-0 text-cyan-300" aria-label="Has coach drawing" />}
                               </div>
-                              <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-300">{finding.observation || finding.coach_sees || ''}</div>
-                              {tags.length > 0 && (
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {tags.slice(0, 3).map((tag) => (
-                                    <span key={tag} className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300">{tagLabel(tag)}</span>
-                                  ))}
-                                </div>
+                              {linked ? (
+                                <>
+                                  <div className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-slate-300">{linked.observation || linked.coach_sees || ''}</div>
+                                  <span className="mt-1 inline-block rounded bg-emerald-400/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">✓ Finding saved</span>
+                                </>
+                              ) : (
+                                <span className="mt-1 inline-block rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-300">Add finding →</span>
                               )}
                             </div>
                           </div>
                         </button>
                       );
                     })}
+                    {/* Legacy findings created before the moment-first flow (no linked
+                        moment) stay reachable here — edit works exactly the same. */}
+                    {unlinkedFindings.length > 0 && (
+                      <>
+                        <div className="pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Findings without a moment</div>
+                        {unlinkedFindings.map((finding) => {
+                          const active = selectedFindingId === finding.id;
+                          const thumb = findingThumbById.get(finding.id) || null;
+                          const seconds = Number(finding.timestamp_seconds ?? finding.timestamp_start ?? NaN);
+                          return (
+                            <button
+                              key={finding.id}
+                              type="button"
+                              onClick={() => selectFinding(finding)}
+                              className={`w-full rounded-xl border p-2.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-sky-400/70 bg-sky-400/10 shadow-[0_0_0_1px_rgba(56,189,248,0.25)]' : 'border-white/10 bg-white/5 hover:border-sky-300/40 hover:bg-white/[0.08]'}`}
+                            >
+                              <div className="flex gap-2.5">
+                                {thumb ? (
+                                  <img src={thumb} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg border border-white/10 object-cover" />
+                                ) : (
+                                  <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-[9px] text-slate-500">No image</div>
+                                )}
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className={`h-2 w-2 flex-shrink-0 rounded-full ${finding.severity === 'high' || finding.severity === 'critical' ? 'bg-orange-400' : finding.severity === 'low' ? 'bg-emerald-400' : 'bg-amber-300'}`} />
+                                    <span className="text-xs font-bold text-white">{tagLabel(finding.stroke_phase || finding.phase || 'Finding')}</span>
+                                    {Number.isFinite(seconds) && <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(seconds)}</span>}
+                                  </div>
+                                  <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-300">{finding.observation || finding.coach_sees || ''}</div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1491,7 +1572,7 @@ export default function CoachDrawStudio({
                 >
                   {/* Keyed wrapper: switching step / selecting a finding remounts the
                       content with a quick fade (professional, 180ms, reduced-motion aware). */}
-                  <div key={currentStep === 'analysis' ? 'moments' : (editorFinding?.id || 'create')} className="ssd-fade-enter space-y-3.5">
+                  <div key={currentStep === 'analysis' ? 'moments' : (editorFinding?.id || selectedMomentId || 'idle')} className="ssd-fade-enter space-y-3.5">
                   {currentStep === 'analysis' ? (
                     <>
                       <div className="flex items-center justify-between gap-2">
@@ -1587,12 +1668,18 @@ export default function CoachDrawStudio({
                           Delete Finding
                         </button>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-300">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
                         <span className="font-semibold">Time</span>
                         <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-cyan-200">
                           {formatTimestamp(Number(editorFinding.timestamp_seconds ?? editorFinding.timestamp_start ?? 0) || 0)}
                         </span>
-                        <span className="text-slate-500">video is seeked to this moment</span>
+                        {momentByFindingId.get(editorFinding.id) ? (
+                          <span className="min-w-0 truncate text-slate-400">
+                            from moment <span className="font-semibold text-slate-200">{momentByFindingId.get(editorFinding.id).phase}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">video is seeked to this moment</span>
+                        )}
                       </div>
                       <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Observation</div>
@@ -1666,42 +1753,6 @@ export default function CoachDrawStudio({
                           })}
                         </div>
                       </div>
-                      {linkedEvidenceOptions.length > 0 && (
-                        <details className="group rounded-lg border border-white/10 bg-white/5">
-                          <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
-                            <span>Evidence image {effectiveLinkId ? <span className="text-cyan-300">· linked</span> : <span className="text-slate-500">(none)</span>}</span>
-                            <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
-                          </summary>
-                          <div className="space-y-1.5 px-3 pb-3">
-                            <div className="flex gap-2 overflow-x-auto pb-1">
-                              <button
-                                type="button"
-                                onClick={() => setLinkChoice('none')}
-                                className={`flex h-16 w-16 flex-shrink-0 flex-col items-center justify-center rounded-lg border text-[10px] font-semibold transition-colors ${linkChoice === 'none' ? 'border-cyan-400 bg-cyan-400/20 text-cyan-100' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/40'}`}
-                              >
-                                No image
-                              </button>
-                              {linkedEvidenceOptions.map((ev) => (
-                                <button
-                                  key={ev.id}
-                                  type="button"
-                                  onClick={() => setLinkChoice(ev.id)}
-                                  title={ev.label}
-                                  className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border transition-colors ${effectiveLinkId === ev.id ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/15 hover:border-cyan-300/40'}`}
-                                >
-                                  <img src={ev.thumb} alt="" className="h-full w-full object-cover" />
-                                  <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[8px] font-mono text-white">
-                                    {ev.kind === 'drawing' ? 'Draw' : formatTimestamp(ev.seconds)}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="text-[10px] text-slate-400">
-                              {effectiveLinkId ? '✓ Image linked to this finding' : 'This finding will have no image.'}
-                            </div>
-                          </div>
-                        </details>
-                      )}
                       <details className="group rounded-lg border border-white/10 bg-white/5">
                         <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
                           <span>Notes {editNotes.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
@@ -1752,17 +1803,51 @@ export default function CoachDrawStudio({
                         Start another finding
                       </Button>
                     </div>
+                  ) : !selectedMoment ? (
+                    /* Guidance: moments are the source — the coach picks one on the left. */
+                    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-center">
+                      <div className="text-sm font-semibold text-slate-200">
+                        {keyMoments.length === 0 ? 'No moments yet' : 'Select a moment'}
+                      </div>
+                      <p className="mx-auto mt-1.5 max-w-[230px] text-[11px] leading-5 text-slate-400">
+                        {keyMoments.length === 0
+                          ? 'Create moments in Analysis before adding findings.'
+                          : 'Select a moment on the left and create a finding for it. The moment image becomes the report screenshot.'}
+                      </p>
+                      {keyMoments.length === 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-3 h-9 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10"
+                          onClick={() => goToStep('analysis')}
+                        >
+                          ‹ Back to Analysis
+                        </Button>
+                      )}
+                    </div>
                   ) : (
                     <>
-                      {/* CREATE mode — the same editor as edit, blank. The old bulky
-                          create form (phase chips + drills + linked image) was removed:
-                          drills attach in step 3, the moment image auto-links. */}
+                      {/* CREATE mode — anchored to the selected Analysis Moment. The
+                          finding takes the moment's time and image (one-to-one), so
+                          the report screenshot is always the annotated moment frame. */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-[15px] font-bold uppercase tracking-wider">{readOnly ? 'Review (read-only)' : 'New Finding'}</div>
-                        <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-[10px] text-cyan-200">{formatTimestamp(timestamp)}</span>
+                        <div className="min-w-0 truncate text-[15px] font-bold uppercase tracking-wider">
+                          {readOnly ? 'Review (read-only)' : <>New Finding <span className="text-cyan-300">· {selectedMoment.phase}</span></>}
+                        </div>
+                        <span className="flex-shrink-0 rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-[10px] text-cyan-200">{formatTimestamp(selectedMoment.seconds)}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-slate-900/50 p-2">
+                        {selectedMoment.thumb ? (
+                          <img src={selectedMoment.thumb} alt="" className="h-12 w-[4.5rem] flex-shrink-0 rounded-lg border border-white/10 object-cover" />
+                        ) : (
+                          <div className="flex h-12 w-[4.5rem] flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-[9px] text-slate-500">No image</div>
+                        )}
+                        <p className="min-w-0 text-[10px] leading-4 text-slate-400">
+                          This moment's image becomes the finding's report screenshot. Draw on the frame to add visual proof.
+                        </p>
                       </div>
                       <p className="text-[11px] leading-4 text-slate-400">
-                        Scrub to the moment on the video, pick the technique area, and describe what you see. Drills attach in the next step.
+                        Describe what you see at this moment. Drills attach in the next step.
                       </p>
                       {reviewMode === 'ai' && sortedFindings.length > 0 && onReviewAISuggestions && (
                         <Button

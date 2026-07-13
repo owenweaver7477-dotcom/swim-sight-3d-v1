@@ -210,11 +210,18 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
     group.push(a);
     linkedByFinding.set(a.finding_id, group);
   });
+  // Creation order for "latest drawing wins" — sanitized rows drop created_date,
+  // so the lookup is built from the raw input before sanitization. When a coach
+  // redraws on a moment, the report must show the NEWEST annotated frame.
+  const createdAtById = new Map((Array.isArray(inputAnnotations) ? inputAnnotations : [])
+    .map(a => [a?.id, Date.parse(a?.created_date || a?.created_at || '') || 0]));
   const findingImage = (finding) => {
     const linked = linkedByFinding.get(finding.id) || [];
-    return linked.find(a => a.annotation_type === 'coach_draw' || a.annotation_type === 'body_line')
-      || linked.find(a => a.annotation_type === 'key_frame')
-      || null;
+    const drawings = linked.filter(a => a.annotation_type === 'coach_draw' || a.annotation_type === 'body_line');
+    if (drawings.length) {
+      return [...drawings].sort((a, b) => (createdAtById.get(a.id) || 0) - (createdAtById.get(b.id) || 0)).pop();
+    }
+    return linked.find(a => a.annotation_type === 'key_frame') || null;
   };
 
   const reportType = isManualReview ? 'Coach Manual Review' : 'Coach-Reviewed AI Analysis';
