@@ -294,7 +294,7 @@ export default function CoachDrawStudio({
   const [actionFeedback, setActionFeedback] = useState(null); // { type: 'success' | 'error', msg }
   const [drawingSaving, setDrawingSaving] = useState(false);
   const [reopenConfirm, setReopenConfirm] = useState(false);
-  const [linkChoice] = useState('auto'); // 'auto' | 'none' | <annotationId> (always auto since the create form was unified)
+  const [linkChoice, setLinkChoice] = useState('auto'); // 'auto' | 'none' | <annotationId>
   // Finalised/shared reports are read-only. canEdit (passed by the parent) already folds
   // in !isReportFinalised, so !canEdit here means "cannot save into this report".
   const readOnly = !canEdit;
@@ -385,10 +385,16 @@ export default function CoachDrawStudio({
 
   useEffect(() => {
     if (!fullscreenOpen) return undefined;
-    const onKeyDown = (e) => { if (e.key === 'Escape') setFullscreenOpen(false); };
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      // Escape cancels an in-progress drawing first (same as the toolbar's Cancel) —
+      // it must never throw away unsaved shapes AND the whole workspace in one press.
+      if (drawing) { setDrawing(false); return; }
+      closeFullscreen();
+    };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [fullscreenOpen]);
+  }, [fullscreenOpen, drawing]);
 
   // Persist the open-state and unsaved inputs so a tab switch / refetch / reload restores
   // them (restore itself is done via lazy state initialisers above — no effect race).
@@ -434,6 +440,11 @@ export default function CoachDrawStudio({
   // to its moment so the coach can re-check (and draw on) the exact frame.
   const selectFinding = (finding) => {
     if (!finding) return;
+    // In blank create mode with typed text, switching to a finding would clobber the
+    // shared editor fields — confirm before discarding the coach's unsaved work.
+    if (!selectedFindingId && !readOnly && (editObservation.trim() || editCue.trim() || editNotes.trim())) {
+      if (!window.confirm('Discard your unsaved new finding?')) return;
+    }
     setSelectedFindingId(finding.id);
     setEditObservation(finding.observation || finding.coach_sees || '');
     setEditCue(finding.correction_cue || finding.cue || '');
@@ -515,6 +526,7 @@ export default function CoachDrawStudio({
       }
       setAddedFindingCount((n) => n + 1);
       setLastCapturedMomentId(null);
+      setLinkChoice('auto');
       if (created?.id) {
         setSelectedFindingId(created.id);
       } else {
@@ -1654,6 +1666,42 @@ export default function CoachDrawStudio({
                           })}
                         </div>
                       </div>
+                      {linkedEvidenceOptions.length > 0 && (
+                        <details className="group rounded-lg border border-white/10 bg-white/5">
+                          <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
+                            <span>Evidence image {effectiveLinkId ? <span className="text-cyan-300">· linked</span> : <span className="text-slate-500">(none)</span>}</span>
+                            <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+                          </summary>
+                          <div className="space-y-1.5 px-3 pb-3">
+                            <div className="flex gap-2 overflow-x-auto pb-1">
+                              <button
+                                type="button"
+                                onClick={() => setLinkChoice('none')}
+                                className={`flex h-16 w-16 flex-shrink-0 flex-col items-center justify-center rounded-lg border text-[10px] font-semibold transition-colors ${linkChoice === 'none' ? 'border-cyan-400 bg-cyan-400/20 text-cyan-100' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/40'}`}
+                              >
+                                No image
+                              </button>
+                              {linkedEvidenceOptions.map((ev) => (
+                                <button
+                                  key={ev.id}
+                                  type="button"
+                                  onClick={() => setLinkChoice(ev.id)}
+                                  title={ev.label}
+                                  className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border transition-colors ${effectiveLinkId === ev.id ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/15 hover:border-cyan-300/40'}`}
+                                >
+                                  <img src={ev.thumb} alt="" className="h-full w-full object-cover" />
+                                  <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[8px] font-mono text-white">
+                                    {ev.kind === 'drawing' ? 'Draw' : formatTimestamp(ev.seconds)}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {effectiveLinkId ? '✓ Image linked to this finding' : 'This finding will have no image.'}
+                            </div>
+                          </div>
+                        </details>
+                      )}
                       <details className="group rounded-lg border border-white/10 bg-white/5">
                         <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
                           <span>Notes {editNotes.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
@@ -1685,6 +1733,25 @@ export default function CoachDrawStudio({
                         </p>
                       </div>
                     </>
+                  ) : selectedFindingId ? (
+                    /* Transient: the finding was just created/selected but the refetched
+                       list hasn't landed yet. Rendering the blank create form here would
+                       re-arm the Create button with the same text — a double-tap would
+                       save a DUPLICATE finding. Show a sync state instead. */
+                    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-center">
+                      <div className="text-sm font-semibold text-slate-200">Finding saved</div>
+                      <p className="mx-auto mt-1.5 max-w-[220px] text-[11px] leading-5 text-slate-400">
+                        Syncing with the report… it will open here in a moment.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3 h-9 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10"
+                        onClick={clearFindingSelection}
+                      >
+                        Start another finding
+                      </Button>
+                    </div>
                   ) : (
                     <>
                       {/* CREATE mode — the same editor as edit, blank. The old bulky
