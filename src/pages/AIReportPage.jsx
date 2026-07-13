@@ -1090,7 +1090,7 @@ export default function AIReportPage() {
       <div className="max-w-3xl mx-auto px-4 py-12 text-center space-y-3">
         <Brain className="w-10 h-10 text-muted-foreground mx-auto opacity-40" />
         <div className="text-sm font-medium text-foreground">No report selected</div>
-        <Button size="sm" variant="outline" onClick={() => navigate('/ai-reports')}>
+        <Button size="sm" variant="outline" onClick={() => navigate('/ai-reviews')}>
           <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Reports
         </Button>
       </div>
@@ -1122,7 +1122,7 @@ export default function AIReportPage() {
         <div className="flex-1 min-w-0 space-y-6">
 
           {/* Back nav */}
-          <Button size="sm" variant="ghost" onClick={() => navigate('/ai-reports')}>
+          <Button size="sm" variant="ghost" onClick={() => navigate('/ai-reviews')}>
             <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Coach Studio
           </Button>
 
