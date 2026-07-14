@@ -280,10 +280,13 @@ export default function HomePage() {
             aria-label="Coach Draw preview with line reset correction marks"
           >
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Coach Draw preview</div>
-            <div className="mt-5 h-56 rounded-2xl border border-slate-200 bg-[linear-gradient(90deg,rgba(14,165,233,0.08)_1px,transparent_1px),linear-gradient(rgba(14,165,233,0.08)_1px,transparent_1px)] bg-[length:24px_24px] p-5">
-              <div className="mt-16 h-1 w-56 rotate-[-7deg] rounded-full bg-sky-500" />
-              <div className="ml-20 mt-8 h-1 w-32 rotate-[18deg] rounded-full bg-cyan-400" />
-              <div className="mt-6 inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">Line reset cue</div>
+            {/* Paused-frame look with a coach annotation highlight — deliberately not a chart. */}
+            <div className="relative mt-5 h-56 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-5">
+              <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(120%_80%_at_30%_20%,rgba(56,189,248,0.18),transparent_60%)]" />
+              <div aria-hidden="true" className="absolute right-9 top-11 h-20 w-20 rounded-full border-2 border-cyan-300/80 shadow-[0_0_0_6px_rgba(56,189,248,0.12)]" />
+              <div className="absolute bottom-5 left-5 inline-flex items-center gap-1.5 rounded-full bg-cyan-300 px-3 py-1 text-xs font-semibold text-slate-950">
+                <PencilLine className="h-3.5 w-3.5" /> Line reset cue
+              </div>
             </div>
           </div>
         </div>

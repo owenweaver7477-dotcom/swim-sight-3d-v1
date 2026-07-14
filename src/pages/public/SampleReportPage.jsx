@@ -64,10 +64,10 @@ const findings = [
 function DemoFrame({ moment }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="relative h-36 bg-slate-950">
-        <div className="absolute inset-0 opacity-25" style={{ backgroundImage: 'linear-gradient(90deg,#38bdf8 1px,transparent 1px),linear-gradient(#38bdf8 1px,transparent 1px)', backgroundSize: '28px 28px' }} />
-        <div className="absolute left-5 right-5 top-16 h-1 rounded-full bg-cyan-200 shadow-lg shadow-cyan-300/30" />
-        <div className="absolute left-20 top-24 h-1 w-28 rotate-[14deg] rounded-full bg-white/50" />
+      {/* Paused video-frame look with a coach highlight — deliberately not a chart. */}
+      <div className="relative h-36 overflow-hidden bg-slate-950">
+        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(130%_90%_at_50%_18%,rgba(56,189,248,0.16),transparent_62%)]" />
+        <div aria-hidden="true" className="absolute right-6 top-9 h-12 w-12 rounded-full border-2 border-cyan-200/70 shadow-[0_0_0_5px_rgba(56,189,248,0.1)]" />
         <div className="absolute left-4 top-4 rounded-full bg-cyan-200 px-2.5 py-1 text-[10px] font-bold text-slate-950">{moment.time}</div>
       </div>
       <div className="p-4">
