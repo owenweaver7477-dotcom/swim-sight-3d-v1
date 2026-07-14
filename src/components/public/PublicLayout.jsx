@@ -61,9 +61,9 @@ export function PublicHero({ eyebrow, title, description, actions, children }) {
   );
 }
 
-export function PublicSection({ eyebrow, title, description, children, subtle = false }) {
+export function PublicSection({ eyebrow, title, description, children, subtle = false, id }) {
   return (
-    <section className={`border-b border-slate-200 px-4 py-12 sm:py-14 ${subtle ? 'bg-slate-50' : 'bg-white'}`}>
+    <section id={id} className={`border-b border-slate-200 px-4 py-12 sm:py-14 ${subtle ? 'bg-slate-50' : 'bg-white'}`}>
       <div className="mx-auto max-w-6xl">
         {(eyebrow || title || description) && (
           <div className="mb-8 max-w-3xl">

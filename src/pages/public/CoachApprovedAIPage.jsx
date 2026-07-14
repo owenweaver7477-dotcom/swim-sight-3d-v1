@@ -6,10 +6,38 @@ import StructuredData from '@/components/seo/StructuredData';
 import { PILOT_MAILTO } from '@/lib/supportConfig';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
-import { breadcrumbStructuredData } from './publicStructuredData';
+import { breadcrumbStructuredData, faqStructuredData } from './publicStructuredData';
 
 // Route path stays /coach-approved-ai so existing links and the sitemap keep working;
-// the page is now a coach-control + privacy page (no AI framing).
+// the page is now a combined Trust & Privacy + FAQ page (no AI framing). /faq redirects here.
+
+// FAQ groups merged in from the retired /faq page.
+const faqGroups = [
+  {
+    category: 'Coach review',
+    items: [
+      ['Does Swim Sight 3D replace the coach?', 'No. It is a manual review tool. The coach marks moments, writes every finding, and decides what appears in a report.'],
+      ['How are findings created?', 'The coach creates every finding by hand from the video — mark the moment, draw on the frame, and write the observation, cue, and drill.'],
+      ['Can coaches edit findings?', 'Yes. Coaches write, edit, reject, or reorder findings before finalising a report.'],
+      ['What video length works best?', 'For pilot testing, short 5–15 second clips, side view, and 720p or compressed 1080p footage are recommended.'],
+    ],
+  },
+  {
+    category: 'Privacy',
+    items: [
+      ['Are videos private?', 'Videos stay inside the authenticated club workflow. Shared reports never expose private paths or signed URLs.'],
+      ['What is excluded from shared reports?', 'Shared reports exclude private paths, signed URLs, rejected findings, and internal coach notes.'],
+    ],
+  },
+  {
+    category: 'Clubs & reports',
+    items: [
+      ['Is this for clubs or individual coaches?', 'Both. Individual coaches can review swimmers, and clubs can use workspaces, squads, roles, reports, and progress views.'],
+      ['Can reports be shared with swimmers or parents?', 'Yes. Coaches can create secure shared report links with approved public-safe content only.'],
+    ],
+  },
+];
+const faqs = faqGroups.flatMap(group => group.items);
 
 const reviewSteps = [
   'The coach watches the clip in a focused review workspace',
@@ -40,13 +68,16 @@ export default function CoachApprovedAIPage() {
   return (
     <PublicLayout>
       <StructuredData
-        data={breadcrumbStructuredData([
-          { name: 'Home', path: '/' },
-          { name: 'Trust and privacy', path: '/coach-approved-ai' },
-        ])}
+        data={[
+          faqStructuredData(faqs),
+          breadcrumbStructuredData([
+            { name: 'Home', path: '/' },
+            { name: 'Trust and privacy', path: '/coach-approved-ai' },
+          ]),
+        ]}
       />
       <PublicHero
-        eyebrow="Trust & Privacy"
+        eyebrow="Trust & Privacy + FAQ"
         title="Coach-led review. You control every finding."
         description="Every finding is written and approved by the coach, videos stay private, and shared reports show approved content only."
         actions={
@@ -159,11 +190,32 @@ export default function CoachApprovedAIPage() {
           ))}
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Link to="/for-clubs" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
-          <Link to="/for-coaches" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
+          <Link to="/for-coaches" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Clubs &amp; coaches</Link>
           <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
             Book a pilot <ArrowRight className="ml-2 h-4 w-4" />
           </a>
+        </div>
+      </PublicSection>
+
+      {/* Merged FAQ (was /faq — now redirects here) */}
+      <PublicSection id="faq" subtle title="Frequently asked questions" description="Short, honest answers about coach control, privacy, clubs, and reports.">
+        <div className="grid gap-5">
+          {faqGroups.map((group) => (
+            <section key={group.category} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-200 pb-4">
+                <h3 className="text-lg font-bold text-slate-950">{group.category}</h3>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{group.items.length} questions</span>
+              </div>
+              <div className="grid gap-3">
+                {group.items.map(([question, answer]) => (
+                  <div key={question} className="rounded-2xl bg-slate-50 p-4">
+                    <h4 className="text-base font-bold text-slate-950">{question}</h4>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       </PublicSection>
     </PublicLayout>

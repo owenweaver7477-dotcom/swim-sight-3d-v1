@@ -4,12 +4,10 @@ import { ArrowRight, Menu, X } from 'lucide-react';
 import { PILOT_MAILTO } from '@/lib/supportConfig';
 
 const navItems = [
-  { to: '/for-coaches', label: 'Coaches' },
-  { to: '/for-clubs', label: 'Clubs' },
-  { to: '/coach-approved-ai', label: 'Trust & Privacy' },
+  { to: '/for-coaches', label: 'Clubs & Coaches' },
   { to: '/sample-report', label: 'Sample Report' },
+  { to: '/coach-approved-ai', label: 'Trust & Privacy + FAQ' },
   { to: '/pricing', label: 'Pilot Access' },
-  { to: '/faq', label: 'FAQ' },
 ];
 
 export default function PublicNav() {

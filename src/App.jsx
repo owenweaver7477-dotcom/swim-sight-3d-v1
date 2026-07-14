@@ -32,12 +32,10 @@ import SharedReportPage from './pages/SharedReportPage';
 // Everything else is code-split: marketing subpages, analytics (recharts), admin/internal
 // tools, and the drill library load on demand instead of inside the main bundle.
 const ForCoachesPage = lazy(() => import('./pages/public/ForCoachesPage'));
-const ForClubsPage = lazy(() => import('./pages/public/ForClubsPage'));
 const CoachApprovedAIPage = lazy(() => import('./pages/public/CoachApprovedAIPage'));
 const PrivacyVideoReviewPage = lazy(() => import('./pages/public/PrivacyVideoReviewPage'));
 const SampleReportPage = lazy(() => import('./pages/public/SampleReportPage'));
 const PricingPage = lazy(() => import('./pages/public/PricingPage'));
-const FAQPage = lazy(() => import('./pages/public/FAQPage'));
 const ClubProgress = lazy(() => import('./pages/ClubProgress'));
 const DrillLibrary = lazy(() => import('./pages/DrillLibrary.jsx'));
 const Roadmap = lazy(() => import('./pages/Roadmap.jsx'));
@@ -88,7 +86,6 @@ const AuthenticatedApp = () => {
   const publicWebsitePaths = [
     '/',
     '/for-coaches',
-    '/for-clubs',
     '/coach-approved-ai',
     '/privacy-video-review',
     '/sample-report',
@@ -153,14 +150,16 @@ const AuthenticatedApp = () => {
       {/* Public website routes — crawlable marketing structure, no app sidebar */}
       <Route path="/" element={<HomePage />} />
       <Route path="/for-coaches" element={<ForCoachesPage />} />
-      <Route path="/for-clubs" element={<ForClubsPage />} />
       <Route path="/coach-approved-ai" element={<CoachApprovedAIPage />} />
       <Route path="/privacy-video-review" element={<PrivacyVideoReviewPage />} />
       <Route path="/sample-report" element={<SampleReportPage />} />
       <Route path="/pricing" element={<PricingPage />} />
-      <Route path="/faq" element={<FAQPage />} />
-      {/* Retired public pages (Features + per-stroke pages) — redirect old links so
-          bookmarks/search results land somewhere useful instead of 404ing. */}
+      {/* FAQ merged into the Trust & Privacy page */}
+      <Route path="/faq" element={<Navigate to="/coach-approved-ai" replace />} />
+      {/* Merged/retired public pages — redirect old links so bookmarks and search
+          results land somewhere useful instead of 404ing. For Clubs merged into the
+          combined Clubs & Coaches page. */}
+      <Route path="/for-clubs" element={<Navigate to="/for-coaches" replace />} />
       <Route path="/features" element={<Navigate to="/for-coaches" replace />} />
       <Route path="/stroke-analysis" element={<Navigate to="/for-coaches" replace />} />
       <Route path="/stroke-analysis/breaststroke" element={<Navigate to="/for-coaches" replace />} />

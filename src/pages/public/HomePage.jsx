@@ -179,7 +179,7 @@ export default function HomePage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link to="/for-coaches" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
           <Link to="/for-coaches" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
-          <Link to="/for-clubs" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
+          <Link to="/for-coaches" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Clubs & coaches</Link>
         </div>
       </Section>
 
@@ -351,7 +351,7 @@ export default function HomePage() {
           ))}
         </div>
         <div className="mt-6">
-          <Link to="/faq" className="text-sm font-bold text-sky-700 hover:text-sky-900">Read the full FAQ</Link>
+          <Link to="/coach-approved-ai" className="text-sm font-bold text-sky-700 hover:text-sky-900">Read the FAQ</Link>
         </div>
       </Section>
 

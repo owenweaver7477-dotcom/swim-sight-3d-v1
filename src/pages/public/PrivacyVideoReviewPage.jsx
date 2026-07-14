@@ -198,7 +198,7 @@ export default function PrivacyVideoReviewPage() {
             Trust and privacy <ArrowRight className="ml-2 inline h-4 w-4" />
           </Link>
           <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
-          <Link to="/for-clubs" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">For clubs</Link>
+          <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">Clubs & coaches</Link>
         </div>
       </PublicSection>
     </PublicLayout>

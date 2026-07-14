@@ -9,11 +9,6 @@ export const publicSeoMetadata = {
     title: 'For Coaches | Swim Sight 3D Coach Studio',
     description: 'Swim Sight 3D helps swim coaches review footage faster, save timestamped key moments, add coach-approved feedback, assign drills, and share swimmer reports.',
   },
-  clubs: {
-    path: '/for-clubs',
-    title: 'For Clubs | Swim Sight 3D Swimming Analysis Platform',
-    description: 'Swim Sight 3D gives swim clubs private workspaces for squads, coaches, technical findings, reports, and consistent swimmer feedback workflows.',
-  },
   coachApprovedAI: {
     path: '/coach-approved-ai',
     title: 'Trust and Privacy | Swim Sight 3D',
@@ -33,10 +28,5 @@ export const publicSeoMetadata = {
     path: '/pricing',
     title: 'Pilot Access | Swim Sight 3D for Coaches and Clubs',
     description: 'Join the Swim Sight 3D pilot for Australian swim clubs and coaches. See what a pilot includes and book a pilot for your club — pricing is finalised with pilot clubs.',
-  },
-  faq: {
-    path: '/faq',
-    title: 'FAQ | Swim Sight 3D Swimming Analysis Software',
-    description: 'Answers about Swim Sight 3D coach-led swim video review, coach approval, manual review, private videos, squads, reports, and pilot access.',
   },
 };
