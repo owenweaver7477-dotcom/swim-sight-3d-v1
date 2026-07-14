@@ -29,7 +29,41 @@ const EMPTY_FORM = {
   swimmer_email: '',
   parent_email: '',
   notification_preference: 'in_app',
+  goal_short_term: '',
+  goal_long_term: '',
+  strengths: '',
+  weaknesses: '',
+  goal_times: {},
 };
+
+// Goal times are stored as a { event: time } jsonb. This compact editor keeps the
+// shared Add/Edit form simple — add a row, type an event + target time.
+function GoalTimesEditor({ value = {}, onChange }) {
+  const entries = Object.entries(value || {});
+  const setEntry = (i, field, v) => {
+    const next = entries.map((e) => [...e]);
+    next[i][field === 'event' ? 0 : 1] = v;
+    onChange(Object.fromEntries(next.filter(([k]) => k.trim())));
+  };
+  const addRow = () => onChange({ ...(value || {}), '': '' });
+  const removeRow = (key) => {
+    const next = { ...(value || {}) };
+    delete next[key];
+    onChange(next);
+  };
+  return (
+    <div className="space-y-1.5">
+      {entries.map(([ev, t], i) => (
+        <div key={i} className="flex items-center gap-2">
+          <Input value={ev} onChange={e => setEntry(i, 'event', e.target.value)} placeholder="Event (e.g. 100 Free)" className="bg-secondary border-border h-8 text-xs flex-1" />
+          <Input value={t} onChange={e => setEntry(i, 'time', e.target.value)} placeholder="Target (e.g. 1:02.5)" className="bg-secondary border-border h-8 text-xs w-28" />
+          <button type="button" onClick={() => removeRow(ev)} className="text-muted-foreground hover:text-destructive text-xs px-1" aria-label="Remove goal time">✕</button>
+        </div>
+      ))}
+      <button type="button" onClick={addRow} className="text-[11px] font-semibold text-primary hover:underline">+ Add goal time</button>
+    </div>
+  );
+}
 
 // Shared swimmer form fields — used by both the Add and Edit dialogs so the two
 // stay in sync. Squad creation stays Add-only (children prop).
@@ -54,6 +88,30 @@ function SwimmerFormFields({ form, setForm, squads, squadExtra = null }) {
       <div>
         <Label className="text-xs text-muted-foreground">Main Strokes</Label>
         <Input value={form.main_strokes} onChange={e => setForm(p => ({ ...p, main_strokes: e.target.value }))} placeholder="e.g. Breaststroke, IM" className="bg-secondary border-border mt-1" />
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground">Goal Times</Label>
+        <div className="mt-1"><GoalTimesEditor value={form.goal_times} onChange={g => setForm(p => ({ ...p, goal_times: g }))} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs text-muted-foreground">Short-term goal</Label>
+          <Input value={form.goal_short_term} onChange={e => setForm(p => ({ ...p, goal_short_term: e.target.value }))} placeholder="This season's focus" className="bg-secondary border-border mt-1" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Long-term goal</Label>
+          <Input value={form.goal_long_term} onChange={e => setForm(p => ({ ...p, goal_long_term: e.target.value }))} placeholder="The bigger target" className="bg-secondary border-border mt-1" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs text-muted-foreground">Strengths <span className="text-muted-foreground/60">(optional)</span></Label>
+          <Textarea value={form.strengths} onChange={e => setForm(p => ({ ...p, strengths: e.target.value }))} placeholder="What's working well" className="bg-secondary border-border mt-1" rows={2} />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Areas to work on <span className="text-muted-foreground/60">(optional)</span></Label>
+          <Textarea value={form.weaknesses} onChange={e => setForm(p => ({ ...p, weaknesses: e.target.value }))} placeholder="Where to improve" className="bg-secondary border-border mt-1" rows={2} />
+        </div>
       </div>
       <div>
         <Label className="text-xs text-muted-foreground">Coach Notes</Label>
@@ -182,6 +240,11 @@ export default function Swimmers() {
       swimmer_email: selected.swimmer_email || '',
       parent_email: selected.parent_email || '',
       notification_preference: selected.notification_preference || 'in_app',
+      goal_short_term: selected.goal_short_term || '',
+      goal_long_term: selected.goal_long_term || '',
+      strengths: selected.strengths || '',
+      weaknesses: selected.weaknesses || '',
+      goal_times: selected.goal_times && typeof selected.goal_times === 'object' ? selected.goal_times : {},
     });
     setEditOpen(true);
   };
@@ -299,6 +362,68 @@ export default function Swimmers() {
                 </div>
               ))}
             </div>
+
+            {/* Goals & profile — coach-facing view of the swimmer's targets. */}
+            {(() => {
+              const goalTimes = selected.goal_times && typeof selected.goal_times === 'object' ? Object.entries(selected.goal_times).filter(([k]) => k) : [];
+              const hasProfile = goalTimes.length || selected.goal_short_term || selected.goal_long_term || selected.strengths || selected.weaknesses;
+              if (!hasProfile) {
+                return canManageSwimmers ? (
+                  <div className="rounded-xl border border-dashed border-border bg-card p-4 text-center">
+                    <p className="text-xs text-muted-foreground">No goals or profile yet. Use <span className="font-semibold text-foreground">Edit Details</span> to add goal times, goals, and strengths.</p>
+                  </div>
+                ) : null;
+              }
+              return (
+                <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Goals &amp; profile</div>
+                  {goalTimes.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-foreground mb-1.5">Goal times</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {goalTimes.map(([ev, t]) => (
+                          <span key={ev} className="rounded-lg border border-border bg-secondary px-2.5 py-1 text-xs">
+                            <span className="text-muted-foreground">{ev}</span> <span className="font-mono font-semibold text-foreground">{t}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(selected.goal_short_term || selected.goal_long_term) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {selected.goal_short_term && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Short-term goal</div>
+                          <p className="text-sm text-foreground mt-0.5">{selected.goal_short_term}</p>
+                        </div>
+                      )}
+                      {selected.goal_long_term && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Long-term goal</div>
+                          <p className="text-sm text-foreground mt-0.5">{selected.goal_long_term}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(selected.strengths || selected.weaknesses) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {selected.strengths && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-emerald-500">Strengths</div>
+                          <p className="text-sm text-foreground mt-0.5 whitespace-pre-line">{selected.strengths}</p>
+                        </div>
+                      )}
+                      {selected.weaknesses && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-amber-500">Areas to work on</div>
+                          <p className="text-sm text-foreground mt-0.5 whitespace-pre-line">{selected.weaknesses}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 
