@@ -188,8 +188,8 @@ const AuthenticatedApp = () => {
           <Route path="/ai-reviews" element={<AIReportsListPage />} />
           <Route path="/ai-review" element={<AIReportPage />} />
           <Route path="/swimmers" element={<Swimmers />} />
-          {/* Reference Library is parked: its tables (migration 008) are not applied in
-              production, so the page would error. Redirect until 008 is intentionally applied. */}
+          {/* Reference Library removed (coach audit). Redirect kept so any old link
+              lands on the dashboard instead of a 404. */}
           <Route path="/reference-library" element={<Navigate to="/dashboard" replace />} />
           <Route path="/club-progress" element={<ClubProgress />} />
           <Route path="/swimmer-trends" element={<SwimmerTrends />} />

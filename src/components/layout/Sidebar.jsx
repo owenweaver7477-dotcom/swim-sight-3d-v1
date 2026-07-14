@@ -8,14 +8,13 @@ import {
   LayoutDashboard, Users, FlaskConical,
   Settings, ChevronDown, ChevronRight, Dumbbell,
   Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Brain,
-  ShieldAlert, Activity, TrendingUp, BarChart3, ClipboardCheck, Server
+  ShieldAlert, Activity, TrendingUp, BarChart3, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
   getRoleLabel,
   isCoachAppRole,
-  isPilotRole,
   normalizeRole,
 } from '@/lib/permissions';
 
@@ -47,7 +46,6 @@ const NAV_INTERNAL = [
   { to: '/roadmap',       label: 'Roadmap',         icon: Map },
 ];
 
-const PILOT_NAV_ITEM = { to: '/pilot-launch', label: 'Private Coach Pilot', icon: ClipboardCheck };
 
 export default function Sidebar() {
   const { club, clubs, switchClub } = useClubContext();
@@ -72,7 +70,6 @@ export default function Sidebar() {
   const rawMemberRole = club?._rawMemberRole || club?._memberRole || memberRole;
   const isPlatformAdmin = user?.role === 'admin';
   const canUseCoachApp = isCoachAppRole(memberRole) || user?.role === 'admin';
-  const canUsePilot = isPilotRole(memberRole) || user?.role === 'admin';
 
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
@@ -221,7 +218,6 @@ export default function Sidebar() {
             <SectionLabel label="Tools" divider />
             <div className="space-y-0.5">
               {NAV_TOOLS.map(item => <NavItem key={item.to} item={item} />)}
-              {canUsePilot && <NavItem item={PILOT_NAV_ITEM} />}
             </div>
 
             {/* — Club — */}
