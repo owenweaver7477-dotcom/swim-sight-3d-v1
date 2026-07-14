@@ -68,7 +68,7 @@ export default function FAQPage() {
         description="Short, honest answers about AI, coach approval, privacy, reports, supported strokes, and pilot access."
         actions={
           <>
-            <Link to="/features" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Explore features</Link>
+            <Link to="/for-coaches" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Explore features</Link>
             <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">AI + trust</Link>
           </>
         }
@@ -98,7 +98,7 @@ export default function FAQPage() {
           <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
           <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Coach-approved AI</Link>
           <Link to="/privacy-video-review" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Privacy + video review</Link>
-          <Link to="/features" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Explore features</Link>
+          <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white">Explore features</Link>
           <Link to="/login" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Log in</Link>
         </div>
       </PublicSection>

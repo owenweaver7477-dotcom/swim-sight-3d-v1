@@ -41,11 +41,10 @@ export default function PublicFooter() {
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Product</div>
           <div className="mt-3 grid gap-2 text-sm">
-            <Link to="/features" className="hover:text-white">Features</Link>
+            <Link to="/for-coaches" className="hover:text-white">Coaches</Link>
+            <Link to="/for-clubs" className="hover:text-white">Clubs</Link>
             <Link to="/coach-approved-ai" className="hover:text-white">Trust & Privacy</Link>
-            <Link to="/privacy-video-review" className="hover:text-white">Privacy + Video Review</Link>
             <Link to="/sample-report" className="hover:text-white">Sample Report</Link>
-            <Link to="/stroke-analysis" className="hover:text-white">Stroke Analysis</Link>
             <Link to="/pricing" className="hover:text-white">Pilot Access</Link>
           </div>
         </div>

@@ -4,12 +4,10 @@ import { ArrowRight, Menu, X } from 'lucide-react';
 import { PILOT_MAILTO } from '@/lib/supportConfig';
 
 const navItems = [
-  { to: '/features', label: 'Features' },
   { to: '/for-coaches', label: 'Coaches' },
   { to: '/for-clubs', label: 'Clubs' },
   { to: '/coach-approved-ai', label: 'Trust & Privacy' },
   { to: '/sample-report', label: 'Sample Report' },
-  { to: '/stroke-analysis', label: 'Stroke Analysis' },
   { to: '/pricing', label: 'Pilot Access' },
   { to: '/faq', label: 'FAQ' },
 ];

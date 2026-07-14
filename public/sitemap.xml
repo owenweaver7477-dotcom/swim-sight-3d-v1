@@ -6,11 +6,6 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://swimsight3d.com/features</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://swimsight3d.com/for-coaches</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -34,31 +29,6 @@
     <loc>https://swimsight3d.com/sample-report</loc>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://swimsight3d.com/stroke-analysis</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://swimsight3d.com/stroke-analysis/breaststroke</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://swimsight3d.com/stroke-analysis/freestyle</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://swimsight3d.com/stroke-analysis/backstroke</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://swimsight3d.com/stroke-analysis/butterfly</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://swimsight3d.com/pricing</loc>

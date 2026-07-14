@@ -35,13 +35,6 @@ const workflowSteps = [
   ['Share the plan', 'Finalise a swimmer improvement report with cues, drills, next focus, and selected key moments.'],
 ];
 
-const strokeCards = [
-  ['Breaststroke', '/stroke-analysis/breaststroke', 'Timing, kick setup, line reset'],
-  ['Freestyle', '/stroke-analysis/freestyle', 'Body line, catch setup, breathing timing'],
-  ['Backstroke', '/stroke-analysis/backstroke', 'Rotation, catch, body alignment'],
-  ['Butterfly', '/stroke-analysis/butterfly', 'Rhythm, catch, kick timing'],
-];
-
 const faqs = [
   ['Does Swim Sight 3D replace the coach?', 'No. It gives coaches a clearer system for reviewing video and sharing improvement plans.'],
   ['Do I need special equipment?', 'No. A short side-view clip from a phone, tablet, or standard camera works well for coach review.'],
@@ -184,7 +177,7 @@ export default function HomePage() {
           ))}
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/features" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
+          <Link to="/for-coaches" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
           <Link to="/for-coaches" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
           <Link to="/for-clubs" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">For clubs</Link>
         </div>
@@ -312,20 +305,6 @@ export default function HomePage() {
           <MiniCard icon={Users} title="Squads + profiles" description="Keep swimmers, squad assignment, coach notes, and report history organised." />
           <MiniCard icon={Target} title="Shared technical language" description="Use consistent phases, fault tags, cues, drills, and final report structure." />
           <MiniCard icon={Lock} title="Private workspace" description="Club data and video access stay inside the authenticated app workflow." />
-        </div>
-      </Section>
-
-      <Section eyebrow="Stroke coverage" title="Built around the strokes coaches review every week." description="Each stroke page shows the phase structure used for review and reporting.">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {strokeCards.map(([title, href, description]) => (
-            <Link key={title} to={href} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
-              <div className="text-lg font-bold text-slate-950">{title}</div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-            </Link>
-          ))}
-        </div>
-        <div className="mt-6">
-          <Link to="/stroke-analysis" className="text-sm font-bold text-sky-700 hover:text-sky-900">View all stroke analysis pages</Link>
         </div>
       </Section>
 

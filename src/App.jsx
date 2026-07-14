@@ -31,17 +31,11 @@ import AIReportsListPage from './pages/AIReportsListPage';
 import SharedReportPage from './pages/SharedReportPage';
 // Everything else is code-split: marketing subpages, analytics (recharts), admin/internal
 // tools, and the drill library load on demand instead of inside the main bundle.
-const FeaturesPage = lazy(() => import('./pages/public/FeaturesPage'));
 const ForCoachesPage = lazy(() => import('./pages/public/ForCoachesPage'));
 const ForClubsPage = lazy(() => import('./pages/public/ForClubsPage'));
 const CoachApprovedAIPage = lazy(() => import('./pages/public/CoachApprovedAIPage'));
 const PrivacyVideoReviewPage = lazy(() => import('./pages/public/PrivacyVideoReviewPage'));
 const SampleReportPage = lazy(() => import('./pages/public/SampleReportPage'));
-const StrokeAnalysisPage = lazy(() => import('./pages/public/StrokeAnalysisPage'));
-const BreaststrokeAnalysisPage = lazy(() => import('./pages/public/BreaststrokeAnalysisPage'));
-const FreestyleAnalysisPage = lazy(() => import('./pages/public/FreestyleAnalysisPage'));
-const BackstrokeAnalysisPage = lazy(() => import('./pages/public/BackstrokeAnalysisPage'));
-const ButterflyAnalysisPage = lazy(() => import('./pages/public/ButterflyAnalysisPage'));
 const PricingPage = lazy(() => import('./pages/public/PricingPage'));
 const FAQPage = lazy(() => import('./pages/public/FAQPage'));
 const ClubProgress = lazy(() => import('./pages/ClubProgress'));
@@ -93,17 +87,11 @@ const AuthenticatedApp = () => {
   const location = useLocation();
   const publicWebsitePaths = [
     '/',
-    '/features',
     '/for-coaches',
     '/for-clubs',
     '/coach-approved-ai',
     '/privacy-video-review',
     '/sample-report',
-    '/stroke-analysis',
-    '/stroke-analysis/breaststroke',
-    '/stroke-analysis/freestyle',
-    '/stroke-analysis/backstroke',
-    '/stroke-analysis/butterfly',
     '/pricing',
     '/faq',
   ];
@@ -164,19 +152,21 @@ const AuthenticatedApp = () => {
 
       {/* Public website routes — crawlable marketing structure, no app sidebar */}
       <Route path="/" element={<HomePage />} />
-      <Route path="/features" element={<FeaturesPage />} />
       <Route path="/for-coaches" element={<ForCoachesPage />} />
       <Route path="/for-clubs" element={<ForClubsPage />} />
       <Route path="/coach-approved-ai" element={<CoachApprovedAIPage />} />
       <Route path="/privacy-video-review" element={<PrivacyVideoReviewPage />} />
       <Route path="/sample-report" element={<SampleReportPage />} />
-      <Route path="/stroke-analysis" element={<StrokeAnalysisPage />} />
-      <Route path="/stroke-analysis/breaststroke" element={<BreaststrokeAnalysisPage />} />
-      <Route path="/stroke-analysis/freestyle" element={<FreestyleAnalysisPage />} />
-      <Route path="/stroke-analysis/backstroke" element={<BackstrokeAnalysisPage />} />
-      <Route path="/stroke-analysis/butterfly" element={<ButterflyAnalysisPage />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/faq" element={<FAQPage />} />
+      {/* Retired public pages (Features + per-stroke pages) — redirect old links so
+          bookmarks/search results land somewhere useful instead of 404ing. */}
+      <Route path="/features" element={<Navigate to="/for-coaches" replace />} />
+      <Route path="/stroke-analysis" element={<Navigate to="/for-coaches" replace />} />
+      <Route path="/stroke-analysis/breaststroke" element={<Navigate to="/for-coaches" replace />} />
+      <Route path="/stroke-analysis/freestyle" element={<Navigate to="/for-coaches" replace />} />
+      <Route path="/stroke-analysis/backstroke" element={<Navigate to="/for-coaches" replace />} />
+      <Route path="/stroke-analysis/butterfly" element={<Navigate to="/for-coaches" replace />} />
 
       {/* Public report sharing — only via secure token */}
       <Route path="/shared-report/:token" element={<SharedReportPage />} />
