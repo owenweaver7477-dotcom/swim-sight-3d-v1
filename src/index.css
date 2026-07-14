@@ -65,41 +65,64 @@
     --surface-foreground: 222 47% 11%;
     --report-bg: 0 0% 100%;
     --report-fg: 222 47% 11%;
+
+    color-scheme: light;
   }
 
+  /* Dark theme — deep navy-slate surfaces that keep the Pool Blue / Aqua brand
+     legible. Toggled by adding `.dark` to <html> (see ThemeToggle + ThemeContext).
+     Report tokens stay light on purpose: printed/shared reports must render on
+     white regardless of the coach's app theme. */
   .dark {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 201 100% 36%;
+    --background: 213 41% 8%;         /* #0C131B */
+    --foreground: 210 30% 92%;        /* #E4EAF0 */
+    --card: 213 36% 12%;             /* #131E29 */
+    --card-foreground: 210 30% 92%;
+    --popover: 213 36% 12%;
+    --popover-foreground: 210 30% 92%;
+
+    /* Brand blues brightened a touch for contrast on dark surfaces */
+    --primary: 201 96% 46%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 191 67% 94%;
-    --secondary-foreground: 207 61% 18%;
-    --muted: 214 32% 95%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 191 100% 39%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+
+    --secondary: 207 40% 18%;
+    --secondary-foreground: 209 55% 88%;
+
+    --muted: 210 30% 17%;
+    --muted-foreground: 214 20% 66%;
+
+    --accent: 191 92% 44%;
+    --accent-foreground: 213 41% 8%;
+
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 201 100% 36%;
-    --chart-1: 201 100% 36%;
-    --chart-2: 191 100% 39%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 142 72% 29%;
-    --chart-5: 0 72% 51%;
-    --sidebar-background: 210 74% 12%;
+
+    --border: 210 26% 22%;
+    --input: 210 26% 22%;
+    --ring: 201 96% 46%;
+
+    --chart-1: 201 96% 55%;
+    --chart-2: 191 92% 50%;
+    --chart-3: 38 92% 58%;
+    --chart-4: 142 62% 45%;
+    --chart-5: 0 72% 60%;
+
+    --sidebar-background: 213 41% 8%;
     --sidebar-foreground: 210 30% 80%;
-    --sidebar-primary: 191 100% 39%;
-    --sidebar-primary-foreground: 210 74% 12%;
-    --sidebar-accent: 207 61% 18%;
+    --sidebar-primary: 191 92% 44%;
+    --sidebar-primary-foreground: 213 41% 8%;
+    --sidebar-accent: 207 40% 16%;
     --sidebar-accent-foreground: 210 30% 90%;
-    --sidebar-border: 207 50% 20%;
-    --sidebar-ring: 191 100% 39%;
+    --sidebar-border: 210 26% 20%;
+    --sidebar-ring: 191 92% 44%;
+
+    --surface: 213 34% 13%;
+    --surface-foreground: 210 30% 92%;
+    /* Reports stay light in every theme (print/PDF/share safety). */
+    --report-bg: 0 0% 100%;
+    --report-fg: 222 47% 11%;
+
+    color-scheme: dark;
   }
 }
 

@@ -26,7 +26,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex dark:bg-slate-950">
       <Sidebar />
       {/* Offset content: desktop = ml-56, mobile = top bar plus iOS safe area */}
       <main className="flex-1 min-w-0 pt-[calc(3.5rem+env(safe-area-inset-top))] lg:pt-0 lg:ml-56">
