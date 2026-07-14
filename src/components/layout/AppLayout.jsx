@@ -1,12 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useClubContext } from '@/lib/useClubContext';
 import { Loader2 } from 'lucide-react';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
+import { applyClubTheme, clearClubTheme } from '@/lib/clubTheme';
 
 export default function AppLayout() {
   const { club, clubs, loading } = useClubContext();
+
+  // Club style option: recolour the workspace accent from the active club's
+  // colours (every member sees it). Applies on colour/club change without a
+  // flash; cleared only when the app unmounts (logout / leaving the workspace)
+  // so one club's style never bleeds into another or the public site.
+  useEffect(() => {
+    applyClubTheme(club?.primary_color, club?.accent_color);
+  }, [club?.primary_color, club?.accent_color]);
+  useEffect(() => () => clearClubTheme(), []);
 
   // Still loading memberships — show a spinner rather than flashing onboarding
   if (loading) {

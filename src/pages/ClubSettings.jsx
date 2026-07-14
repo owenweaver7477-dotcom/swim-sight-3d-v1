@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import PageHeader from '@/components/shared/PageHeader';
+import { CLUB_STYLE_PRESETS } from '@/lib/clubTheme';
 import {
   Plus, Settings, Waves, KeyRound, Pencil, Check, Map, RotateCcw, FlaskConical,
   ArrowRight, Activity, Archive, Users, User, Target, ExternalLink, Lock, Palette
@@ -237,6 +238,31 @@ function ClubBrandingEditor({ club }) {
       </div>
 
       <form onSubmit={handleSave} className="space-y-3">
+        {/* Quick club styles — applied to the whole workspace for every member after Save. */}
+        <div>
+          <Label className="text-xs text-muted-foreground">Workspace style</Label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {CLUB_STYLE_PRESETS.map((preset) => {
+              const active = primaryColor?.toLowerCase() === preset.primary.toLowerCase() && accentColor?.toLowerCase() === preset.accent.toLowerCase();
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => { setPrimaryColor(preset.primary); setAccentColor(preset.accent); }}
+                  title={preset.name}
+                  className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground hover:border-primary/40'}`}
+                >
+                  <span className="flex -space-x-1">
+                    <span className="h-3 w-3 rounded-full border border-white/60" style={{ backgroundColor: preset.primary }} />
+                    <span className="h-3 w-3 rounded-full border border-white/60" style={{ backgroundColor: preset.accent }} />
+                  </span>
+                  {preset.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">Pick a style or set custom colours below. Saved styles recolour the whole club workspace for every member.</p>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs text-muted-foreground">Primary Colour</Label>
