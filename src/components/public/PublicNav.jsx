@@ -39,9 +39,9 @@ export default function PublicNav() {
           <img
             src="/brand/swim-sight-logo.png"
             alt="Swim Sight 3D"
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-full bg-white object-contain shadow-sm"
+            width={44}
+            height={44}
+            className="h-11 w-11 rounded-xl bg-white object-contain shadow-sm ring-1 ring-slate-950/5"
           />
           <span>
             <span className={`block text-sm font-bold leading-tight ${dark ? 'text-white' : 'text-slate-950'}`}>Swim Sight 3D</span>

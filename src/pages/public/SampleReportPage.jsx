@@ -11,10 +11,17 @@ import {
   Waves,
 } from 'lucide-react';
 import PublicLayout, { PublicSection } from '@/components/public/PublicLayout';
+import PrivateFramePreview from '@/components/public/PrivateFramePreview';
 import StructuredData from '@/components/seo/StructuredData';
 import usePublicMeta from './usePublicMeta';
 import { publicSeoMetadata } from './publicSeoMetadata';
 import { breadcrumbStructuredData } from './publicStructuredData';
+
+const studioGlimpses = [
+  ['Analysis', 'Mark key moments frame by frame'],
+  ['Findings', 'Write coach findings on the frame'],
+  ['Drills & report', 'Attach drills and share the plan'],
+];
 
 const keyMoments = [
   {
@@ -64,12 +71,9 @@ const findings = [
 function DemoFrame({ moment }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {/* Paused video-frame look with a coach highlight — deliberately not a chart. */}
-      <div className="relative h-36 overflow-hidden bg-slate-950">
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(130%_90%_at_50%_18%,rgba(56,189,248,0.16),transparent_62%)]" />
-        <div aria-hidden="true" className="absolute right-6 top-9 h-12 w-12 rounded-full border-2 border-cyan-200/70 shadow-[0_0_0_5px_rgba(56,189,248,0.1)]" />
-        <div className="absolute left-4 top-4 rounded-full bg-cyan-200 px-2.5 py-1 text-[10px] font-bold text-slate-950">{moment.time}</div>
-      </div>
+      {/* Real reports carry the marked frame here — blurred on the public demo for
+          privacy, with a lock on hover. Synthetic art only, never real footage. */}
+      <PrivateFramePreview badge={moment.time} className="h-36 rounded-none" />
       <div className="p-4">
         <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-600">{moment.phase}</div>
         <p className="mt-2 text-sm leading-6 text-slate-700">{moment.note}</p>
@@ -149,7 +153,7 @@ export default function SampleReportPage() {
         </div>
       </section>
 
-      <PublicSection eyebrow="Key moments" title="Coach-selected moments from the clip." description="These cards show how a report can hold the timestamp, phase, coach note, and visual context without exposing a private video URL.">
+      <PublicSection eyebrow="Key moments" title="Coach-selected moments from the clip." description="Each card holds the timestamp, phase, and coach note. The marked frame is blurred for privacy on this public demo — hover to see the lock.">
         <div className="grid gap-4 md:grid-cols-3">
           {keyMoments.map((moment) => (
             <DemoFrame key={moment.time} moment={moment} />
@@ -200,6 +204,20 @@ export default function SampleReportPage() {
         </div>
       </PublicSection>
 
+      <PublicSection eyebrow="Inside Coach Studio" title="A glimpse of where the report comes from." description="Coaches build every report in Coach Studio — move through the video, mark findings, and attach drills. These workspace previews are blurred for privacy; hover to see the lock.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {studioGlimpses.map(([step, caption]) => (
+            <div key={step} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <PrivateFramePreview badge={step} label="Coach Studio — private" className="h-40 rounded-none" />
+              <div className="p-4">
+                <div className="text-sm font-bold text-slate-950">{step}</div>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{caption}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </PublicSection>
+
       <PublicSection subtle eyebrow="Privacy and trust" title="Public reports show approved content only.">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -208,16 +226,11 @@ export default function SampleReportPage() {
             </div>
             <div>
               <p className="text-base leading-8 text-slate-700">
-                Sample reports show only coach-approved content. Private video paths, rejected findings, and internal coach notes are not included.
+                Sample reports show only coach-approved content. Private video paths, rejected findings, and internal coach notes are never included.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
-                <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Coach-approved AI</Link>
-                <Link to="/privacy-video-review" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Privacy + video review</Link>
-                <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">For coaches</Link>
-                <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Clubs & coaches</Link>
-                <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Breaststroke analysis</Link>
-                <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Read the FAQ</Link>
+                <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">How privacy works</Link>
+                <Link to="/for-coaches" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Clubs &amp; coaches</Link>
               </div>
             </div>
           </div>

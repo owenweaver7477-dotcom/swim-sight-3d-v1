@@ -95,6 +95,10 @@ export default function HomePage() {
 
           <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-16 pt-24 md:pt-20">
             <div className="max-w-xl">
+              <div className="reveal mb-6 inline-flex items-center gap-3">
+                <img src="/brand/swim-sight-logo.png" alt="Swim Sight 3D" width={56} height={56} className="h-14 w-14 rounded-2xl bg-white/95 object-contain shadow-lg shadow-cyan-950/30 ring-1 ring-white/20" />
+                <span className="text-lg font-extrabold tracking-tight text-white drop-shadow">Swim Sight 3D</span>
+              </div>
               <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
                 <Waves className="h-3.5 w-3.5" />
                 Coach-led video review
