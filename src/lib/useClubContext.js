@@ -38,6 +38,8 @@ export function normaliseClub(club, membership) {
     _rawMemberRole: rawRole,
     _membershipId: membership?.id || club._membershipId,
     _member: membership || club._member || null,
+    // The swimmer this member is linked to (for swimmer/parent portal scoping).
+    linked_swimmer_id: membership?.linked_swimmer_id ?? club.linked_swimmer_id ?? club._member?.linked_swimmer_id ?? null,
   };
 }
 

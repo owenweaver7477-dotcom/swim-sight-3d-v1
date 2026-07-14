@@ -7,7 +7,7 @@ import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { applyClubTheme, clearClubTheme } from '@/lib/clubTheme';
 
 export default function AppLayout() {
-  const { club, clubs, loading } = useClubContext();
+  const { club, clubs, loading, memberRole } = useClubContext();
 
   // Club style option: recolour the workspace accent from the active club's
   // colours (every member sees it). Applies on colour/club change without a
@@ -33,6 +33,12 @@ export default function AppLayout() {
   // No club membership at all — redirect to onboarding gate
   if (!loading && clubs.length === 0 && !club) {
     return <Navigate to="/club-onboarding" replace />;
+  }
+
+  // Swimmers and parents don't use the coach workspace — send them to their
+  // portal instead of the coach sidebar / an "Access restricted" wall.
+  if (!loading && (memberRole === 'swimmer' || memberRole === 'parent')) {
+    return <Navigate to="/portal" replace />;
   }
 
   return (

@@ -36,6 +36,7 @@ const CoachApprovedAIPage = lazy(() => import('./pages/public/CoachApprovedAIPag
 const PrivacyVideoReviewPage = lazy(() => import('./pages/public/PrivacyVideoReviewPage'));
 const SampleReportPage = lazy(() => import('./pages/public/SampleReportPage'));
 const PricingPage = lazy(() => import('./pages/public/PricingPage'));
+const SwimmerPortal = lazy(() => import('./pages/SwimmerPortal'));
 const ClubProgress = lazy(() => import('./pages/ClubProgress'));
 const DrillLibrary = lazy(() => import('./pages/DrillLibrary.jsx'));
 const Roadmap = lazy(() => import('./pages/Roadmap.jsx'));
@@ -177,6 +178,11 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         {/* Club onboarding — protected but outside AppLayout (no sidebar, own full-page layout) */}
           <Route path="/club-onboarding" element={<ClubOnboarding />} />
+
+        {/* Swimmer / parent portal — own layout, not the coach app workspace */}
+        <Route element={<RoleProtectedRoute allowedRoles={['swimmer', 'parent']} />}>
+          <Route path="/portal" element={<SwimmerPortal />} />
+        </Route>
 
         <Route element={<AppLayout />}>
           <Route path="/settings" element={<SettingsPage />} />
