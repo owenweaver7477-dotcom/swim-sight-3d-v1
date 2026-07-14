@@ -50,10 +50,6 @@ export function PublicHero({ eyebrow, title, description, actions, children }) {
     <section className="border-b border-slate-200 bg-[radial-gradient(circle_at_20%_0%,rgba(14,165,233,0.12),transparent_34%),linear-gradient(180deg,#ffffff,#f8fafc)]">
       <div className={`mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:py-16 md:py-20 ${children ? 'md:grid-cols-[1.1fr_0.9fr]' : ''}`}>
         <div>
-          <div className="reveal mb-5 inline-flex items-center gap-2.5">
-            <img src="/brand/swim-sight-logo.png" alt="" aria-hidden="true" className="h-10 w-10 rounded-xl bg-white object-contain shadow-sm ring-1 ring-slate-950/5" />
-            <span className="text-sm font-bold tracking-tight text-slate-900">Swim Sight 3D</span>
-          </div>
           {eyebrow && <div className="reveal text-xs font-bold uppercase tracking-[0.24em] text-sky-600">{eyebrow}</div>}
           <h1 className="reveal mt-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl md:text-6xl">{title}</h1>
           <p className="reveal mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">{description}</p>

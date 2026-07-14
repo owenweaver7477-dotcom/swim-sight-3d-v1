@@ -92,13 +92,16 @@ export default function HomePage() {
           <div aria-hidden="true" className="absolute inset-0 bg-black/65 md:bg-transparent" />
           <div aria-hidden="true" className="absolute inset-0 md:bg-gradient-to-r md:from-[#04060c] md:via-[#04060c]/70 md:to-transparent" />
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#04060c] via-transparent to-[#04060c]/40" />
+          {/* Right-side fade + blur: sinks the on-screen analytics/score panel into the
+              background colour so no line-graph / AI-score dashboard reads on the hero. */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-y-0 right-0 hidden w-[52%] md:block bg-gradient-to-l from-[#04060c] via-[#04060c]/85 to-transparent"
+            style={{ backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', maskImage: 'linear-gradient(to left, #000 55%, transparent)', WebkitMaskImage: 'linear-gradient(to left, #000 55%, transparent)' }}
+          />
 
           <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-16 pt-24 md:pt-20">
             <div className="max-w-xl">
-              <div className="reveal mb-6 inline-flex items-center gap-3">
-                <img src="/brand/swim-sight-logo.png" alt="Swim Sight 3D" width={56} height={56} className="h-14 w-14 rounded-2xl bg-white/95 object-contain shadow-lg shadow-cyan-950/30 ring-1 ring-white/20" />
-                <span className="text-lg font-extrabold tracking-tight text-white drop-shadow">Swim Sight 3D</span>
-              </div>
               <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
                 <Waves className="h-3.5 w-3.5" />
                 Coach-led video review

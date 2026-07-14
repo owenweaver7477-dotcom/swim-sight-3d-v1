@@ -37,11 +37,11 @@ export default function PublicNav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2.5">
           <img
-            src="/brand/swim-sight-logo.png"
+            src="/brand/swim-sight-emblem.png"
             alt="Swim Sight 3D"
-            width={44}
-            height={44}
-            className="h-11 w-11 rounded-xl bg-white object-contain shadow-sm ring-1 ring-slate-950/5"
+            width={56}
+            height={56}
+            className="h-14 w-14 object-contain"
           />
           <span>
             <span className={`block text-sm font-bold leading-tight ${dark ? 'text-white' : 'text-slate-950'}`}>Swim Sight 3D</span>

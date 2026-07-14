@@ -9,11 +9,11 @@ export default function PublicFooter() {
         <div>
           <div className="flex items-center gap-2.5">
             <img
-              src="/brand/swim-sight-logo.png"
+              src="/brand/swim-sight-emblem.png"
               alt="Swim Sight 3D"
-              width={36}
-              height={36}
-              className="h-9 w-9 rounded-full bg-white object-contain"
+              width={44}
+              height={44}
+              className="h-11 w-11 object-contain"
             />
             <div>
               <div className="text-sm font-bold text-white">Swim Sight 3D</div>
