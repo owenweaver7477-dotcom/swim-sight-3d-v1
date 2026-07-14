@@ -112,13 +112,17 @@ export default function Sidebar() {
           onClick={() => setClubDropdownOpen(!clubDropdownOpen)}
           className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-primary/40 transition-all dark:bg-slate-800/50 dark:border-slate-700"
         >
-          <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-              style={{ backgroundColor: club.primary_color || '#0077B6' }}
-            >
-              {club.initials || club.name?.charAt(0) || 'C'}
-            </div>
+          <div className="flex items-center gap-2.5">
+            {club.logo_url ? (
+              <img src={club.logo_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-lg border border-slate-200 object-contain bg-white dark:border-slate-700" />
+            ) : (
+              <div
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white"
+                style={{ backgroundColor: club.primary_color || '#0077B6' }}
+              >
+                {club.initials || club.name?.charAt(0) || 'C'}
+              </div>
+            )}
             <div className="min-w-0 flex-1 text-left">
               <div className="text-xs font-semibold text-slate-900 truncate dark:text-slate-100">{club.name}</div>
               {memberRole && <div className="text-[10px] text-slate-400">{getRoleLabel(rawMemberRole)}</div>}

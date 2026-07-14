@@ -217,11 +217,16 @@ function ClubBrandingEditor({ club }) {
         <span className="ml-auto text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">Owner / Admin only</span>
       </div>
 
-      {/* Live avatar preview (initials + colour — the club mark today) */}
+      {/* Live club-mark preview — the logo is the club mark; colour initial is the
+          automatic fallback only when no logo is uploaded. */}
       <div className="flex items-center gap-4 mb-5 p-3 rounded-lg bg-secondary/50">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-base font-bold flex-shrink-0 transition-all" style={{ backgroundColor: primaryColor, color: '#fff' }}>
-          {initials || club.name?.charAt(0) || '?'}
-        </div>
+        {logoUrl ? (
+          <img src={logoUrl} alt="Club logo" className="w-12 h-12 rounded-xl object-contain border border-border bg-white flex-shrink-0" />
+        ) : (
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-base font-bold flex-shrink-0 transition-all" style={{ backgroundColor: primaryColor, color: '#fff' }}>
+            {club.name?.charAt(0) || '?'}
+          </div>
+        )}
         <div>
           <div className="text-sm font-semibold text-foreground">{club.name}</div>
           <div className="flex gap-1.5 mt-1.5">
@@ -232,11 +237,7 @@ function ClubBrandingEditor({ club }) {
       </div>
 
       <form onSubmit={handleSave} className="space-y-3">
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <Label className="text-xs text-muted-foreground">Initials</Label>
-            <Input value={initials} onChange={e => setInitials(e.target.value)} placeholder="e.g. SAC" maxLength={4} className="mt-1 h-8 text-sm" />
-          </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs text-muted-foreground">Primary Colour</Label>
             <div className="mt-1 flex items-center gap-2">
