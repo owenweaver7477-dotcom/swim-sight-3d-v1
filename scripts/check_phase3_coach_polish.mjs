@@ -14,7 +14,10 @@ const coachWorkflow = await read('src/components/coach-studio/CoachStudioWorkflo
 const coachDraw = await read('src/components/annotations/CoachDrawStudio.jsx');
 const drillLibrary = await read('src/pages/DrillLibrary.jsx');
 const defaultDrills = await read('src/lib/defaultDrills.js');
-const analysisPage = await read('src/pages/Analysis.jsx');
+// The live route is /analyse -> src/pages/Analyse.jsx. This used to read the
+// orphaned src/pages/Analysis.jsx, so it was guarding a file the app never
+// loaded and would have passed through any regression on the real page.
+const analysisPage = await read('src/pages/Analyse.jsx');
 const pilotReadinessGate = await read('src/components/pilot/PilotReadinessGate.jsx');
 const featureReadiness = await read('src/lib/featureReadiness.js');
 const aiReportPage = await read('src/pages/AIReportPage.jsx');
@@ -66,13 +69,17 @@ for (const detail of ['purpose', 'when_to_use', 'setup', 'execution_steps', 'com
   assert.match(defaultDrills, new RegExp(detail), `drill data missing ${detail}`);
 }
 
+// Analyse.jsx keys these singular (Start/Turn) and adds Underwater/Breakout —
+// the orphaned page this used to read still said Starts/Turns.
 for (const standard of [
   'Freestyle',
   'Breaststroke',
   'Backstroke',
   'Butterfly',
-  'Starts',
-  'Turns',
+  'Start',
+  'Turn',
+  'Underwater',
+  'Breakout',
   'STROKE_PHASES',
   'FAULT_TAGS',
   'coach_sees',

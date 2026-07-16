@@ -11,6 +11,7 @@
     "typecheck": "tsc -p ./jsconfig.json",
     "test:safeguarding": "node --test tests/safeguarding.test.mjs",
     "test:public-report-safety": "node scripts/check_public_report_safety.mjs",
+    "test:public-copy-safety": "node scripts/check_public_copy_safety.mjs",
     "test:pilot-readiness": "node scripts/check_pilot_launch_readiness.mjs",
     "test:pilot-recovery": "node scripts/check_pilot_recovery_foundation.mjs",
     "test:ai-processing-reliability": "node scripts/check_ai_processing_reliability.mjs",

@@ -54,7 +54,20 @@ assert.match(videoLibrary, /AI processing is taking longer than expected/);
 assert.match(videoLibrary, /continue manual coach review/i);
 
 assert.match(aiReportPage, /PilotReadinessWarning/);
-assert.match(aiReportPage, /RecoveryActionCard/);
+// The review page used to render <RecoveryActionCard>; it now renders an inline
+// status card per AI state. Pin the recovery *behaviour* rather than the old
+// component name: every failure state must still say the video survived and
+// hand the coach a route back into manual review.
+for (const recoveryState of [
+  'AI review did not complete',
+  'AI worker did not accept the job yet',
+  'Manual review recommended',
+]) {
+  assert.match(aiReportPage, new RegExp(recoveryState), `AI review page missing recovery state: ${recoveryState}`);
+}
+assert.match(aiReportPage, /The video is still available\./);
+assert.match(aiReportPage, /label: 'Open Coach Studio'/);
+assert.match(aiReportPage, /label: 'Retry AI review'/);
 assert.match(aiReportPage, /AI review not reliable enough|Manual coach review required|manual coach review/i);
 assert.match(aiReportPage, /no AI result is published without coach approval/i);
 

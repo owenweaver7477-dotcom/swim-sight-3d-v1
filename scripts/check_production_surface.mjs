@@ -65,7 +65,11 @@ for (const route of ownerRoutes) {
   assert.ok(routeIndex > ownerGuardIndex && routeIndex < ownerGuardEndIndex, `${route} must stay inside the owner/admin role guard`);
 }
 
-assert.match(sidebarSource, /\{isAdmin && \(/);
+// Internal/platform tools stay behind an app-level admin check in the sidebar.
+// Pin the property (role === 'admin'), not just the render guard, so a rename
+// can't quietly widen this to club owners/coaches.
+assert.match(sidebarSource, /const isPlatformAdmin = user\?\.role === 'admin'/);
+assert.match(sidebarSource, /\{isPlatformAdmin && \(/);
 for (const route of ownerRoutes.filter(route => route !== '/coach-testing')) {
   if (!sidebarSource.includes(`to: '${route}'`)) continue;
   assert.ok(sidebarSource.indexOf(`to: '${route}'`) < sidebarSource.indexOf('export default function Sidebar'));
@@ -76,9 +80,14 @@ assert.match(diagnosticsGateSource, /import\.meta\.env\.DEV === true/);
 assert.match(diagnosticsGateSource, /DIAGNOSTIC_ROLES\.has\(memberRole\)/);
 assert.match(diagnosticsGateSource, /appRole === 'admin'/);
 
-assert.match(homepageSource, /AI-assisted swim video review for coaches\./);
-assert.match(homepageSource, /Upload a clip, review draft findings, approve the report, and send clear next steps to swimmers\./);
-assert.match(homepageSource, /does not replace the coach/i);
+// Coach-led positioning: the homepage leads with the coach workflow and states
+// plainly that the coach creates and approves everything a swimmer ever sees.
+// These pins were rewritten for the 2026-07-11 repositioning; the previous
+// AI-forward wording was removed from the product on purpose and must not return.
+assert.match(homepageSource, /Turn one video into a clear coaching plan\./);
+assert.match(homepageSource, /Video in, coach review, approved findings, swimmer report out\./);
+assert.match(homepageSource, /Every finding is coach-created and coach-approved\./);
+assert.match(homepageSource, /Reports only ever show the content you approved\./);
 
 const publicChrome = `${publicNavSource}\n${publicFooterSource}`;
 for (const privateRoute of [...coachRoutes, ...ownerRoutes]) {

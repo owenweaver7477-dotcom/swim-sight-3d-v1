@@ -44,13 +44,11 @@ export default function PublicFooter() {
             <Link to="/for-coaches" className="hover:text-white">Clubs & Coaches</Link>
             <Link to="/coach-approved-ai" className="hover:text-white">Trust & Privacy + FAQ</Link>
             <Link to="/sample-report" className="hover:text-white">Sample Report</Link>
-            <Link to="/pricing" className="hover:text-white">Pilot Access</Link>
           </div>
         </div>
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Access</div>
           <div className="mt-3 grid gap-2 text-sm">
-            <Link to="/for-coaches" className="hover:text-white">Clubs & Coaches</Link>
             <Link to="/pricing" className="hover:text-white">Pilot Access</Link>
             <Link to="/login" className="hover:text-white">Login</Link>
           </div>

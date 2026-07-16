@@ -123,7 +123,7 @@ Hard limits in this repo. If a task heads toward one of these, stop and flag it.
 
 Default mode is **understand first, edit second.** Before changing anything:
 
-1. **Map the repo** — structure, routing, main pages/components, where API calls and Supabase calls live. `[UNCONFIRMED — verify in-repo]`
+1. **Map the repo** — structure, routing, main pages/components, where API calls and Supabase calls live. Confirmed 2026-07-16: routes in `src/App.jsx` (public pages eager, subpages/admin lazy); pages in `src/pages/` + `src/pages/public/`; shared UI in `src/components/ui/`; Supabase client in `src/lib/supabaseClient.js`, data access via `src/lib/data/entities.js`; serverless endpoints in `api/` (worker callbacks under `api/_lib/ai/`).
 2. **Trace the relevant flow end-to-end** before touching it (e.g. for an upload bug, follow upload → signed URL → storage → trigger).
 3. **Identify protected systems in scope** (Section 6) and note what must not change.
 4. **State the smallest change** that fixes the issue and the blast radius.
@@ -179,27 +179,46 @@ Paste this for **low-risk, design-system-respecting** UI work:
 
 ## 13. Testing / Check Commands
 
-> ⚠️ `[UNCONFIRMED — verify in-repo]` — confirm the actual scripts in `package.json` before relying on these. Typical Vite/React candidates:
+> ✅ Confirmed against `package.json` on 2026-07-16. There is **no `npm test`** — the
+> suite is a battery of named guard scripts, listed below. Keep this list in sync.
 
 ```bash
-# install deps
-npm install
-
-# run the app locally
-npm run dev
-
-# production build (catches build/type errors before deploy)
-npm run build
-
-# preview the production build locally
-npm run preview
-
-# lint (if configured)
-npm run lint
-
-# tests (if configured)
-npm test
+npm install          # install deps (fresh checkouts need this before any check)
+npm run dev          # run the app locally
+npm run build        # production build — catches build errors before deploy
+npm run preview      # preview the production build locally
+npm run lint         # eslint (npm run lint:fix to autofix)
+npm run typecheck    # type check
 ```
+
+**Guard battery** — each is a standalone assertion script under `scripts/`. Run the
+ones touching your change; run all of them before calling anything "done":
+
+```bash
+npm run test:safeguarding                # core safeguarding rules
+npm run test:public-report-safety        # shared reports never leak unapproved/private content
+npm run test:public-copy-safety          # public marketing copy stays inside safe language (Section 4/5)
+npm run test:pilot-readiness             # pilot launch gate
+npm run test:pilot-recovery              # AI failure states always leave a manual-review route
+npm run test:ai-processing-reliability   # AI processing contract
+npm run test:ai-output-selection         # which AI output is surfaced
+npm run test:biomechanics-contracts      # biomechanics claim limits
+npm run test:video-probe                 # video probe contracts
+npm run test:ai-metadata-callback        # worker callback: metadata
+npm run test:pose-2d-callback            # worker callback: 2D pose
+npm run test:pose-3d-callback            # worker callback: 3D pose
+npm run test:analyse-route-runtime-safety
+npm run test:analysis-jobs               # job state machine
+npm run test:storage-hardening           # storage/signed-URL hardening
+npm run test:storage-adapter-readiness
+npm run test:phase3-coach-polish         # coach studio / drill library surface
+npm run test:production-surface          # route guards, admin gating, no private routes in public nav
+```
+
+⚠️ **Guard scripts pin literal strings.** If a check fails because you renamed or
+removed a pinned literal, do **not** delete the assertion to go green — restore the
+literal, or repoint the guard at the real behaviour and say so in the diff. A guard
+that was silently pointing at a dead file passes forever and protects nothing.
 
 Rules for checks:
 - **Build/test/lint are read-only verification** — running them is fine and encouraged before proposing a change is "done."
