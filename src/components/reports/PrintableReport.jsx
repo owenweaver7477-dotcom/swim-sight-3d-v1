@@ -126,7 +126,7 @@ function FindingCard({ finding, index, image }) {
       <div className="flex items-center gap-2 flex-wrap mb-2.5">
         <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">{index}</div>
         {finding.phase && <span className="text-sm font-bold text-slate-900">{finding.phase}</span>}
-        {stamp && <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">{stamp}</span>}
+        {stamp && <span className="text-[10px] font-mono text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">{stamp}</span>}
         {finding.severity && <SeverityBadge severity={finding.severity} />}
       </div>
       {/* Text-first: findings read as clean text; the linked image is a small supporting
@@ -267,13 +267,13 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
     <div className="printable-report-area-content">
       {showPrintButton && (
         <div className="print:hidden mb-8 flex justify-end">
-          <Button onClick={handlePrint} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-lg" size="lg">
+          <Button onClick={handlePrint} className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white shadow-sm" size="lg">
             <Download className="w-5 h-5 mr-2" /> Download PDF
           </Button>
         </div>
       )}
 
-      <div className="print-report max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden print:shadow-none print:rounded-none print:max-w-none text-slate-900">
+      <div className="print-report max-w-4xl mx-auto bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden print:shadow-none print:border-none print:rounded-none print:max-w-none text-slate-900">
         {/* Header */}
         <div className="px-8 py-6 border-b-2 border-slate-900" style={brandColor ? { borderColor: brandColor } : undefined}>
           <div className="flex items-center justify-between gap-4">
@@ -356,7 +356,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
           {aiUsed && report.overall_score != null && (
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 print:break-inside-avoid">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex flex-col items-center justify-center text-white flex-shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-blue-600 flex flex-col items-center justify-center text-white flex-shrink-0">
                   <span className="text-2xl font-black">{report.overall_score}</span>
                   <span className="text-[8px] font-semibold uppercase tracking-wider opacity-90">Score</span>
                 </div>
