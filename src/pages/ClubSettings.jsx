@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
 import entities from '@/lib/data/entities';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import PageHeader from '@/components/shared/PageHeader';
-import { CLUB_STYLE_PRESETS } from '@/lib/clubTheme';
+import { CLUB_STYLE_PRESETS, applyClubTheme } from '@/lib/clubTheme';
 import {
   Plus, Settings, Waves, KeyRound, Pencil, Check, Map, RotateCcw, FlaskConical,
   ArrowRight, Activity, Archive, Users, User, Target, ExternalLink, Lock, Palette
@@ -133,8 +133,8 @@ function ClubProfileEditor({ club }) {
 function ClubBrandingEditor({ club }) {
   const saveClub = useClubSave();
   const [initials, setInitials] = useState(club.initials || '');
-  const [primaryColor, setPrimaryColor] = useState(club.primary_color || '#0ea5e9');
-  const [accentColor, setAccentColor] = useState(club.accent_color || '#06b6d4');
+  const [primaryColor, setPrimaryColor] = useState(club.primary_color || '#0077B6');
+  const [accentColor, setAccentColor] = useState(club.accent_color || '#00A6C8');
   const [logoUrl, setLogoUrl] = useState(club.logo_url || '');
   const [reportIntro, setReportIntro] = useState(club.report_intro || '');
   const [reportSignOff, setReportSignOff] = useState(club.report_sign_off || '');
@@ -145,10 +145,23 @@ function ClubBrandingEditor({ club }) {
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // Live-apply the picked colours across the whole workspace so the coach sees the
+  // change take effect immediately (not just a tiny swatch). Saving persists it;
+  // leaving without saving reverts to the club's saved colours (kept in a ref so
+  // the unmount cleanup always has the latest saved value).
+  const savedColors = useRef({ p: club.primary_color, a: club.accent_color });
+  savedColors.current = { p: club.primary_color, a: club.accent_color };
+  useEffect(() => {
+    applyClubTheme(primaryColor, accentColor);
+  }, [primaryColor, accentColor]);
+  useEffect(() => () => {
+    applyClubTheme(savedColors.current.p, savedColors.current.a);
+  }, []);
+
   useEffect(() => {
     setInitials(club.initials || '');
-    setPrimaryColor(club.primary_color || '#0ea5e9');
-    setAccentColor(club.accent_color || '#06b6d4');
+    setPrimaryColor(club.primary_color || '#0077B6');
+    setAccentColor(club.accent_color || '#00A6C8');
     setLogoUrl(club.logo_url || '');
     setReportIntro(club.report_intro || '');
     setReportSignOff(club.report_sign_off || '');
@@ -331,7 +344,7 @@ function ClubProfileReadOnly({ club, memberRole }) {
     <div className="p-5 rounded-xl bg-card border border-border">
       <h3 className="text-sm font-semibold text-foreground mb-4">Club Profile</h3>
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0" style={{ backgroundColor: club.primary_color || '#0ea5e9', color: '#fff' }}>
+        <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0" style={{ backgroundColor: club.primary_color || '#0077B6', color: '#fff' }}>
           {club.initials || club.name?.charAt(0)}
         </div>
         <div>

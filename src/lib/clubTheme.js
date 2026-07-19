@@ -121,11 +121,20 @@ export function applyClubTheme(primaryHex, accentHex) {
 // Curated quick styles for the "change the club style" option. Each is a
 // { primary, accent } pair; the first is the default brand.
 export const CLUB_STYLE_PRESETS = [
-  { name: 'Ocean', primary: '#0077B6', accent: '#00A6C8' },
-  { name: 'Midnight', primary: '#4f46e5', accent: '#6366f1' },
+  { name: 'Ocean', primary: '#0077B6', accent: '#00A6C8' },      // default brand — keep first
+  { name: 'Sky', primary: '#0284c7', accent: '#38bdf8' },
+  { name: 'Royal', primary: '#1d4ed8', accent: '#3b82f6' },
+  { name: 'Indigo', primary: '#4f46e5', accent: '#6366f1' },
+  { name: 'Violet', primary: '#7c3aed', accent: '#a78bfa' },
+  { name: 'Magenta', primary: '#a21caf', accent: '#d946ef' },
+  { name: 'Rose', primary: '#be123c', accent: '#f43f5e' },
+  { name: 'Coral', primary: '#e11d48', accent: '#fb7185' },
   { name: 'Sunset', primary: '#ea580c', accent: '#f59e0b' },
-  { name: 'Forest', primary: '#047857', accent: '#10b981' },
-  { name: 'Crimson', primary: '#be123c', accent: '#f43f5e' },
-  { name: 'Black & Gold', primary: '#111827', accent: '#f59e0b' },
+  { name: 'Amber', primary: '#b45309', accent: '#f59e0b' },
+  { name: 'Emerald', primary: '#047857', accent: '#10b981' },
+  { name: 'Teal', primary: '#0f766e', accent: '#14b8a6' },
+  { name: 'Lime', primary: '#4d7c0f', accent: '#84cc16' },
   { name: 'Slate', primary: '#334155', accent: '#64748b' },
+  { name: 'Graphite', primary: '#1f2937', accent: '#6b7280' },
+  { name: 'Black & Gold', primary: '#111827', accent: '#f59e0b' },
 ];
