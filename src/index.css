@@ -215,8 +215,8 @@
 /* Public site scroll-reveal */
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(16px);
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 .reveal.is-visible {
@@ -229,6 +229,62 @@
     transform: none !important;
     transition: none !important;
   }
+}
+
+/* ── Quiet motion: public-site micro-interactions & entrances ──────────────
+   Modernist restraint — fast, eased, purposeful. Everything moving is gated on
+   prefers-reduced-motion so it holds perfectly still for anyone who opts out. */
+
+/* Keyboard focus ring everywhere. :where() keeps specificity at 0 so any
+   component can still override, but nothing loses a visible focus state. */
+:where(a, button, [role="button"], summary, input, select, textarea):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A trailing arrow slides a few px when its link/button is hovered. */
+  a .lucide-arrow-right,
+  button .lucide-arrow-right {
+    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  a:hover .lucide-arrow-right,
+  button:hover .lucide-arrow-right {
+    transform: translateX(3px);
+  }
+}
+
+/* Hero headline — each line rises out from a clipped baseline on load. */
+.ss-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+}
+.ss-line > span {
+  display: block;
+  transform: translateY(115%);
+  animation: ss-line-rise 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes ss-line-rise {
+  to { transform: translateY(0); }
+}
+
+/* A hairline accent that draws in from the left when scrolled into view.
+   Pairs with the .reveal IntersectionObserver (it toggles .is-visible); the
+   extra class raises specificity so it wins over the plain .reveal transform. */
+.reveal.draw-rule {
+  opacity: 1;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.reveal.draw-rule.is-visible {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-line > span { animation: none; transform: none; }
+  .reveal.draw-rule { transform: none; }
 }
 
 /* Coach Studio step transitions — professional, restrained (220ms slide + fade).

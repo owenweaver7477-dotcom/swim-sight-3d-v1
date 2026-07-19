@@ -84,7 +84,7 @@ export function PublicSection({ eyebrow, title, description, children, subtle = 
 
 export function PublicCard({ title, description, children }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300">
+    <div className="rounded-lg border border-slate-200 bg-white p-5 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <h3 className="text-base font-semibold text-slate-950">{title}</h3>
       {description && <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>}
       {children && <div className="mt-4">{children}</div>}
@@ -94,7 +94,7 @@ export function PublicCard({ title, description, children }) {
 
 export function PrimaryPublicLink({ to, children }) {
   return (
-    <a href={to} className="inline-flex items-center rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
+    <a href={to} className="inline-flex items-center rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:translate-y-px">
       {children}
     </a>
   );
@@ -102,7 +102,7 @@ export function PrimaryPublicLink({ to, children }) {
 
 export function SecondaryPublicLink({ to, children }) {
   return (
-    <a href={to} className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">
+    <a href={to} className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 active:translate-y-px">
       {children}
     </a>
   );

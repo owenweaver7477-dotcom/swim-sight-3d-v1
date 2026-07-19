@@ -68,7 +68,7 @@ function Section({ eyebrow, title, description, children, subtle = false, id }) 
 // accent icon sits inline; the headline does the work.
 function Feature({ icon: Icon, title, description }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300">
+    <div className="rounded-lg border border-slate-200 bg-white p-5 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       {Icon && <Icon className="h-5 w-5 text-sky-700" strokeWidth={1.75} />}
       <h3 className="mt-4 text-base font-semibold text-slate-950">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
@@ -91,8 +91,10 @@ export default function HomePage() {
               <div className="reveal text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
                 Coach-led video review
               </div>
-              <h1 className="reveal mt-5 max-w-xl text-4xl font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
-                See every stroke. Coach every swimmer.
+              <div className="reveal draw-rule mt-4 h-px w-12 bg-sky-700" aria-hidden="true" />
+              <h1 className="mt-5 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
+                <span className="ss-line"><span style={{ animationDelay: '90ms' }}>See every stroke.</span></span>
+                <span className="ss-line"><span style={{ animationDelay: '200ms' }}>Coach every swimmer.</span></span>
               </h1>
               <p className="reveal mt-6 max-w-md text-lg leading-8 text-slate-600">
                 Private video review for swim coaches — mark key moments, draw over frames, add findings and drills, and share clean reports with swimmers and parents.
@@ -102,10 +104,10 @@ export default function HomePage() {
                 Every finding is coach-created and coach-approved.
               </p>
               <div className="reveal mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
+                <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:translate-y-px">
                   Book a pilot <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
-                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">
+                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 active:translate-y-px">
                   View sample report
                 </Link>
                 <Link to="/login" className="inline-flex items-center justify-center px-3 py-3.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950">
@@ -133,7 +135,7 @@ export default function HomePage() {
                     ['What to feel', 'Heels up first, then a late turn and strong kick back.'],
                     ['This week', 'Hold the line for three seconds after every kick drill.'],
                   ].map(([label, value]) => (
-                    <div key={label} className="bg-white px-5 py-4">
+                    <div key={label} className="reveal bg-white px-5 py-4">
                       <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</div>
                       <div className="mt-1.5 text-sm font-medium leading-6 text-slate-900">{value}</div>
                     </div>
@@ -225,7 +227,7 @@ export default function HomePage() {
                 ['What to feel', 'Heels up first, then a late turn and strong kick back.'],
                 ['This week', 'Hold the line for three seconds after every kick drill.'],
               ].map(([label, value]) => (
-                <div key={label} className="bg-white px-6 py-4">
+                <div key={label} className="reveal bg-white px-6 py-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</div>
                   <div className="mt-1.5 text-sm font-medium leading-6 text-slate-900">{value}</div>
                 </div>
