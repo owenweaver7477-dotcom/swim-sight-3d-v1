@@ -200,7 +200,7 @@ export default function Sidebar() {
       {canUseCoachApp && <div className="px-3 py-2">
         <Button
           size="sm"
-          className="w-full h-9 text-xs font-semibold text-white bg-gradient-to-r from-[#0077B6] to-[#00A6C8] shadow-md shadow-primary/20 transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
+          className="w-full h-9 text-xs font-semibold text-white bg-primary transition-colors hover:bg-primary/90"
           onClick={() => navigate('/analyse')}
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" /> New Analysis

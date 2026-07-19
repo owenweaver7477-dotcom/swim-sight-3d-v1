@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Target,
   Users,
-  Waves,
 } from 'lucide-react';
 import PublicLayout from '@/components/public/PublicLayout';
 import StructuredData from '@/components/seo/StructuredData';
@@ -35,6 +34,13 @@ const workflowSteps = [
   ['Share the plan', 'Finalise a swimmer improvement report with cues, drills, next focus, and selected key moments.'],
 ];
 
+const trustStrip = [
+  [ShieldCheck, 'Private & secure', 'Videos never leave your private club workspace.'],
+  [Target, 'Cues and drills, not dashboards', 'Feedback a swimmer can act on at the next session.'],
+  [Layers3, 'Built for swimming', 'Stroke-specific review, not a generic tool.'],
+  [Users, 'Coach-first', 'The coach writes and approves every finding.'],
+];
+
 const faqs = [
   ['Does Swim Sight 3D replace the coach?', 'No. It gives coaches a clearer system for reviewing video and sharing improvement plans.'],
   ['Do I need special equipment?', 'No. A short side-view clip from a phone, tablet, or standard camera works well for coach review.'],
@@ -42,14 +48,15 @@ const faqs = [
   ['Are videos private?', 'Yes. Shared reports do not expose private video paths or signed video URLs.'],
 ];
 
-function Section({ eyebrow, title, description, children, dark = false }) {
+// Section shell — one background, section rhythm from whitespace and a hairline rule.
+function Section({ eyebrow, title, description, children, subtle = false, id }) {
   return (
-    <section className={`${dark ? 'bg-slate-950 text-white border-slate-800' : 'bg-white text-slate-950 border-slate-200'} border-b px-4 py-16`}>
+    <section id={id} className={`border-b border-slate-200 px-4 py-16 sm:py-20 ${subtle ? 'bg-slate-50' : 'bg-white'}`}>
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 max-w-3xl">
-          {eyebrow && <div className={`reveal text-xs font-bold uppercase tracking-[0.24em] ${dark ? 'text-cyan-200' : 'text-sky-600'}`}>{eyebrow}</div>}
-          <h2 className={`reveal mt-3 text-2xl font-bold tracking-tight md:text-4xl ${dark ? 'text-white' : 'text-slate-950'}`}>{title}</h2>
-          {description && <p className={`reveal mt-4 text-base leading-8 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>}
+        <div className="mb-10 max-w-3xl">
+          {eyebrow && <div className="reveal text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">{eyebrow}</div>}
+          <h2 className="reveal mt-3 text-2xl font-bold tracking-tight text-slate-950 md:text-3xl">{title}</h2>
+          {description && <p className="reveal mt-3 text-base leading-8 text-slate-600">{description}</p>}
         </div>
         <div className="reveal">{children}</div>
       </div>
@@ -57,21 +64,17 @@ function Section({ eyebrow, title, description, children, dark = false }) {
   );
 }
 
-function MiniCard({ icon: Icon, title, description, dark = false }) {
+// Feature card — flat, border-defined, no icon-in-a-coloured-circle. The small
+// accent icon sits inline; the headline does the work.
+function Feature({ icon: Icon, title, description }) {
   return (
-    <div className={`rounded-2xl border p-5 shadow-sm ${dark ? 'border-white/10 bg-white/[0.045] shadow-cyan-950/20' : 'border-slate-200 bg-white shadow-slate-950/5'}`}>
-      {Icon && (
-        <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${dark ? 'bg-cyan-300/10 text-cyan-200' : 'bg-sky-50 text-sky-700'}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-      )}
-      <h3 className={`text-base font-bold ${dark ? 'text-white' : 'text-slate-950'}`}>{title}</h3>
-      <p className={`mt-2 text-sm leading-7 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>
+    <div className="rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300">
+      {Icon && <Icon className="h-5 w-5 text-sky-700" strokeWidth={1.75} />}
+      <h3 className="mt-4 text-base font-semibold text-slate-950">{title}</h3>
+      <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
     </div>
   );
 }
-
-// Hero visual is now the cinematic photo background rendered in the hero section below.
 
 export default function HomePage() {
   usePublicMeta(publicSeoMetadata.home);
@@ -79,158 +82,158 @@ export default function HomePage() {
   return (
     <PublicLayout>
       <StructuredData data={homeStructuredData()} />
-      <section className="relative -mt-16 overflow-hidden border-b border-slate-900 bg-[#05070d] text-white">
-        {/* Cinematic photo hero — decorative background, pulled up behind the sticky nav */}
-        <div className="relative">
-          <img
-            src="/hero/hero-desktop.jpg"
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
-          />
-          {/* Legibility scrims: overall darken on mobile, dark-left on desktop, top/bottom depth */}
-          <div aria-hidden="true" className="absolute inset-0 bg-black/65 md:bg-transparent" />
-          <div aria-hidden="true" className="absolute inset-0 md:bg-gradient-to-r md:from-[#04060c] md:via-[#04060c]/70 md:to-transparent" />
-          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#04060c] via-transparent to-[#04060c]/40" />
-          {/* Right-side fade + blur: sinks the on-screen analytics/score panel into the
-              background colour so no line-graph / AI-score dashboard reads on the hero. */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-y-0 right-0 hidden w-[52%] md:block bg-gradient-to-l from-[#04060c] via-[#04060c]/85 to-transparent"
-            style={{ backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', maskImage: 'linear-gradient(to left, #000 55%, transparent)', WebkitMaskImage: 'linear-gradient(to left, #000 55%, transparent)' }}
-          />
 
-          <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-7xl items-center px-4 pb-16 pt-24 md:pt-20">
-            <div className="max-w-xl">
-              <div className="reveal inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
-                <Waves className="h-3.5 w-3.5" />
+      {/* ── Hero — light, typographic. The product output is the visual. ── */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-20 md:py-28">
+          <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <div>
+              <div className="reveal text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
                 Coach-led video review
               </div>
-              <h1 className="reveal mt-6 text-5xl font-extrabold leading-[1.02] tracking-tight drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-7xl">
-                See every stroke.{' '}
-                <br className="hidden sm:block" />
-                <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">Coach every swimmer.</span>
+              <h1 className="reveal mt-5 max-w-xl text-4xl font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
+                See every stroke. Coach every swimmer.
               </h1>
-              <p className="reveal mt-6 max-w-md text-base leading-8 text-slate-200 md:text-lg">
+              <p className="reveal mt-6 max-w-md text-lg leading-8 text-slate-600">
                 Private video review for swim coaches — mark key moments, draw over frames, add findings and drills, and share clean reports with swimmers and parents.
               </p>
-              <p className="reveal mt-4 flex items-center gap-2 text-sm text-slate-300">
-                <ShieldCheck className="h-4 w-4 flex-shrink-0 text-cyan-300" />
+              <p className="reveal mt-4 flex items-center gap-2 text-sm text-slate-500">
+                <ShieldCheck className="h-4 w-4 flex-shrink-0 text-sky-700" />
                 Every finding is coach-created and coach-approved.
               </p>
               <div className="reveal mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-full bg-sky-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-sky-500/30 transition-colors hover:bg-sky-400">
+                <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
                   Book a pilot <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
-                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-7 py-4 text-base font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/20">
-                  View Sample Report
+                <Link to="/sample-report" className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">
+                  View sample report
                 </Link>
-                <Link to="/login" className="inline-flex items-center justify-center rounded-full px-4 py-4 text-sm font-semibold text-slate-200 transition-colors hover:text-white">
+                <Link to="/login" className="inline-flex items-center justify-center px-3 py-3.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950">
                   Log in
                 </Link>
               </div>
-              <a href="#how-it-works" className="reveal mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-200 transition-colors hover:text-white">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/5 text-white backdrop-blur-sm">
-                  <PlayCircle className="h-4 w-4" />
-                </span>
-                See how it works
+              <a href="#how-it-works" className="reveal mt-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950">
+                <PlayCircle className="h-4 w-4" /> See how it works
               </a>
             </div>
-          </div>
-        </div>
 
-        {/* Trust strip — solid dark band below the photo (legible), honest value props */}
-        <div className="relative border-t border-white/10 bg-[#05070d]">
-          <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-6 px-4 py-7 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              [ShieldCheck, 'Private & secure', 'Videos never leave your private club workspace.'],
-              [Target, 'Cues and drills, not dashboards', 'Feedback a swimmer can act on at the next session.'],
-              [Waves, 'Built for swimming', 'Stroke-specific review, not a generic tool.'],
-              [Users, 'Coach-first', 'The coach writes and approves every finding.'],
-            ].map(([Icon, title, desc]) => (
-              <div key={title} className="reveal flex items-center gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-cyan-300 ring-1 ring-white/10">
-                  <Icon className="h-4 w-4" strokeWidth={1.5} />
-                </span>
-                <div>
-                  <div className="text-sm font-bold text-sky-100">{title}</div>
-                  <div className="text-[11px] leading-4 text-slate-400">{desc}</div>
+            {/* Flat product preview — the real report language, no chrome. */}
+            <div className="reveal">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Swimmer report</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-950">Breaststroke · Kick setup</div>
+                  </div>
+                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">Coach-approved</span>
+                </div>
+                <div className="grid gap-px bg-slate-200">
+                  {[
+                    ['What we saw', 'Knees widen during heel recovery.'],
+                    ['What to feel', 'Heels up first, then a late turn and strong kick back.'],
+                    ['This week', 'Hold the line for three seconds after every kick drill.'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="bg-white px-5 py-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</div>
+                      <div className="mt-1.5 text-sm font-medium leading-6 text-slate-900">{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-slate-200 px-5 py-4">
+                  <Link to="/sample-report" className="inline-flex items-center text-sm font-semibold text-sky-700 hover:text-sky-900">
+                    See the full sample report <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Link>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="border-b border-slate-200 bg-white px-4 py-6">
-        <div className="mx-auto grid max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {proofPoints.map(([title, description]) => (
-            <div key={title} className="reveal rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-bold text-slate-950">{title}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-600">{description}</div>
+      {/* ── Trust strip — flat, hairline-separated ── */}
+      <section className="border-b border-slate-200 bg-slate-50 px-4 py-10">
+        <div className="mx-auto grid max-w-6xl gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          {trustStrip.map(([Icon, title, desc]) => (
+            <div key={title} className="reveal flex items-start gap-3">
+              <Icon className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-700" strokeWidth={1.75} />
+              <div>
+                <div className="text-sm font-semibold text-slate-950">{title}</div>
+                <div className="mt-0.5 text-[13px] leading-5 text-slate-600">{desc}</div>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      <Section eyebrow="How it works" title="Turn one video into a clear coaching plan." description="Video in, coach review, approved findings, swimmer report out." >
-        <div id="how-it-works" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Proof points ── */}
+      <section className="border-b border-slate-200 bg-white px-4 py-16 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {proofPoints.map(([title, description]) => (
+            <div key={title} className="reveal">
+              <div className="text-sm font-semibold text-slate-950">{title}</div>
+              <div className="mt-1.5 text-sm leading-6 text-slate-600">{description}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Section eyebrow="How it works" title="Turn one video into a clear coaching plan." description="Video in, coach review, approved findings, swimmer report out.">
+        <div id="how-it-works" className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {workflowSteps.map(([title, description], index) => (
-            <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">{index + 1}</div>
-              <h3 className="text-base font-bold text-slate-950">{title}</h3>
+            <div key={title} className="border-t border-slate-200 pt-5">
+              <div className="text-sm font-mono font-semibold text-sky-700">0{index + 1}</div>
+              <h3 className="mt-3 text-base font-semibold text-slate-950">{title}</h3>
               <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
             </div>
           ))}
         </div>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/for-coaches" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Clubs & coaches</Link>
-          <Link to="/sample-report" className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">See a sample report</Link>
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Link to="/for-coaches" className="inline-flex rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">Clubs &amp; coaches</Link>
+          <Link to="/sample-report" className="inline-flex rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">See a sample report</Link>
         </div>
       </Section>
 
-      <Section eyebrow="Human trust" title="Built for real coaching conversations." description="Built for the moment after a clip, when a coach needs to explain one clear change.">
-        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">From pool deck to plan</div>
-            <div className="mt-5 grid gap-3">
-              {[
-                ['1', 'Coach captures a short clip', 'A race or training moment becomes the starting point, not a pile of scattered notes.'],
-                ['2', 'Coach reviews the key moment', 'The coach slows the video, saves the timestamp, and decides what matters.'],
-                ['3', 'Coach adds cue and drill', 'Feedback becomes practical: what happened, what to feel, and what to practise.'],
-                ['4', 'Swimmer receives a clear plan', 'The final report is written for action, not for internal software complexity.'],
-              ].map(([number, title, description]) => (
-                <div key={title} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-cyan-200">{number}</div>
-                  <div>
-                    <div className="text-sm font-bold text-slate-950">{title}</div>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
-                  </div>
+      <Section subtle eyebrow="Human trust" title="Built for real coaching conversations." description="Built for the moment after a clip, when a coach needs to explain one clear change.">
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-3">
+            {[
+              ['1', 'Coach captures a short clip', 'A race or training moment becomes the starting point, not a pile of scattered notes.'],
+              ['2', 'Coach reviews the key moment', 'The coach slows the video, saves the timestamp, and decides what matters.'],
+              ['3', 'Coach adds cue and drill', 'Feedback becomes practical: what happened, what to feel, and what to practise.'],
+              ['4', 'Swimmer receives a clear plan', 'The final report is written for action, not for internal software complexity.'],
+            ].map(([number, title, description]) => (
+              <div key={title} className="flex gap-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="text-sm font-mono font-semibold text-sky-700">{number}</div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-950">{title}</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-950/10">
-            <div className="border-b border-slate-200 bg-slate-950 p-6 text-white">
-              <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Coach-to-swimmer output</div>
-              <h3 className="mt-3 text-2xl font-bold">A report that sounds like coaching.</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+          <div className="rounded-xl border border-slate-200 bg-white">
+            <div className="border-b border-slate-200 px-6 py-6">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Coach-to-swimmer output</div>
+              <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">A report that sounds like coaching.</h3>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
                 The best report is simple enough for a swimmer to use at the next session and structured enough for a club to keep consistent.
               </p>
             </div>
-            <div className="grid gap-3 p-6">
+            <div className="grid gap-px bg-slate-200">
               {[
                 ['What we saw', 'Knees widen during heel recovery.'],
                 ['What to feel', 'Heels up first, then a late turn and strong kick back.'],
                 ['This week', 'Hold the line for three seconds after every kick drill.'],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{label}</div>
-                  <div className="mt-2 text-sm font-semibold leading-6 text-slate-950">{value}</div>
+                <div key={label} className="bg-white px-6 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</div>
+                  <div className="mt-1.5 text-sm font-medium leading-6 text-slate-900">{value}</div>
                 </div>
               ))}
-              <Link to="/sample-report" className="mt-2 inline-flex w-fit items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                See the sample report <ArrowRight className="ml-2 h-4 w-4" />
+            </div>
+            <div className="border-t border-slate-200 px-6 py-4">
+              <Link to="/sample-report" className="inline-flex items-center text-sm font-semibold text-sky-700 hover:text-sky-900">
+                See the sample report <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -238,144 +241,84 @@ export default function HomePage() {
       </Section>
 
       <Section eyebrow="Why it is different" title="Better than loose video comments and scattered notes." description="Loose video comments vanish into chats and notes. This turns each moment into a structured record.">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MiniCard icon={Clock3} title="Moments stay attached to feedback" description="Key timestamps and approximate frames can sit beside the finding, drill, and next focus." />
-          <MiniCard icon={FileText} title="Feedback becomes a report" description="The coach output is a readable swimmer improvement plan, not a disconnected video clip." />
-          <MiniCard icon={ShieldCheck} title="Only approved content is shared" description="Private coach notes and rejected findings stay out of public reports." />
+        <div className="grid gap-6 md:grid-cols-3">
+          <Feature icon={Clock3} title="Moments stay attached to feedback" description="Key timestamps and approximate frames can sit beside the finding, drill, and next focus." />
+          <Feature icon={FileText} title="Feedback becomes a report" description="The coach output is a readable swimmer improvement plan, not a disconnected video clip." />
+          <Feature icon={ShieldCheck} title="Only approved content is shared" description="Private coach notes and rejected findings stay out of public reports." />
         </div>
       </Section>
 
-      <Section dark eyebrow="Coach Studio" title="The heart of the product is a structured coach review room." description="A professional workflow for turning video moments into clear feedback. Manual review is first-class, not a fallback.">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MiniCard dark icon={PlayCircle} title="Fullscreen review" description="Review video in a focused workspace with slow motion and approximate frame stepping." />
-          <MiniCard dark icon={Clock3} title="Key stamps" description="Capture timestamped moments for catch, breath, kick setup, line reset, turns, and more." />
-          <MiniCard dark icon={PencilLine} title="Coach Draw" description="Draw on important frames with coach-created marks that can be included in reports." />
-          <MiniCard dark icon={Target} title="Findings + drills" description="Create technical findings from moments and connect them to cues, drills, and next focus." />
+      <Section subtle eyebrow="Coach Studio" title="The heart of the product is a structured coach review room." description="A professional workflow for turning video moments into clear feedback. Manual review is first-class, not a fallback.">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <Feature icon={PlayCircle} title="Fullscreen review" description="Review video in a focused workspace with slow motion and approximate frame stepping." />
+          <Feature icon={Clock3} title="Key stamps" description="Capture timestamped moments for catch, breath, kick setup, line reset, turns, and more." />
+          <Feature icon={PencilLine} title="Coach Draw" description="Draw on important frames with coach-created marks that can be included in reports." />
+          <Feature icon={Target} title="Findings + drills" description="Create technical findings from moments and connect them to cues, drills, and next focus." />
         </div>
       </Section>
 
       <Section eyebrow="Coach control" title="Every finding is coach-created and coach-approved." description="Nothing reaches a swimmer report unless the coach marks it, writes it, and approves it. You stay in control of every word that goes to a swimmer or parent.">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MiniCard icon={PencilLine} title="Coach-created findings" description="Every observation is written by the coach from the video, in your own words." />
-          <MiniCard icon={ShieldCheck} title="Private by default" description="Videos stay in your private club workspace and are never shared without you." />
-          <MiniCard icon={CheckCircle2} title="Coach final say" description="Reports only ever show the content you approved." />
+        <div className="grid gap-6 md:grid-cols-3">
+          <Feature icon={PencilLine} title="Coach-created findings" description="Every observation is written by the coach from the video, in your own words." />
+          <Feature icon={ShieldCheck} title="Private by default" description="Videos stay in your private club workspace and are never shared without you." />
+          <Feature icon={CheckCircle2} title="Coach final say" description="Reports only ever show the content you approved." />
         </div>
-        <div className="mt-8">
-          <Link to="/coach-approved-ai" className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
+        <div className="mt-10">
+          <Link to="/coach-approved-ai" className="inline-flex rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
             Read about trust and privacy
           </Link>
         </div>
       </Section>
 
-      <Section eyebrow="Key moments + Coach Draw" title="Mark the moment. Explain the correction. Share the plan." description="Capture the exact moment, annotate the frame, and turn it into a finding with a drill.">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">Moment workflow</div>
-            <div className="mt-5 grid gap-3">
-              {['Save timestamped key moment', 'Create finding from this moment', 'Draw body line or correction cue', 'Include selected moments in report'].map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-800 shadow-sm">
-                  <CheckCircle2 className="h-4 w-4 text-sky-600" />
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-            role="img"
-            aria-label="Coach Draw preview with line reset correction marks"
-          >
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Coach Draw preview</div>
-            {/* Paused-frame look with a coach annotation highlight — deliberately not a chart. */}
-            <div className="relative mt-5 h-56 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-5">
-              <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(120%_80%_at_30%_20%,rgba(56,189,248,0.18),transparent_60%)]" />
-              <div aria-hidden="true" className="absolute right-9 top-11 h-20 w-20 rounded-full border-2 border-cyan-300/80 shadow-[0_0_0_6px_rgba(56,189,248,0.12)]" />
-              <div className="absolute bottom-5 left-5 inline-flex items-center gap-1.5 rounded-full bg-cyan-300 px-3 py-1 text-xs font-semibold text-slate-950">
-                <PencilLine className="h-3.5 w-3.5" /> Line reset cue
-              </div>
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      <Section dark eyebrow="Swimmer improvement reports" title="The report is the product output." description="Reports are built so swimmers and parents understand the correction — without the app complexity.">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MiniCard dark icon={FileText} title="What we saw" description="A clear, coach-approved observation from video." />
-          <MiniCard dark icon={Layers3} title="Why it matters" description="A short explanation of how the fault affects stroke quality." />
-          <MiniCard dark icon={Target} title="What to feel" description="Coach language the swimmer can take into the next set." />
-          <MiniCard dark icon={PencilLine} title="Recommended drill" description="A practical correction linked to the finding." />
-          <MiniCard dark icon={Clock3} title="Selected key moments" description="Approved timestamps and annotations that support the feedback." />
-          <MiniCard dark icon={ShieldCheck} title="Secure sharing" description="Public links show approved content only, never private video paths." />
+      <Section subtle eyebrow="Swimmer improvement reports" title="The report is the product output." description="Reports are built so swimmers and parents understand the correction — without the app complexity.">
+        <div className="grid gap-6 md:grid-cols-3">
+          <Feature icon={FileText} title="What we saw" description="A clear, coach-approved observation from video." />
+          <Feature icon={Layers3} title="Why it matters" description="A short explanation of how the fault affects stroke quality." />
+          <Feature icon={Target} title="What to feel" description="Coach language the swimmer can take into the next set." />
+          <Feature icon={PencilLine} title="Recommended drill" description="A practical correction linked to the finding." />
+          <Feature icon={Clock3} title="Selected key moments" description="Approved timestamps and annotations that support the feedback." />
+          <Feature icon={ShieldCheck} title="Secure sharing" description="Public links show approved content only, never private video paths." />
         </div>
       </Section>
 
       <Section eyebrow="Club workflow" title="For coaches, squads, and clubs that need consistency." description="Organise swimmers and reports across a coaching team — simple enough to run on pool deck.">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MiniCard icon={Users} title="Squads + profiles" description="Keep swimmers, squad assignment, coach notes, and report history organised." />
-          <MiniCard icon={Target} title="Shared technical language" description="Use consistent phases, fault tags, cues, drills, and final report structure." />
-          <MiniCard icon={Lock} title="Private workspace" description="Club data and video access stay inside the authenticated app workflow." />
+        <div className="grid gap-6 md:grid-cols-3">
+          <Feature icon={Users} title="Squads + profiles" description="Keep swimmers, squad assignment, coach notes, and report history organised." />
+          <Feature icon={Target} title="Shared technical language" description="Use consistent phases, fault tags, cues, drills, and final report structure." />
+          <Feature icon={Lock} title="Private workspace" description="Club data and video access stay inside the authenticated app workflow." />
         </div>
       </Section>
 
-      <Section eyebrow="Sample report preview" title="See the improvement plan a swimmer receives." description="Demo content only — real reports come from coach-reviewed club data.">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-950/10">
-          <div className="bg-slate-950 p-6 text-white">
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Demo report</div>
-            <h3 className="mt-3 text-2xl font-bold">Breaststroke · Kick setup</h3>
-            <p className="mt-2 text-sm text-slate-300">Every finding is coach-created. Final report content is coach-approved.</p>
-          </div>
-          <div className="grid gap-4 p-6 md:grid-cols-2">
-            {[
-              ['Stroke', 'Breaststroke'],
-              ['Key moment', '0:03.42 — Kick setup'],
-              ['Finding', 'Knees widen during heel recovery.'],
-              ['What to feel', 'Heels up, late turn, piston drive.'],
-              ['Drill', 'Wall breaststroke kick with narrow knees.'],
-              ['Next focus', 'Hold line after the kick.'],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{label}</div>
-                <div className="mt-2 text-base font-semibold text-slate-950">{value}</div>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-slate-200 p-6">
-            <Link to="/sample-report" className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-              View full sample report <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </Section>
-
-      <Section eyebrow="FAQ preview" title="Quick answers before you log in.">
-        <div className="grid gap-4 md:grid-cols-2">
+      <Section subtle eyebrow="FAQ" title="Quick answers before you log in.">
+        <div className="grid gap-8 md:grid-cols-2">
           {faqs.map(([question, answer]) => (
-            <div key={question} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-base font-bold text-slate-950">{question}</h3>
+            <div key={question} className="border-t border-slate-200 pt-5">
+              <h3 className="text-base font-semibold text-slate-950">{question}</h3>
               <p className="mt-2 text-sm leading-7 text-slate-600">{answer}</p>
             </div>
           ))}
         </div>
-        <div className="mt-6">
-          <Link to="/coach-approved-ai" className="text-sm font-bold text-sky-700 hover:text-sky-900">Read the FAQ</Link>
+        <div className="mt-8">
+          <Link to="/coach-approved-ai" className="text-sm font-semibold text-sky-700 hover:text-sky-900">Read the full FAQ</Link>
         </div>
       </Section>
 
-      <section className="bg-slate-950 px-4 py-16 text-white">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/[0.045] p-8 md:p-10">
-          <div className="reveal max-w-3xl">
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Built for coaches, squads, and clubs</div>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">Turn video into a clearer coaching plan.</h2>
-            <p className="mt-4 text-base leading-8 text-slate-300">
+      {/* ── Closing CTA — light, restrained ── */}
+      <section className="bg-white px-4 py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-2xl">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Built for coaches, squads, and clubs</div>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">Turn video into a clearer coaching plan.</h2>
+            <p className="mt-4 text-base leading-8 text-slate-600">
               Start with the sample report, then book a pilot for your club — we set it up with your coaching team.
             </p>
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
+            <a href={PILOT_MAILTO} className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
               Book a pilot
             </a>
-            <Link to="/sample-report" className="inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
-              View Sample Report
+            <Link to="/sample-report" className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">
+              View sample report
             </Link>
           </div>
         </div>

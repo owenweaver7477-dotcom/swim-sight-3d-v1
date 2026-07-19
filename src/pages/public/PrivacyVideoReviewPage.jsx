@@ -50,25 +50,25 @@ export default function PrivacyVideoReviewPage() {
         description="Swim Sight 3D is designed so coaches can review uploaded swim footage inside the app, finalise approved feedback, and share a swimmer-friendly report without exposing private video paths or raw review output."
         actions={
           <>
-            <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
-            <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Coach-approved AI</Link>
+            <Link to="/sample-report" className="rounded-lg bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
+            <Link to="/coach-approved-ai" className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Coach-approved AI</Link>
           </>
         }
       >
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-950/10">
+        <div className="rounded-lg border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-cyan-200">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sky-700">
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.22em] text-sky-600">Public trust rule</div>
+              <div className="text-xs font-bold uppercase tracking-[0.22em] text-sky-700">Public trust rule</div>
               <h2 className="text-xl font-bold text-slate-950">Coaches control what is finalised and shared.</h2>
             </div>
           </div>
           <div className="mt-5 grid gap-2">
             {['Shared reports only show coach-approved content.', 'Private video paths and signed URLs are not included in public reports.', 'Rejected findings and internal review notes stay out of swimmer-facing reports.'].map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-800">
-                <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" />
+              <div key={item} className="flex items-start gap-3 rounded-lg bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-800">
+                <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-700" />
                 {item}
               </div>
             ))}
@@ -79,8 +79,8 @@ export default function PrivacyVideoReviewPage() {
       <PublicSection title="Private video workflow" description="The review flow is built around an authenticated coach workspace first, then a separate shared report only after the coach finalises the content.">
         <div className="grid gap-4 md:grid-cols-4">
           {workflow.map(([title, description], index) => (
-            <article key={title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-cyan-200">{index + 1}</div>
+            <article key={title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-sm font-mono font-semibold text-sky-700">0{index + 1}</div>
               <h2 className="mt-4 text-base font-bold text-slate-950">{title}</h2>
               <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
             </article>
@@ -90,8 +90,8 @@ export default function PrivacyVideoReviewPage() {
 
       <PublicSection subtle title="Who can access uploaded videos?" description="Uploaded videos are part of the logged-in club workflow. Access depends on club membership and role-based permissions inside Swim Sight 3D.">
         <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <Users className="h-5 w-5 text-sky-600" />
+          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <Users className="h-5 w-5 text-sky-700" />
             <h2 className="mt-4 text-2xl font-bold text-slate-950">Club workspace access</h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
               Owners, admins, coaches, and approved staff use the app according to their club role. Swimmers and parents receive the shared report link when the coach chooses to share it.
@@ -104,7 +104,7 @@ export default function PrivacyVideoReviewPage() {
               ['Links can be managed', 'Shared report links can be created, copied, and managed from the finalised report workflow.'],
               ['Manual review is the workflow', 'Coaches create the full report by hand — mark moments, add findings, finalise.'],
             ].map(([title, description]) => (
-              <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div key={title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 className="text-base font-bold text-slate-950">{title}</h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
               </div>
@@ -115,28 +115,28 @@ export default function PrivacyVideoReviewPage() {
 
       <PublicSection title="What appears in shared reports?" description="Shared reports are intended to be swimmer-friendly improvement plans. They show the content the coach has selected and approved.">
         <div className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-green-200 bg-green-50 p-6">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-6">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-700" />
               <h2 className="text-xl font-bold text-slate-950">Included when approved</h2>
             </div>
             <div className="mt-5 grid gap-2">
               {publicReportItems.map(item => (
-                <div key={item} className="rounded-2xl bg-white p-3 text-sm font-semibold text-slate-800 shadow-sm">{item}</div>
+                <div key={item} className="rounded-lg bg-white p-3 text-sm font-semibold text-slate-800 shadow-sm">{item}</div>
               ))}
             </div>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <Video className="h-5 w-5 text-sky-600" />
+              <Video className="h-5 w-5 text-sky-700" />
               <h2 className="text-xl font-bold text-slate-950">Report output, not raw system output</h2>
             </div>
             <p className="mt-3 text-sm leading-7 text-slate-600">
               A shared report is meant to answer what the coach saw, why it matters, what the swimmer should feel, which drill to use, and what to focus on next.
             </p>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link to="/sample-report" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">See sample report</Link>
-              <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
+              <Link to="/sample-report" className="rounded-lg bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">See sample report</Link>
+              <Link to="/for-coaches" className="rounded-lg border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Explore features</Link>
             </div>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function PrivacyVideoReviewPage() {
       <PublicSection subtle title="What never appears publicly by default?" description="Public report links are designed to avoid exposing internal review data and private video storage details.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {excludedItems.map(item => (
-            <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold leading-6 text-slate-800 shadow-sm">
+            <div key={item} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm font-semibold leading-6 text-slate-800 shadow-sm">
               <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-500" />
               {item}
             </div>
@@ -154,12 +154,12 @@ export default function PrivacyVideoReviewPage() {
       </PublicSection>
 
       <PublicSection title="Coach-approved content rule" description="Swim Sight 3D is built around the coach deciding what belongs in the final swimmer-facing report.">
-        <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 md:p-8">
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Coach-created. Coach-approved.</div>
-              <h2 className="mt-3 text-3xl font-bold">The coach controls what is finalised and shared.</h2>
-              <p className="mt-4 text-sm leading-7 text-slate-300">
+              <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">Coach-created. Coach-approved.</div>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">The coach controls what is finalised and shared.</h2>
+              <p className="mt-4 text-sm leading-7 text-slate-600">
                 Rejected findings and private coach notes are not intended for the public report. Coaches write, approve, and edit the final findings before sharing.
               </p>
             </div>
@@ -169,9 +169,9 @@ export default function PrivacyVideoReviewPage() {
                 ['Coach review', 'The coach checks the video, edits language, and selects what belongs.'],
                 ['Shared report', 'The swimmer or parent sees the final approved improvement plan.'],
               ].map(([title, description]) => (
-                <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                  <h3 className="text-sm font-bold text-white">{title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-300">{description}</p>
+                <div key={title} className="rounded-lg border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-bold text-slate-950">{title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
                 </div>
               ))}
             </div>
@@ -186,19 +186,19 @@ export default function PrivacyVideoReviewPage() {
             ['For clubs', 'Use a consistent reporting structure across squads and coaches.'],
             ['For swimmers and parents', 'Receive a clear improvement plan without internal review clutter.'],
           ].map(([title, description]) => (
-            <article key={title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <FileText className="h-5 w-5 text-sky-600" />
+            <article key={title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <FileText className="h-5 w-5 text-sky-700" />
               <h2 className="mt-4 text-base font-bold text-slate-950">{title}</h2>
               <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
             </article>
           ))}
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Link to="/coach-approved-ai" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">
+          <Link to="/coach-approved-ai" className="rounded-lg bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">
             Trust and privacy <ArrowRight className="ml-2 inline h-4 w-4" />
           </Link>
-          <Link to="/sample-report" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
-          <Link to="/for-coaches" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">Clubs & coaches</Link>
+          <Link to="/sample-report" className="rounded-lg border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">View sample report</Link>
+          <Link to="/for-coaches" className="rounded-lg border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-white">Clubs & coaches</Link>
         </div>
       </PublicSection>
     </PublicLayout>

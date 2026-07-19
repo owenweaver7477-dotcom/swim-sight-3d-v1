@@ -70,12 +70,12 @@ const findings = [
 
 function DemoFrame({ moment }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       {/* Real reports carry the marked frame here — blurred on the public demo for
           privacy, with a lock on hover. Synthetic art only, never real footage. */}
       <PrivateFramePreview badge={moment.time} className="h-36 rounded-none" />
       <div className="p-4">
-        <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-600">{moment.phase}</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-700">{moment.phase}</div>
         <p className="mt-2 text-sm leading-6 text-slate-700">{moment.note}</p>
       </div>
     </div>
@@ -92,16 +92,16 @@ function FindingCard({ finding, index }) {
   ];
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5">
+    <article className="overflow-hidden rounded-lg border border-slate-200 bg-white">
       <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
         <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Coach finding {index + 1}</div>
         <h3 className="mt-2 text-xl font-bold text-slate-950">{finding.title}</h3>
       </div>
       <div className="grid gap-4 p-6">
         {rows.map(([label, text, Icon]) => (
-          <div key={label} className={`rounded-2xl border p-4 ${label === 'What to feel in the water' ? 'border-cyan-200 bg-cyan-50' : label === 'Recommended drill' ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+          <div key={label} className={`rounded-lg border border-slate-200 p-4 ${label === 'What to feel in the water' || label === 'Recommended drill' ? 'bg-slate-50' : 'bg-white'}`}>
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-              <Icon className="h-3.5 w-3.5 text-sky-600" />
+              <Icon className="h-3.5 w-3.5 text-sky-700" />
               {label}
             </div>
             <p className="mt-2 text-sm leading-7 text-slate-800">{text}</p>
@@ -119,22 +119,22 @@ export default function SampleReportPage() {
     <PublicLayout>
       <StructuredData data={breadcrumbStructuredData([{ name: 'Home', path: '/' }, { name: 'Sample Report', path: '/sample-report' }])} />
 
-      <section className="border-b border-slate-800 bg-slate-950 px-4 py-16 text-white">
+      <section className="border-b border-slate-200 bg-white px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
-            <ShieldCheck className="h-3.5 w-3.5" />
+          <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+            <ShieldCheck className="h-3.5 w-3.5 text-sky-700" />
             Demo report — no real swimmer data
           </div>
-          <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_0.82fr] lg:items-end">
+          <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_0.82fr] lg:items-end">
             <div>
-              <h1 className="max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">Sample swimming analysis report.</h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
+              <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">Sample swimming analysis report.</h1>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
                 This public demo shows how Swim Sight 3D turns coach-reviewed video moments into findings, cues, drills, and a swimmer improvement plan.
               </p>
-              <p className="mt-3 text-sm font-semibold text-cyan-100">Every finding is coach-created. Coaches decide what appears in the final report.</p>
+              <p className="mt-3 text-sm font-semibold text-slate-700">Every finding is coach-created. Coaches decide what appears in the final report.</p>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
-              <div className="grid gap-3 text-sm">
+            <div className="rounded-lg border border-slate-200 bg-white">
+              <div className="grid gap-px bg-slate-200">
                 {[
                   ['Swimmer', 'Sample Swimmer'],
                   ['Stroke', 'Breaststroke'],
@@ -142,9 +142,9 @@ export default function SampleReportPage() {
                   ['Video type', 'Side-view training clip'],
                   ['Focus', 'Kick setup and line reset'],
                 ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3">
+                  <div key={label} className="flex items-center justify-between gap-3 bg-white px-4 py-3">
                     <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{label}</span>
-                    <span className="text-right font-semibold text-white">{value}</span>
+                    <span className="text-right font-semibold text-slate-900">{value}</span>
                   </div>
                 ))}
               </div>
@@ -171,8 +171,8 @@ export default function SampleReportPage() {
 
       <PublicSection eyebrow="Swimmer improvement plan" title="This week’s focus." description="The report ends with a simple plan the swimmer and coach can take into the next week of training.">
         <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-950/5">
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600">This week’s focus</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-6">
+            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">This week’s focus</div>
             <h2 className="mt-3 text-2xl font-bold text-slate-950">Cleaner breaststroke kick setup into a stronger line reset.</h2>
             <div className="mt-6 grid gap-3">
               {[
@@ -180,22 +180,20 @@ export default function SampleReportPage() {
                 ['Avoid', 'Turning the feet while the heels are still low.'],
                 ['Next review target', 'Film another side-view breaststroke clip after one week of focused drill work.'],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{label}</div>
                   <p className="mt-2 text-sm leading-7 text-slate-800">{value}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-3xl border border-blue-200 bg-blue-50 p-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-700 shadow-sm">
-              <Dumbbell className="h-5 w-5" />
-            </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-6">
+            <Dumbbell className="h-6 w-6 text-sky-700" />
             <h3 className="mt-4 text-xl font-bold text-slate-950">Drills for the next block</h3>
             <div className="mt-4 grid gap-3">
               {['Wall breaststroke kick with narrow knees', 'Breaststroke kick into 3-second line hold'].map((drill) => (
-                <div key={drill} className="flex items-start gap-3 rounded-2xl bg-white p-4 text-sm font-semibold leading-6 text-slate-800 shadow-sm">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
+                <div key={drill} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm font-semibold leading-6 text-slate-800">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-700" />
                   {drill}
                 </div>
               ))}
@@ -207,7 +205,7 @@ export default function SampleReportPage() {
       <PublicSection eyebrow="Inside Coach Studio" title="A glimpse of where the report comes from." description="Coaches build every report in Coach Studio — move through the video, mark findings, and attach drills. These workspace previews are blurred for privacy; hover to see the lock.">
         <div className="grid gap-4 sm:grid-cols-3">
           {studioGlimpses.map(([step, caption]) => (
-            <div key={step} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div key={step} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
               <PrivateFramePreview badge={step} label="Coach Studio — private" className="h-40 rounded-none" />
               <div className="p-4">
                 <div className="text-sm font-bold text-slate-950">{step}</div>
@@ -219,9 +217,9 @@ export default function SampleReportPage() {
       </PublicSection>
 
       <PublicSection subtle eyebrow="Privacy and trust" title="Public reports show approved content only.">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-start">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-cyan-200">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sky-700">
               <Lock className="h-5 w-5" />
             </div>
             <div>
@@ -229,28 +227,28 @@ export default function SampleReportPage() {
                 Sample reports show only coach-approved content. Private video paths, rejected findings, and internal coach notes are never included.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link to="/coach-approved-ai" className="rounded-full border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">How privacy works</Link>
-                <Link to="/for-coaches" className="rounded-full bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Clubs &amp; coaches</Link>
+                <Link to="/coach-approved-ai" className="rounded-lg border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">How privacy works</Link>
+                <Link to="/for-coaches" className="rounded-lg bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">Clubs &amp; coaches</Link>
               </div>
             </div>
           </div>
         </div>
       </PublicSection>
 
-      <section className="bg-slate-950 px-4 py-16 text-white">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/[0.045] p-8 md:p-10">
+      <section className="bg-white px-4 py-20">
+        <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">Coach Studio creates the report</div>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">See how Swim Sight works for coaches.</h2>
-            <p className="mt-4 text-base leading-8 text-slate-300">
+            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">Coach Studio creates the report</div>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">See how Swim Sight works for coaches.</h2>
+            <p className="mt-4 text-base leading-8 text-slate-600">
               Use Coach Studio to review video, capture key moments, add coach-approved feedback, and share clear swimmer improvement reports.
             </p>
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link to="/for-coaches" className="inline-flex items-center justify-center rounded-full bg-cyan-200 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">
+            <Link to="/for-coaches" className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
               Explore features <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-            <Link to="/login" className="inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+            <Link to="/login" className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50">
               Log in to create a report
             </Link>
           </div>
