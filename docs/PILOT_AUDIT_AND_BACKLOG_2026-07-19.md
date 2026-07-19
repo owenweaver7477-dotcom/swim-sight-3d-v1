@@ -64,12 +64,12 @@ copy will trip it. **Repoint the guard, never delete the assertion.**
 ## 5. Public site polish (a11y / SEO / perf) — Me
 
 - [ ] Social unfurls broken: no SSR/prerender → every subpage unfurls as the homepage on Slack/iMessage/LinkedIn. — 🟠 L
-- [ ] Render-blocking Google Fonts `@import` (8 weights, 2 unused: 300/800) → trim + `preconnect`. — 🟠 M
+- [x] Google Fonts moved off the render-blocking CSS `@import` to `<link>` + `preconnect`; dropped the unused 800 weight. *Done.*
 - [x] ~~No `focus-visible` rings~~ — **fixed** in the quiet-motion commit (global `:where()` ring).
-- [ ] Nav breakpoint at `xl` (1280px) hides links behind a hamburger on tablets/small laptops → lower to `lg`. — 🟡 S
-- [ ] `slate-500` body text marginal contrast (fails AA on `bg-sky-50`) → `slate-600`. — 🟡 S
-- [ ] Delete unused `public/hero/hero-desktop.jpg` (251KB, zero refs after redesign). — 🟢 S
-- [ ] Minor: redundant logo `alt`, decorative icons need `aria-hidden`, `theme-color` meta still dark navy, stale `<noscript>` links. — 🟢 S
+- [x] Nav breakpoint lowered `xl`→`lg` — links now show on tablets/small laptops (browser-verified at 1150px). *Done.*
+- [x] `slate-500` "Pilot lane" label on `bg-sky-50` → `slate-600` (AA). *Done.*
+- [x] Deleted unused `public/hero/hero-desktop.jpg` (251KB). *Done.*
+- [x] `theme-color` now light/dark per `prefers-color-scheme`; redundant logo `alt` → `alt=""` (decorative). *Done.* · [ ] remaining minor: decorative icons `aria-hidden`, stale `<noscript>` links.
 
 ## 6. Correctness — verify (not cosmetic) — Me
 

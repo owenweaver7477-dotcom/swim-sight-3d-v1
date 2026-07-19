@@ -28,7 +28,7 @@ export default function PublicNav() {
         <Link to="/" className="flex items-center gap-2.5">
           <img
             src="/brand/swim-sight-emblem.png"
-            alt="Swim Sight 3D"
+            alt=""
             width={56}
             height={56}
             className="h-14 w-14 object-contain"
@@ -39,7 +39,7 @@ export default function PublicNav() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 xl:flex" aria-label="Public navigation">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Public navigation">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className={linkClass}>
               {item.label}
@@ -47,7 +47,7 @@ export default function PublicNav() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 xl:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <Link
             to="/login"
             className="rounded-md px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-950"
@@ -65,7 +65,7 @@ export default function PublicNav() {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-700 xl:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-700 lg:hidden"
           aria-label={open ? 'Close navigation' : 'Open navigation'}
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -73,7 +73,7 @@ export default function PublicNav() {
       </div>
 
       {open && (
-        <div className="border-t border-slate-200 bg-white px-4 py-4 xl:hidden">
+        <div className="border-t border-slate-200 bg-white px-4 py-4 lg:hidden">
           <nav className="mx-auto grid max-w-6xl gap-1" aria-label="Mobile public navigation">
             {navItems.map((item) => (
               <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className={linkClass}>

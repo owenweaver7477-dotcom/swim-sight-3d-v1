@@ -10,7 +10,7 @@ export default function PublicFooter() {
           <div className="flex items-center gap-2.5">
             <img
               src="/brand/swim-sight-emblem.png"
-              alt="Swim Sight 3D"
+              alt=""
               width={44}
               height={44}
               className="h-11 w-11 object-contain"

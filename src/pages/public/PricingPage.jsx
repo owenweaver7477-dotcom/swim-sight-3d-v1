@@ -44,7 +44,7 @@ export default function PricingPage() {
         <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
           {tiers.map(({ plan, items, note, featured }) => (
             <article key={plan.key} className={`rounded-lg border p-5 shadow-sm ${featured ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Pilot lane</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Pilot lane</div>
               <h2 className="mt-3 text-xl font-bold text-slate-950">{plan.label}</h2>
               <p className="mt-3 text-sm leading-7 text-slate-600">{plan.description}</p>
               <div className="mt-5 grid gap-2">
