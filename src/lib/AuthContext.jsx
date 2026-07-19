@@ -48,6 +48,7 @@ function mergeUserProfile(authUser, profile) {
     id: authUser.id,
     email: authUser.email,
     full_name: profile?.full_name || getFullName(authUser),
+    avatar_url: profile?.avatar_url || null,
     app_role: profile?.app_role || 'user',
     role: profile?.app_role || 'user',
     profile,
@@ -334,6 +335,8 @@ export const AuthProvider = ({ children }) => {
     const profileUpdates = {
       email: session.user.email,
       full_name: updates.full_name,
+      // Only touch avatar_url when the caller passes it (null = remove photo).
+      ...(updates.avatar_url !== undefined ? { avatar_url: updates.avatar_url } : {}),
     };
 
     const { data: updatedProfile, error } = await supabase

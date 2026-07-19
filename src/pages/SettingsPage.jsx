@@ -6,8 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import PageHeader from '@/components/shared/PageHeader';
-import { Lock, User, Settings, ExternalLink } from 'lucide-react';
+import { Lock, User, Settings, ExternalLink, ImageUp } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
+import MemberAvatar from '@/components/shared/MemberAvatar';
+
+const AVATAR_BUCKET = 'member-avatars';
 
 export default function SettingsPage() {
   const { user, logout, updateProfile } = useAuth();
@@ -15,6 +19,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState('');
   const canUseCoachApp = ['owner', 'admin', 'coach', 'assistant_coach'].includes(memberRole) || user?.role === 'admin';
   const isAdmin = ['owner', 'admin'].includes(memberRole) || user?.role === 'admin';
   const quickLinks = [
@@ -39,6 +45,36 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setPhotoBusy(true);
+    setPhotoMsg('');
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined });
+      if (upErr) throw upErr;
+      await updateProfile({ avatar_url: path });
+    } catch (err) {
+      setPhotoMsg(err?.message || 'Could not upload the photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    setPhotoBusy(true);
+    setPhotoMsg('');
+    try {
+      await updateProfile({ avatar_url: null });
+    } catch (err) {
+      setPhotoMsg(err?.message || 'Could not remove the photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const handleSignOut = () => {
     signOut();
     logout();
@@ -57,6 +93,24 @@ export default function SettingsPage() {
           </div>
           {user ? (
             <div className="space-y-3">
+              {/* Profile photo */}
+              <div className="flex items-center gap-4 pb-3 border-b border-border">
+                <MemberAvatar name={user.full_name || user.email} path={user.avatar_url} size="lg" />
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-foreground">Profile photo</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label className="cursor-pointer">
+                      <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-secondary">
+                        <ImageUp className="h-3.5 w-3.5" /> {photoBusy ? 'Working…' : user.avatar_url ? 'Change' : 'Upload photo'}
+                      </span>
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handlePhotoUpload} disabled={photoBusy} />
+                    </label>
+                    {user.avatar_url && <button type="button" onClick={handleRemovePhoto} disabled={photoBusy} className="text-xs text-destructive hover:underline">Remove</button>}
+                  </div>
+                  {photoMsg && <p className="mt-1 text-[10px] text-destructive">{photoMsg}</p>}
+                  <p className="mt-1 text-[10px] text-muted-foreground">PNG, JPG or WEBP. Only you can change your photo.</p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <div className="text-muted-foreground mb-0.5">Name</div>

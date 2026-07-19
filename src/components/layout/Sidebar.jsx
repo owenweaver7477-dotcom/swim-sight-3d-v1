@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/ThemeToggle';
+import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
   getRoleLabel,
   isCoachAppRole,
@@ -256,9 +257,7 @@ export default function Sidebar() {
       <div className="px-3 pb-3 pt-2">
         {user ? (
           <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0077B6] to-[#00A6C8] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
-              {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-            </div>
+            <MemberAvatar name={user.full_name || user.email} path={user.avatar_url} size="sm" />
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-slate-900 truncate dark:text-slate-100">{user.full_name || 'Account'}</div>
               <div className="text-[10px] text-slate-400 truncate">{memberRole ? getRoleLabel(rawMemberRole) : user.email}</div>
