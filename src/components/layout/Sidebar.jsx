@@ -82,7 +82,7 @@ export default function Sidebar() {
             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 motion-reduce:hover:translate-x-0'
         }`}>
           <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'}`} />
-          <span>{item.label}</span>
+          <span className="sb-label">{item.label}</span>
         </div>
       </Link>
     );
@@ -90,7 +90,7 @@ export default function Sidebar() {
 
   const SectionLabel = ({ label, divider }) => (
     <div className={`px-3 pb-1 ${divider ? 'mt-3 border-t border-slate-100 dark:border-slate-800 pt-3' : 'pt-3'}`}>
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{label}</span>
+      <span className="sb-label block text-[10px] font-semibold uppercase tracking-widest text-slate-400">{label}</span>
     </div>
   );
 
@@ -125,16 +125,16 @@ export default function Sidebar() {
                 {club.initials || club.name?.charAt(0) || 'C'}
               </div>
             )}
-            <div className="min-w-0 flex-1 text-left">
+            <div className="sb-label min-w-0 flex-1 text-left">
               <div className="text-sm font-bold text-slate-900 truncate dark:text-slate-100">{club.name}</div>
               {memberRole && <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{getRoleLabel(rawMemberRole)}</div>}
             </div>
-            <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <ChevronsUpDown className="sb-label w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
           </div>
         </button>
 
         {clubDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden dark:border-slate-700 dark:bg-slate-900">
+          <div className="absolute top-full left-0 mt-1 z-50 w-56 min-w-[14rem] rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden dark:border-slate-700 dark:bg-slate-900">
             {clubs.length > 1 && (
               <div className="px-2 pt-2 pb-1">
                 <div className="text-[10px] uppercase tracking-wider text-slate-400 px-2 mb-1">Switch Club</div>
@@ -188,8 +188,8 @@ export default function Sidebar() {
             height={40}
             className="w-10 h-10 rounded-lg object-contain"
           />
-          <div>
-            <div className="text-sm font-bold text-slate-900 leading-tight">Swim Sight 3D</div>
+          <div className="sb-label">
+            <div className="text-sm font-bold text-slate-900 leading-tight dark:text-slate-100">Swim Sight 3D</div>
             <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Performance Analysis</div>
           </div>
         </Link>
@@ -205,7 +205,7 @@ export default function Sidebar() {
           className="w-full h-9 text-xs font-semibold text-white bg-primary transition-colors hover:bg-primary/90"
           onClick={() => navigate('/analyse')}
         >
-          <Plus className="w-3.5 h-3.5 mr-1.5" /> New Analysis
+          <Plus className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" /> <span className="sb-label">New Analysis</span>
         </Button>
       </div>}
 
@@ -242,8 +242,8 @@ export default function Sidebar() {
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all dark:hover:bg-slate-800 dark:hover:text-slate-300"
             >
               <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="flex-1 text-left font-semibold uppercase tracking-widest text-[10px]">Internal Tools</span>
-              {adminOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              <span className="sb-label flex-1 text-left font-semibold uppercase tracking-widest text-[10px]">Internal Tools</span>
+              <span className="sb-label">{adminOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}</span>
             </button>
             {adminOpen && (
               <div className="ml-2 pl-3 border-l border-slate-200 mt-0.5 dark:border-slate-700 space-y-0.5">
@@ -259,18 +259,20 @@ export default function Sidebar() {
         {user ? (
           <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
             <MemberAvatar name={user.full_name || user.email} path={user.avatar_url} size="sm" />
-            <div className="flex-1 min-w-0">
+            <div className="sb-label flex-1 min-w-0">
               <div className="text-xs font-semibold text-slate-900 truncate dark:text-slate-100">{user.full_name || 'Account'}</div>
               <div className="text-[10px] text-slate-400 truncate">{memberRole ? getRoleLabel(rawMemberRole) : user.email}</div>
             </div>
-            <ThemeToggle className="flex-shrink-0" />
-            <button
-              onClick={handleSignOut}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors dark:hover:bg-red-500/10"
-              title="Sign out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+            <div className="sb-label flex items-center gap-1">
+              <ThemeToggle className="flex-shrink-0" />
+              <button
+                onClick={handleSignOut}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors dark:hover:bg-red-500/10"
+                title="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         ) : (
           <div className="text-[10px] text-slate-400 px-1">Loading...</div>
@@ -317,8 +319,9 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <div className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-56 bg-white border-r border-slate-200 z-40 dark:bg-slate-900 dark:border-slate-800">
+      {/* Desktop sidebar — collapsed icon rail that expands to full width on hover.
+          Width + label collapse handled by `.sb-rail` in index.css. */}
+      <div className="sb-rail hidden lg:flex flex-col fixed top-0 left-0 bottom-0 bg-white border-r border-slate-200 z-40 shadow-sm transition-shadow hover:shadow-xl dark:bg-slate-900 dark:border-slate-800">
         <SidebarContent />
       </div>
     </>

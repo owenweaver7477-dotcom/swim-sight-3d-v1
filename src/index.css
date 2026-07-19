@@ -287,6 +287,27 @@
   .reveal.draw-rule { transform: none; }
 }
 
+/* ── Desktop hover-expand sidebar (lg+) ────────────────────────────────────
+   Collapsed to an icon rail; expands to the full labelled sidebar on hover.
+   Labels (.sb-label) collapse to zero width so nothing overflows the rail, and
+   the rail overlays content (AppLayout keeps a fixed narrow offset), so nothing
+   shifts. Below lg the sidebar is a drawer and this does not apply. */
+@media (min-width: 1024px) {
+  .sb-rail { width: 5rem; transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+  .sb-rail:hover { width: 15rem; }
+  .sb-rail .sb-label {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: max-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+  }
+  .sb-rail:hover .sb-label { max-width: 12rem; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-rail, .sb-rail .sb-label { transition: none; }
+}
+
 /* Coach Studio step transitions — professional, restrained (220ms slide + fade).
    CSS animations replay when an element's display toggles from none, so the
    step panels re-enter with this every time the coach switches steps. */
