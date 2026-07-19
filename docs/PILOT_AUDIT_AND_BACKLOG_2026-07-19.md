@@ -79,10 +79,10 @@ copy will trip it. **Repoint the guard, never delete the assertion.**
 ## 7. Dead-code & hygiene — Me (with Owner call on "parked" bits)
 
 ~300KB / 77 unreachable files. Some is **intentionally parked** (base44, 3D) — confirm before deleting.
-- [ ] Safe now: drop `next-themes` + `react-hot-toast` deps (0 refs). — 🟢 S
-- [ ] Delete merged branch `feature/coach-studio-3-step`; fix broken git ref `.git/refs/heads/simplify-remove-elite-lab 2` (space in name, warns on every git op); prune 12 stale merged branches. — 🟢 S
-- [ ] Confirm-then-delete: base44 island (10 unreachable files; keep the live `FeedbackButton`→`FeedbackModal`, which does NOT use base44); `three` + `@react-three/fiber` (~600KB, only dead 3D/HUD); 36/49 dead `ui/` components; `VideoAnnotator.jsx` (dead near-dup of live `CoachDrawStudio`). — 🟡 M
-- [ ] **Elite Studio is a phantom** (no route/page; alive only via a guard pin). Remove + repoint the guard. — 🟢 S
+- [x] **Deleted 11 confirmed-dead files (1,572 lines)**: radix toast (`ui/toaster`+`ui/use-toast`, superseded by sonner), `VideoAnnotator`+`AnnotationsPanel` (dead dup of live CoachDrawStudio), `WorkflowGuide` (superseded by the wired OnboardingChecklist), and the C6 "Remove" orphans (`Footer`, `AnalysisSetup`, `SideBySideComparison`, `ModelAssetStatusPanel`, `ShareClipButton`, `DrillPackModal`). Build + 18 guards green. *Done.*
+- [x] Removed the broken git ref `.git/refs/heads/simplify-remove-elite-lab 2` (space in name, warned on every git op). *Done.*
+- [ ] **Deferred to a dedicated pass** (bigger / parked / needs `npm install` lockfile sync): drop `next-themes` + `react-hot-toast` deps; the base44 island + coach-testing tabs (roadmap **H7**); `three`+`@react-three/fiber` + the 3D/HUD cluster (parked **post-pilot** per roadmap N-series); 36/49 scaffolding `ui/` components; delete merged branch `feature/coach-studio-3-step` + prune 12 stale branches. — 🟡 M
+- [ ] **Elite Studio phantom** (no route/page; alive only via a guard pin). Remove + repoint the guard. — 🟢 S
 
 ## Guard-suite notes (for whoever touches the above)
 
