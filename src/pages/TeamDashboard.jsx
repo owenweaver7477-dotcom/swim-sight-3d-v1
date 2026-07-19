@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
@@ -6,49 +6,22 @@ import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
+import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist';
 import {
   Users, Waves, Video, Plus, ChevronRight,
-  AlertCircle, Loader2, Brain, Upload, CheckCircle2,
-  Dumbbell, ArrowRight, TrendingUp, Target
+  AlertCircle, Loader2, Brain, Upload, CheckCircle2, ArrowRight, Share2,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { subDays, startOfDay, differenceInCalendarDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
-
-// ── Real 7-day activity histogram from created_date values ───────────────────────
-function buildSpark(dates) {
-  const start = startOfDay(subDays(new Date(), 6));
-  const buckets = Array(7).fill(0);
-  dates.forEach((v) => {
-    if (!v) return;
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return;
-    const idx = differenceInCalendarDays(d, start);
-    if (idx >= 0 && idx <= 6) buckets[idx] += 1;
-  });
-  return buckets;
-}
-
-// ── Tiny real sparkline (only rendered when there is real recent activity) ───────
-function Sparkline({ data }) {
-  const max = Math.max(1, ...data);
-  return (
-    <svg viewBox="0 0 60 20" className="h-5 w-16" preserveAspectRatio="none" aria-hidden="true">
-      {data.map((v, i) => {
-        const h = Math.max(1.5, (v / max) * 18);
-        return <rect key={i} x={i * 8.6} y={20 - h} width="5" height={h} rx="1" className="fill-primary/40" />;
-      })}
-    </svg>
-  );
-}
 
 // ── Status badge ─────────────────────────────────────────────────────────────────
 const BADGE_TONES = {
   amber: 'bg-amber-100 text-amber-700',
   red: 'bg-red-100 text-red-700',
   orange: 'bg-orange-100 text-orange-700',
-  cyan: 'bg-sky-100 text-sky-700',
+  sky: 'bg-sky-100 text-sky-700',
   blue: 'bg-blue-100 text-blue-700',
   slate: 'bg-slate-100 text-slate-600',
 };
@@ -56,56 +29,11 @@ function Badge({ tone = 'slate', children }) {
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${BADGE_TONES[tone] || BADGE_TONES.slate}`}>{children}</span>;
 }
 
-// ── KPI card (real data only) ───────────────────────────────────────────────────
-function KpiCard({ icon: Icon, label, value, sub, spark, accent = 'bg-primary/10 text-primary', highlight }) {
-  const showSpark = Array.isArray(spark) && spark.reduce((a, b) => a + b, 0) > 0;
-  return (
-    <div className={`group rounded-lg border bg-card p-4 transition-colors hover:border-slate-300 ${highlight ? 'border-amber-200' : 'border-border'}`}>
-      <div className="flex items-start justify-between">
-        <span className={`flex h-10 w-10 items-center justify-center rounded-md ${accent}`}>
-          <Icon className="h-5 w-5" />
-        </span>
-        {highlight
-          ? <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">Action</span>
-          : (showSpark ? <Sparkline data={spark} /> : null)}
-      </div>
-      <div className="mt-3 text-[26px] font-bold leading-none text-foreground">{value}</div>
-      <div className="mt-1.5 text-[11px] font-medium text-muted-foreground">{label}</div>
-      {sub && <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600"><TrendingUp className="h-3 w-3" />{sub}</div>}
-    </div>
-  );
-}
-
-// ── Coach Review Queue chip (real counts) ────────────────────────────────────────
-const CHIP_TONES = {
-  amber: 'text-amber-600 bg-amber-50',
-  blue: 'text-blue-600 bg-blue-50',
-  orange: 'text-orange-600 bg-orange-50',
-  red: 'text-red-600 bg-red-50',
-};
-function ReviewChip({ icon: Icon, label, count, tone, onClick }) {
-  const active = count > 0;
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors ${active ? 'border-border bg-card hover:border-primary/40' : 'border-border bg-muted'}`}
-    >
-      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md ${active ? CHIP_TONES[tone] : 'bg-muted text-muted-foreground'}`}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <div className={`text-base font-bold leading-none ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{count}</div>
-        <div className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground">{label}</div>
-      </div>
-    </button>
-  );
-}
-
 // ── Priority item row ────────────────────────────────────────────────────────────
 function PriorityRow({ icon: Icon, iconColor, label, meta, cta, onClick, urgent, badge, badgeTone }) {
   return (
-    <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${urgent ? 'border-amber-200 bg-amber-50/50' : 'border-border bg-card'}`}>
-      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md ${urgent ? 'bg-amber-100' : 'bg-muted'}`}>
+    <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${urgent ? 'border-amber-200 bg-amber-50/50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-border bg-card'}`}>
+      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md ${urgent ? 'bg-amber-100 dark:bg-amber-500/15' : 'bg-muted'}`}>
         <Icon className={`h-4 w-4 ${iconColor || 'text-muted-foreground'}`} />
       </span>
       <div className="min-w-0 flex-1">
@@ -144,16 +72,19 @@ function NextBestAction({ icon: Icon, label, meta, cta, onClick, badge, badgeTon
   );
 }
 
-// ── Section wrapper ──────────────────────────────────────────────────────────────
-function SectionCard({ title, action, children }) {
+// ── One of the three dashboard questions ─────────────────────────────────────────
+function QuestionSection({ n, title, action, children }) {
   return (
-    <div>
-      <div className="mb-2.5 flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</div>
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-[11px] font-bold text-primary">{n}</span>
+          <h2 className="text-sm font-bold text-foreground">{title}</h2>
+        </div>
         {action}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -174,7 +105,7 @@ function NoClubDashboard() {
   );
 }
 
-// ── Setup state ──────────────────────────────────────────────────────────────────
+// ── Setup state (zero data) ──────────────────────────────────────────────────────
 function SetupDashboard({ club }) {
   const navigate = useNavigate();
   const steps = [
@@ -199,12 +130,13 @@ function SetupDashboard({ club }) {
   );
 }
 
-// ── Main dashboard ─────────────────────────────────────────────────────────────
+// ── Main dashboard — three questions ─────────────────────────────────────────────
 export default function TeamDashboard() {
   const { club, loading } = useClubContext();
   const { user } = useAuth();
   const navigate = useNavigate();
   const enabled = !!club?.id;
+  const [, forceRerender] = useState(0);
 
   const { data: swimmers = [] } = useQuery({ queryKey: ['swimmers', club?.id], queryFn: () => entities.Swimmer.filter({ club_id: club.id }), enabled, staleTime: 5 * 60 * 1000 });
   const { data: videos = [] } = useQuery({ queryKey: ['videos', club?.id], queryFn: () => entities.VideoUpload.filter({ club_id: club.id }, '-created_date', 50), enabled, staleTime: 60 * 1000 });
@@ -239,37 +171,20 @@ export default function TeamDashboard() {
   const recentlyReviewedIds = new Set(publishedReports.filter(r => r.swimmer_id && new Date(r.updated_date || r.created_date) > thirtyDaysAgo).map(r => r.swimmer_id));
   const dueForReview = swimmers.filter(s => !recentlyReviewedIds.has(s.id));
 
-  const faultCounts = {};
-  findings.filter(f => f.approval_status === 'approved' && f.included_in_report).forEach(f => {
-    if (f.finding_name) faultCounts[f.finding_name] = (faultCounts[f.finding_name] || 0) + 1;
-  });
-  const topFaults = Object.entries(faultCounts).sort(([,a],[,b]) => b - a).slice(0, 4);
-
-  const recentReports = publishedReports.slice(0, 5).map(r => ({ ...r, swimmerName: swimmers.find(s => s.id === r.swimmer_id)?.name || 'Unknown' }));
+  const swimmerNameFor = (id) => swimmers.find(s => s.id === id)?.name || 'Unknown';
 
   // Continue last review — most recent UNFINISHED report (never finalised/shared).
-  const swimmerNameFor = (id) => swimmers.find(s => s.id === id)?.name || 'Unknown';
   const lastUnfinished = activeReports
     .filter(r => !finalStatuses.includes(r.status))
     .slice()
     .sort((a, b) => new Date(b.updated_date || b.created_date || 0) - new Date(a.updated_date || a.created_date || 0))[0];
-  // Recently shared — reports already sent out to swimmers/parents.
-  const recentlyShared = activeReports
-    .filter(r => r.status === 'shared')
+
+  // Finished work — finalised + shared reports, newest first.
+  const finishedList = publishedReports
     .slice()
     .sort((a, b) => new Date(b.updated_date || b.created_date || 0) - new Date(a.updated_date || a.created_date || 0))
-    .slice(0, 4)
-    .map(r => ({ ...r, swimmerName: swimmerNameFor(r.swimmer_id) }));
-
-  // Real "new this week" deltas + sparklines from created_date — no fabricated numbers.
-  const sevenDaysAgo = subDays(new Date(), 7);
-  const newSince = (arr, field = 'created_date') => arr.filter(x => x[field] && new Date(x[field]) >= sevenDaysAgo).length;
-  const swimmersNew = newSince(swimmers);
-  const videosNew = newSince(videos);
-  const reportsNew = publishedReports.filter(r => new Date(r.updated_date || r.created_date) >= sevenDaysAgo).length;
-  const swimmerSpark = buildSpark(swimmers.map(s => s.created_date));
-  const videoSpark = buildSpark(videos.map(v => v.created_date));
-  const reportSpark = buildSpark(publishedReports.map(r => r.updated_date || r.created_date));
+    .slice(0, 6)
+    .map(r => ({ ...r, swimmerName: swimmerNameFor(r.swimmer_id), isShared: r.status === 'shared' }));
 
   // Real activity signal from the already-fetched aiJobs (recent window) — display only.
   const activeJobStatuses = ['queued', 'accepted', 'running', 'downloading_video', 'extracting_frames', 'running_pose_detection', 'analysing_stroke', 'generating_outputs', 'callback_sending'];
@@ -279,6 +194,24 @@ export default function TeamDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const coachName = (user?.full_name || '').trim().split(' ')[0];
+
+  // Onboarding — real completion from data; dismissable per club (persisted).
+  const onboardKey = `ssd_onboard_dismiss_${club.id}`;
+  let onboardDismissed = false;
+  try { onboardDismissed = typeof localStorage !== 'undefined' && localStorage.getItem(onboardKey) === '1'; } catch { onboardDismissed = false; }
+  const onboardCompleted = {
+    club: true,
+    swimmer: swimmers.length > 0,
+    video: videos.length > 0,
+    ai_job: aiJobs.length > 0, // only shown by the checklist when AI is unlocked; keeps auto-hide working then
+    finding: findings.length > 0,
+    report: publishedReports.length > 0,
+    share: activeReports.some(r => r.status === 'shared'),
+  };
+  const dismissOnboarding = () => {
+    try { localStorage.setItem(onboardKey, '1'); } catch { /* private mode: dismissal is best-effort */ }
+    forceRerender(n => n + 1);
+  };
 
   const priorityItems = [
     awaitingReview.length > 0 && {
@@ -294,7 +227,7 @@ export default function TeamDashboard() {
       cta: 'Check Videos', onClick: () => navigate('/analyse'),
     },
     readyVideos.length > 0 && {
-      icon: Video, iconColor: 'text-sky-700', urgent: false, badge: 'Review suggested', badgeTone: 'cyan',
+      icon: Video, iconColor: 'text-sky-700', urgent: false, badge: 'Review suggested', badgeTone: 'sky',
       label: `${readyVideos.length} uploaded video${readyVideos.length > 1 ? 's' : ''} ready for review`,
       meta: 'Preview the clip, then use AI assistance or Coach Studio review',
       cta: 'Review Video', onClick: () => navigate('/analyse'),
@@ -323,248 +256,136 @@ export default function TeamDashboard() {
   const reviewTotal = awaitingReview.length + processingVideos.length + manualReviewReports.length + errorVideos.length;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6">
+    <div className="mx-auto max-w-4xl px-4 py-6 pb-24 sm:px-6">
 
-      {/* Welcome banner — real club, greeting, coach name; static swimming motif */}
-      <div className="relative mb-5 overflow-hidden rounded-lg border border-border bg-card p-6 sm:p-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-2/3">
-          <svg viewBox="0 0 400 220" preserveAspectRatio="xMaxYMid slice" className="absolute right-0 top-0 h-full w-full text-primary">
-            <g fill="none" strokeWidth="2.5">
-              <path d="M0,70 Q100,40 200,70 T400,70" stroke="currentColor" opacity="0.07" />
-              <path d="M0,110 Q100,80 200,110 T400,110" stroke="currentColor" opacity="0.06" />
-              <path d="M0,150 Q100,120 200,150 T400,150" stroke="currentColor" opacity="0.05" />
-            </g>
-          </svg>
-        </div>
-        <div className="relative">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{club.name}</div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-[26px]">
-            {greeting},{' '}
-            <span className="relative inline-block text-primary">
-              Coach{coachName ? ` ${coachName}` : ''}
-              <span aria-hidden="true" className="absolute -bottom-0.5 left-0 h-px w-full bg-primary" />
-            </span>.
-          </h1>
-          <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-            Review your findings, approve what you agree with, and share coach-approved reports.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" className="h-9 bg-primary text-xs text-white hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
-              <Upload className="mr-1.5 h-3.5 w-3.5" /> Start New Analysis
-            </Button>
-            <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => navigate('/ai-reviews')}>
-              <Brain className="mr-1.5 h-3.5 w-3.5" /> Coach Studio
-              {awaitingReview.length > 0 && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">{awaitingReview.length}</span>}
-            </Button>
-          </div>
+      {/* Lean header — greeting, club, primary actions */}
+      <div className="mb-6">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{club.name}</div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-[28px]">
+          {greeting},{' '}
+          <span className="relative inline-block text-primary">
+            Coach{coachName ? ` ${coachName}` : ''}
+            <span aria-hidden="true" className="absolute -bottom-0.5 left-0 h-px w-full bg-primary" />
+          </span>.
+        </h1>
+        <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+          Review your findings, approve what you agree with, and share coach-approved reports.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button size="sm" className="h-9 bg-primary text-xs text-white hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
+            <Upload className="mr-1.5 h-3.5 w-3.5" /> Start a new review
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => navigate('/ai-reviews')}>
+            <Brain className="mr-1.5 h-3.5 w-3.5" /> Coach Studio
+            {awaitingReview.length > 0 && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">{awaitingReview.length}</span>}
+          </Button>
         </div>
       </div>
 
-      {/* KPI row — real counts, real deltas, real sparklines (omitted when no recent activity) */}
-      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard icon={Users} label="Swimmers" value={swimmers.length} spark={swimmerSpark} sub={swimmersNew > 0 ? `+${swimmersNew} this week` : null} />
-        <KpiCard icon={Video} label="Private Videos" value={videos.length} accent="bg-sky-100 text-sky-700" spark={videoSpark} sub={videosNew > 0 ? `+${videosNew} this week` : null} />
-        <KpiCard icon={Brain} label="Awaiting coach review" value={awaitingReview.length} accent="bg-amber-100 text-amber-700" highlight={awaitingReview.length > 0} />
-        <KpiCard icon={CheckCircle2} label="Finalised Reports" value={publishedReports.length} accent="bg-emerald-100 text-emerald-700" spark={reportSpark} sub={reportsNew > 0 ? `+${reportsNew} this week` : null} />
-      </div>
+      {/* Onboarding — new coaches only; self-hides when complete or dismissed */}
+      {!onboardDismissed && <OnboardingChecklist completed={onboardCompleted} onDismiss={dismissOnboarding} />}
 
-      {/* Start analysis — CTA that navigates to /analyse only (not an uploader) */}
-      <button
-        onClick={() => { setReviewSession(null); navigate('/analyse'); }}
-        className="group mb-5 flex w-full items-center gap-4 rounded-lg border border-dashed border-primary/40 bg-primary/[0.03] px-5 py-5 text-left transition-colors hover:border-primary/60 hover:bg-primary/[0.06] sm:px-6"
-      >
-        <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white">
-          <Upload className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-foreground">Start a new review</div>
-          <div className="text-xs text-muted-foreground">Upload a short swim clip to begin — the coach reviews and approves every finding.</div>
-        </div>
-        <span className="hidden flex-shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-primary/90 sm:inline-flex">
-          Start analysis <ArrowRight className="h-3.5 w-3.5" />
-        </span>
-      </button>
+      <div className="space-y-8">
 
-      {/* Main grid */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-
-        {/* Left — the coach's core workflow */}
-        <div className="space-y-5 lg:col-span-2">
-
-          {/* HERO: what needs attention */}
-          <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
-            <div className="mb-4 flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <Target className="h-5 w-5" />
-              </span>
-              <h2 className="text-base font-bold text-foreground">What needs your attention today</h2>
-              {!allClear && <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">{priorityItems.length}</span>}
-            </div>
-            {allClear ? (
-              <div className="flex flex-col items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-8 text-center">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircle2 className="h-6 w-6" /></span>
-                <div>
-                  <div className="text-sm font-bold text-emerald-900">You&apos;re all caught up</div>
-                  <div className="text-[11px] text-emerald-700">No reports are waiting for coach decisions right now.</div>
-                </div>
-                <Button size="sm" className="h-8 bg-primary text-xs text-white hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
-                  <Upload className="mr-1.5 h-3.5 w-3.5" /> Start a new analysis
-                </Button>
+        {/* ── Question 1 — What needs your review? ───────────────────────────── */}
+        <QuestionSection n="1" title="What needs your review?">
+          {allClear ? (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-8 text-center dark:border-emerald-500/30 dark:bg-emerald-500/10">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"><CheckCircle2 className="h-6 w-6" /></span>
+              <div>
+                <div className="text-sm font-bold text-emerald-900 dark:text-emerald-200">You&apos;re all caught up</div>
+                <div className="text-[11px] text-emerald-700 dark:text-emerald-300">No reports are waiting for coach decisions right now.</div>
               </div>
+              <Button size="sm" className="h-8 bg-primary text-xs text-white hover:bg-primary/90" onClick={() => { setReviewSession(null); navigate('/analyse'); }}>
+                <Upload className="mr-1.5 h-3.5 w-3.5" /> Start a new analysis
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <NextBestAction {...priorityItems[0]} />
+              {priorityItems.slice(1).map((item, i) => <PriorityRow key={i} {...item} />)}
+              {reviewTotal > 0 && (
+                <div className="pt-1 text-[11px] text-muted-foreground">
+                  {reviewTotal} item{reviewTotal === 1 ? '' : 's'} in the review pipeline{activeJobs.length > 0 ? ` · ${activeJobs.length} in progress` : ''}.
+                </div>
+              )}
+            </div>
+          )}
+        </QuestionSection>
+
+        {/* ── Question 2 — What are you working on? ──────────────────────────── */}
+        <QuestionSection n="2" title="What are you working on?">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {lastUnfinished ? (
+              <button
+                onClick={() => navigate(`/ai-review?report_id=${lastUnfinished.id}`)}
+                className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/[0.04] px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[0.07]"
+              >
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary text-white"><Brain className="h-4 w-4" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Continue last review</div>
+                  <div className="truncate text-xs font-semibold text-foreground">{swimmerNameFor(lastUnfinished.swimmer_id)}</div>
+                </div>
+                <ArrowRight className="h-4 w-4 flex-shrink-0 text-primary" />
+              </button>
             ) : (
-              <div className="space-y-2.5">
-                <NextBestAction {...priorityItems[0]} />
-                {priorityItems.slice(1).map((item, i) => <PriorityRow key={i} {...item} />)}
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted px-4 py-4">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><Brain className="h-4 w-4" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In progress</div>
+                  <div className="text-xs font-medium text-muted-foreground">No review in progress</div>
+                </div>
               </div>
             )}
-          </div>
-
-          {/* Coach Review Queue — real category counts */}
-          <SectionCard
-            title="Coach Review Queue"
-            action={<Link to="/ai-reviews" className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline">Open Coach Studio <ArrowRight className="h-3 w-3" /></Link>}
-          >
-            <div className="rounded-lg border border-border bg-card p-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <ReviewChip icon={Brain} label="Awaiting approval" count={awaitingReview.length} tone="amber" onClick={() => navigate('/ai-reviews')} />
-                <ReviewChip icon={Loader2} label="Processing" count={processingVideos.length} tone="blue" onClick={() => navigate('/analyse')} />
-                <ReviewChip icon={AlertCircle} label="Manual review" count={manualReviewReports.length} tone="orange" onClick={() => navigate('/ai-reviews')} />
-                <ReviewChip icon={AlertCircle} label="Failed / retry" count={errorVideos.length} tone="red" onClick={() => navigate('/analyse')} />
-              </div>
-              <div className="mt-2.5 border-t border-border pt-2.5 text-[10px] text-muted-foreground">
-                {reviewTotal === 0
-                  ? 'Nothing in the review pipeline right now.'
-                  : `${reviewTotal} item${reviewTotal === 1 ? '' : 's'} in the review pipeline${activeJobs.length > 0 ? ` · ${activeJobs.length} in progress` : ''}.`}
-              </div>
-            </div>
-          </SectionCard>
-
-          {/* Recent finalised reports */}
-          {recentReports.length > 0 && (
-            <SectionCard
-              title="Recent Finalised Reports"
-              action={<Link to="/ai-reviews" className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
-            >
-              <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-                {recentReports.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-4 w-4" /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-semibold text-foreground">{r.swimmerName}</div>
-                      <div className="truncate text-[10px] text-muted-foreground">{r.title || 'Coach review report'}</div>
-                    </div>
-                    <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Open →</button>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-        </div>
-
-        {/* Right — actions + workflow + focus */}
-        <div className="space-y-5">
-
-          {/* Continue last review — jump straight back into the most recent unfinished report */}
-          {lastUnfinished && (
             <button
-              onClick={() => navigate(`/ai-review?report_id=${lastUnfinished.id}`)}
-              className="flex w-full items-center gap-3 rounded-lg border border-primary/30 bg-primary/[0.04] px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[0.07]"
+              onClick={() => { setReviewSession(null); navigate('/analyse'); }}
+              className="flex items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.03] px-4 py-4 text-left transition-colors hover:border-primary/60 hover:bg-primary/[0.06]"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary text-white"><Brain className="h-4 w-4" /></span>
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary text-white"><Upload className="h-4 w-4" /></span>
               <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Continue last review</div>
-                <div className="truncate text-xs font-semibold text-foreground">{swimmerNameFor(lastUnfinished.swimmer_id)}</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Start new</div>
+                <div className="truncate text-xs font-semibold text-foreground">Upload a swim clip to begin</div>
               </div>
               <ArrowRight className="h-4 w-4 flex-shrink-0 text-primary" />
             </button>
-          )}
+          </div>
+        </QuestionSection>
 
-          <SectionCard title="Quick Actions">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Upload Video', icon: Upload, to: '/analyse' },
-                { label: 'Add Swimmer', icon: Plus, to: '/swimmers' },
-                { label: 'Coach Studio', icon: Brain, to: '/ai-reviews' },
-                { label: 'Drill Library', icon: Dumbbell, to: '/drill-library' },
-              ].map(a => {
-                const Icon = a.icon;
-                return (
-                  <button key={a.to} onClick={() => navigate(a.to)}
-                    className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-3.5 text-center transition-colors hover:border-primary/40 hover:bg-primary/5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span>
-                    <span className="text-[10px] font-semibold text-foreground">{a.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </SectionCard>
-
-          {recentlyShared.length > 0 && (
-            <SectionCard
-              title="Recently Shared"
-              action={<Link to="/ai-reviews" className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
-            >
-              <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-                {recentlyShared.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700"><Users className="h-4 w-4" /></span>
-                    <div className="min-w-0 flex-1">
+        {/* ── Question 3 — What have you finished? ───────────────────────────── */}
+        <QuestionSection
+          n="3"
+          title="What have you finished?"
+          action={finishedList.length > 0 && <Link to="/ai-reviews" className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+        >
+          {finishedList.length > 0 ? (
+            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+              {finishedList.map(r => (
+                <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${r.isShared ? 'bg-sky-50 text-sky-700' : 'bg-emerald-50 text-emerald-600'}`}>
+                    {r.isShared ? <Share2 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
                       <div className="truncate text-xs font-semibold text-foreground">{r.swimmerName}</div>
-                      <div className="truncate text-[10px] text-muted-foreground">Shared{r.title ? ` · ${r.title}` : ''}</div>
+                      {r.isShared && <Badge tone="sky">Shared</Badge>}
                     </div>
-                    <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Open →</button>
+                    <div className="truncate text-[10px] text-muted-foreground">{r.title || 'Coach review report'}</div>
                   </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Coach Workflow</div>
-            <div className="space-y-2.5">
-              {[
-                ['1', 'Upload a 5-10 second swim clip'],
-                ['2', 'Open Coach Studio; AI assists when evidence is strong'],
-                ['3', 'Add, approve, edit, or reject findings'],
-                ['4', 'Finalise and share the coach-approved report'],
-              ].map(([num, label]) => (
-                <div key={num} className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">{num}</span>
-                  <span>{label}</span>
+                  <button onClick={() => navigate(`/ai-review?report_id=${r.id}`)} className="flex-shrink-0 text-[10px] font-semibold text-primary hover:underline">Open →</button>
                 </div>
               ))}
             </div>
-          </div>
-
-          {topFaults.length > 0 && (
-            <SectionCard title="Club Technical Focus" action={<Link to="/drill-library" className="text-[10px] font-semibold text-primary hover:underline">Drills</Link>}>
-              <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-                {topFaults.map(([name, count], i) => (
-                  <div key={name} className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-4 flex-shrink-0 text-[10px] font-bold text-muted-foreground">{i + 1}</div>
-                    <div className="flex-1 truncate text-xs text-foreground">{name}</div>
-                    <span className="flex-shrink-0 text-[10px] font-semibold text-primary">{count}×</span>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
-          <button onClick={() => navigate('/drill-library')}
-            className="flex w-full items-center gap-3 rounded-lg border border-border bg-card px-4 py-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5">
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Dumbbell className="h-4 w-4" /></span>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-foreground">Drill Library</div>
-              <div className="text-[10px] text-muted-foreground">Corrective packs and coach cues</div>
+          ) : (
+            <div className="rounded-lg border border-border bg-muted px-4 py-8 text-center text-[11px] text-muted-foreground">
+              No finalised reports yet. Finish a coach review to see it here.
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </div>
+          )}
+        </QuestionSection>
       </div>
 
       <FeedbackButton pageRoute="/dashboard" />
 
-      <div className="mt-6 flex items-center gap-1.5 border-t border-border pt-3 text-[10px] text-muted-foreground">
+      <div className="mt-8 flex items-center gap-1.5 border-t border-border pt-3 text-[10px] text-muted-foreground">
         <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
         {club.name} · live
       </div>

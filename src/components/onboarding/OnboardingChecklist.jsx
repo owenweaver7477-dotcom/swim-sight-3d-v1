@@ -77,7 +77,7 @@ export default function OnboardingChecklist({ completed, onDismiss }) {
             <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(doneCount / visibleSteps.length) * 100}%` }} />
           </div>
           {onDismiss && (
-            <button onClick={onDismiss} className="text-muted-foreground hover:text-foreground transition-colors">
+            <button onClick={onDismiss} aria-label="Dismiss onboarding checklist" className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -91,7 +91,7 @@ export default function OnboardingChecklist({ completed, onDismiss }) {
             <div
               key={step.id}
               className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                done ? 'bg-secondary/30 border-border opacity-60' : 'bg-white border-border hover:border-primary/30'
+                done ? 'bg-secondary/30 border-border opacity-60' : 'bg-card border-border hover:border-primary/30'
               }`}
             >
               <div className="flex-shrink-0">

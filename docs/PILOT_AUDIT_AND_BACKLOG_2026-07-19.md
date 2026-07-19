@@ -55,8 +55,8 @@ copy will trip it. **Repoint the guard, never delete the assertion.**
 ## 4. Roadmap H-items (first-impression shapers) — Me
 
 - [ ] **H2** Authenticated `/` renders the public HomePage (no route-level auth redirect) → logged-in coach lands on marketing page. — 🟠 S
-- [ ] **H1** Wire first-run onboarding: `onboarding/WorkflowGuide.jsx` + `OnboardingChecklist.jsx` exist but are **routed nowhere**. Build/wire, not polish. — 🟠 M
-- [ ] **H3** Trim dashboard to "3 questions only". — 🟠 M
+- [x] **H1** Wire first-run onboarding: `OnboardingChecklist` now mounts on the dashboard with real completion state (club→swimmer→video→finding→report→share) + per-club dismiss. *Done — commit `1d… (#4)`.*
+- [x] **H3** Dashboard trimmed to 3 questions (What needs review / What are you working on / What have you finished); KPI/quick-actions/workflow/tech-focus cut; all data logic preserved. *Done — commit `#4`.*
 - [ ] **H4** Report polish (`PrintableReport.jsx`). — 🟠 M–L
 - [ ] **M1** Drill taxonomy: add Dryland tab + Mobility category (Dryland drills exist in `defaultDrills.js` but unsurfaced); delete obsolete `DrillPackModal.jsx`. — 🟡 S–M
 - [ ] **M2** Demo Mode (pre-loaded coach-reviewed example report). — 🟡 M–L
