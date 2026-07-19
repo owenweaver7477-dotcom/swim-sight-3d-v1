@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
@@ -55,7 +55,8 @@ function EmptyState() {
 
 export default function ClubProgress() {
   const { club, loading } = useClubContext();
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'leaderboard' ? 'leaderboard' : 'analytics');
   const [strokeFilter, setStrokeFilter] = useState('All');
   const [squadFilter, setSquadFilter] = useState('all');
 

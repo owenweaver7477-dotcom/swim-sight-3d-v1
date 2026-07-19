@@ -145,7 +145,7 @@ export default function ClubInviteManager({ club, memberRole }) {
               <Input value={expiryDays} onChange={e => setExpiryDays(e.target.value)} placeholder="e.g. 7" type="number" className="mt-1 h-8 text-xs" />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground">Email (optional)</label>
+              <label className="text-[10px] text-muted-foreground">Email (optional — invites are shared by link)</label>
               <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="specific@email.com" className="mt-1 h-8 text-xs" />
             </div>
             {['swimmer', 'parent'].includes(newRole) && swimmers.length > 0 && (

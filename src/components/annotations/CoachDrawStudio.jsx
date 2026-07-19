@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AnnotationCanvas from './AnnotationCanvas';
 import { formatTimestamp } from '@/lib/annotationRender';
+import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 import { DEFAULT_DRILLS } from '@/lib/defaultDrills';
 import { searchAndRankDrills, drillSummary } from '@/lib/drillMatching';
 import { createPortal } from 'react-dom';
@@ -1849,11 +1850,11 @@ export default function CoachDrawStudio({
                       <p className="text-[11px] leading-4 text-slate-400">
                         Describe what you see at this moment. Drills attach in the next step.
                       </p>
-                      {reviewMode === 'ai' && sortedFindings.length > 0 && onReviewAISuggestions && (
+                      {!AI_PILOT_LOCKED && reviewMode === 'ai' && sortedFindings.length > 0 && onReviewAISuggestions && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-9 w-full border-cyan-300/40 bg-white/5 text-[11px] text-white hover:bg-white/10"
+                          className="h-9 w-full border-sky-300/40 bg-white/5 text-[11px] text-white hover:bg-white/10"
                           onClick={onReviewAISuggestions}
                         >
                           Review AI-suggested findings (coach approval required)

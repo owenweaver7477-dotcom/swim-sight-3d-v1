@@ -21,7 +21,7 @@ const CARDS = [
     description: 'Individual progress cards with score trends only when enough finalised reports exist.',
   },
   {
-    to: '/club-progress',
+    to: '/club-progress?tab=leaderboard',
     icon: Trophy,
     title: 'Team Leaderboard',
     description: 'Review consistency and improvement using coach-approved data only.',

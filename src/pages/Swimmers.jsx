@@ -131,7 +131,7 @@ function SwimmerFormFields({ form, setForm, squads, squadExtra = null }) {
           <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="in_app">Manual secure link</SelectItem>
-            <SelectItem value="email">Email when connected</SelectItem>
+            <SelectItem value="email">Email (not yet available)</SelectItem>
             <SelectItem value="none">Do not notify</SelectItem>
           </SelectContent>
         </Select>

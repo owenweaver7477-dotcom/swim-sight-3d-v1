@@ -8,7 +8,6 @@ import {
   useNavigate } from 'react-router-dom'; import entities from '@/lib/data/entities'; import functions from '@/lib/data/functions'; import { uploadPrivateVideo,
   fileSizeMb } from '@/lib/data/videoUploads'; import { getReviewSession,
   setReviewSession,
-  setCoachModeFinding,
   SWIM_STROKES_FULL,
   CAMERA_ANGLES,
   SEVERITY_LEVELS,
@@ -773,11 +772,6 @@ export default function Analyse() {
     });
   };
 
-  const handleSendToCoachMode = (finding) => {
-    setCoachModeFinding(finding);
-    navigate('/coach-mode');
-  };
-
   const videoSrc = session?.preview_url || session?.file_url;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const phases = getPhases(strokeForAnalysis);
@@ -1004,7 +998,7 @@ export default function Analyse() {
 
               <div className="space-y-2">
                 {findings.map(f => (
-                  <FindingCard key={f.id} finding={f} onSendToCoachMode={() => handleSendToCoachMode(f)} />
+                  <FindingCard key={f.id} finding={f} />
                 ))}
                 {findings.length === 0 && !showFindingForm && (
                   <p className="text-[10px] text-muted-foreground text-center py-3">Tag a fault above or add a finding manually.</p>

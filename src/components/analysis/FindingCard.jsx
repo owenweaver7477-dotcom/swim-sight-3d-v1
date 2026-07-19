@@ -1,11 +1,11 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { SEVERITY_LEVELS } from '@/lib/swimState';
 import entities from '@/lib/data/entities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-export default function FindingCard({ finding, onSendToCoachMode }) {
+export default function FindingCard({ finding }) {
   const queryClient = useQueryClient();
   const severity = SEVERITY_LEVELS.find(s => s.value === finding.severity);
 
@@ -34,11 +34,8 @@ export default function FindingCard({ finding, onSendToCoachMode }) {
         </div>
       )}
       <div className="flex gap-1 mt-2">
-        <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={onSendToCoachMode}>
-          <Eye className="w-3 h-3 mr-1" /> Coach Mode
-        </Button>
         <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2 text-destructive" onClick={() => deleteFinding.mutate()}>
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-3 h-3" /> Delete
         </Button>
       </div>
     </div>

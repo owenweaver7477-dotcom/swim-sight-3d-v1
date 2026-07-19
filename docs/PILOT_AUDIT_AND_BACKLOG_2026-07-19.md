@@ -43,14 +43,14 @@ Fix before a coach touches the manual path. ⚠️ **Guard tension:** `check_pha
 pins the literals `"AI-assisted draft review"` and `"Elite Studio"/"preview"` — softening that AI
 copy will trip it. **Repoint the guard, never delete the assertion.**
 
-- [ ] **C6-001** `FindingCard.jsx:37 → Analyse.jsx:1007` — "Coach Mode" button → `/coach-mode` redirects to `/ai-reviews`, context lost. Live manual path. — 🟠 S
-- [ ] **C6-002** `CoachDrawStudio.jsx:1852` — "Review AI-suggested findings" on manual reports, **not gated by `AI_PILOT_LOCKED`** — AI wording leaks through the manual-first lock. — 🟠 S
-- [ ] **C6-004** `ClubSettings.jsx:569` — "Reset Stuck Videos" cites "Admin Tools on any video card" that don't exist. — 🟠 S
-- [ ] **C6-003** `CoachDrawStudio.jsx:2514 / AIReportPage.jsx:983` — "Re-share updated report" wording on first finalise (no link yet). **Protected share flow — APPROVE-gated / Owner.** — 🟠 S
-- [ ] **C6-005** `PerformanceHub.jsx:24` — "Team Leaderboard" card lands on Analytics tab, not a leaderboard. — 🟡 S
-- [ ] **C6-006/007** Email options that save a preference but send nothing (no provider) — Owner decision (wire provider vs honest copy). — 🟡 S
-- [ ] **C6-008** `AIFindingCard.jsx:147,359` — "Why reject this AI draft?" copy not gated by the lock. — 🟡 S
-- [ ] **C6-009/010/011/012** Honest-but-unfinished copy (premium teaser, "email not connected yet", duplicate "Invite Coach"). — 🟢 S
+- [x] **C6-001** "Coach Mode" dead-end button removed from FindingCard (+ handler/import cleanup in Analyse). *Done.*
+- [x] **C6-002** "Review AI-suggested findings" button now gated behind `!AI_PILOT_LOCKED` (+ cyan→sky). *Done.*
+- [x] **C6-004** "Reset Stuck Videos" copy fixed to the real action (delete + re-upload). *Done.*
+- [ ] **C6-003** "Re-share updated report" wording on first finalise. **Protected share flow — left for Owner (APPROVE-gated).**
+- [x] **C6-005** "Team Leaderboard" now deep-links `?tab=leaderboard` (added query-param tab support to ClubProgress). *Done.*
+- [x] **C6-006/007** Email options relabelled honestly ("Email (not yet available)" / "invites are shared by link") — non-destructive interim; wiring a provider is still an Owner call. *Done (interim).*
+- [x] **C6-008** "Why reject this AI draft?" → "Why reject this finding?" (neutral). *Done.*
+- [x] **C6-009/010/011** Honest copy reworded as intentional (share-by-link, PDF-from-browser). *Done.* · [ ] **C6-012** duplicate "Invite Coach" dest — keep (deep-link post-pilot).
 
 ## 4. Roadmap H-items (first-impression shapers) — Me
 

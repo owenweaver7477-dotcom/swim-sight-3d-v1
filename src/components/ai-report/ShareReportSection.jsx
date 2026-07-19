@@ -300,7 +300,7 @@ export default function ShareReportSection({ report, reportId, swimmer, canEdit,
             <div>
               <div className="text-xs font-semibold text-foreground">Notify Swimmer / Parent</div>
               <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-                Email delivery is not connected yet. Copy the secure report link and send it manually.
+                Reports are shared by secure link — copy it and send it to the swimmer or parent.
               </p>
             </div>
           </div>

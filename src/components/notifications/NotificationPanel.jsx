@@ -125,7 +125,7 @@ export default function NotificationPanel() {
         </div>
         <div className="px-4 py-3 border-t border-border">
           <p className="text-[10px] text-muted-foreground text-center">
-            Email sending is not connected yet. Manual delivery only.
+            Reports are delivered by secure link — copy and send it to the swimmer or parent.
           </p>
         </div>
       </SheetContent>

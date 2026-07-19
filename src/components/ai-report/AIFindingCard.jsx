@@ -356,7 +356,7 @@ export default function AIFindingCard({
               {showRejectReason && (
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
-                    Why reject this AI draft?
+                    Why reject this finding?
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {REJECTION_REASONS.map(reason => (

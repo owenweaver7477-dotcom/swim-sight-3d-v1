@@ -1892,7 +1892,7 @@ export default function AIReportPage() {
               )}
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] leading-relaxed text-slate-600">
-              Browser print/PDF is available now. Premium export controls will be part of future plan settings.
+              Download or print the report as a PDF straight from your browser.
             </div>
             <ApprovedCoachReport
               report={report}
