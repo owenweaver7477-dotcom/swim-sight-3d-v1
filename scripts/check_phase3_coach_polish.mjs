@@ -9,7 +9,9 @@ const read = (relativePath) => readFile(path.join(root, relativePath), 'utf8');
 const supportConfig = await read('src/lib/supportConfig.js');
 const feedbackForm = await read('src/components/pilot/CoachPilotFeedbackForm.jsx');
 const feedbackModal = await read('src/components/coach-testing/FeedbackModal.jsx');
-const bugReportModal = await read('src/components/coach-testing/BugReportModal.jsx');
+// BugReportModal was part of the (dead, base44-backed) coach-testing island removed
+// in the #7 cleanup; the central-support-email rule below is still enforced across
+// the live support surfaces (supportConfig, feedbackForm, feedbackModal).
 const coachWorkflow = await read('src/components/coach-studio/CoachStudioWorkflowPanel.jsx');
 const coachDraw = await read('src/components/annotations/CoachDrawStudio.jsx');
 const drillLibrary = await read('src/pages/DrillLibrary.jsx');
@@ -22,7 +24,7 @@ const pilotReadinessGate = await read('src/components/pilot/PilotReadinessGate.j
 const featureReadiness = await read('src/lib/featureReadiness.js');
 const aiReportPage = await read('src/pages/AIReportPage.jsx');
 
-for (const source of [supportConfig, feedbackForm, feedbackModal, bugReportModal]) {
+for (const source of [supportConfig, feedbackForm, feedbackModal]) {
   assert.match(source, /swimsight3d\.support@gmail\.com|SUPPORT_EMAIL/, 'support routing must use the central support email');
 }
 

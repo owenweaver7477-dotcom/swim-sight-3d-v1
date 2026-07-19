@@ -81,8 +81,9 @@ copy will trip it. **Repoint the guard, never delete the assertion.**
 ~300KB / 77 unreachable files. Some is **intentionally parked** (base44, 3D) — confirm before deleting.
 - [x] **Deleted 11 confirmed-dead files (1,572 lines)**: radix toast (`ui/toaster`+`ui/use-toast`, superseded by sonner), `VideoAnnotator`+`AnnotationsPanel` (dead dup of live CoachDrawStudio), `WorkflowGuide` (superseded by the wired OnboardingChecklist), and the C6 "Remove" orphans (`Footer`, `AnalysisSetup`, `SideBySideComparison`, `ModelAssetStatusPanel`, `ShareClipButton`, `DrillPackModal`). Build + 18 guards green. *Done.*
 - [x] Removed the broken git ref `.git/refs/heads/simplify-remove-elite-lab 2` (space in name, warned on every git op). *Done.*
-- [ ] **Deferred to a dedicated pass** (bigger / parked / needs `npm install` lockfile sync): drop `next-themes` + `react-hot-toast` deps; the base44 island + coach-testing tabs (roadmap **H7**); `three`+`@react-three/fiber` + the 3D/HUD cluster (parked **post-pilot** per roadmap N-series); 36/49 scaffolding `ui/` components; delete merged branch `feature/coach-studio-3-step` + prune 12 stale branches. — 🟡 M
+- [x] **Deferred-pass DONE**: deleted the **base44 island** (H7 — 9 files incl. client, + removed the `@base44/vite-plugin` from vite.config and re-added the `@/`→`src/` alias it was silently providing), the **3D/HUD cluster** (`three`+`@react-three/fiber`), and **33 dead `ui/` scaffolding** components — **58 files / ~6.1k lines**. Pruned **12 unused deps** via `npm uninstall` (base44 ×2, three, @react-three/fiber, next-themes, react-hot-toast, embla, vaul, cmdk, input-otp, react-day-picker, react-resizable-panels). Repointed `phase3-coach-polish` off the deleted BugReportModal. Build + lint + 18 guards green. *Done.*
 - [ ] **Elite Studio phantom** (no route/page; alive only via a guard pin). Remove + repoint the guard. — 🟢 S
+- [ ] Delete merged branch `feature/coach-studio-3-step` + prune 12 stale local branches. — 🟢 S (git hygiene, not on the deploy path)
 
 ## Guard-suite notes (for whoever touches the above)
 
