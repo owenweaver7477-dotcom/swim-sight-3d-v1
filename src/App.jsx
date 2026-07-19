@@ -1,7 +1,10 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { Toaster } from "@/components/ui/toaster"
+// Live code calls sonner's toast() (safeguarding + share-report feedback), so mount
+// sonner's Toaster — the radix one previously mounted here had no callers and rendered
+// nothing, so those success/error toasts never appeared.
+import { Toaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';

@@ -73,8 +73,8 @@ copy will trip it. **Repoint the guard, never delete the assertion.**
 
 ## 6. Correctness — verify (not cosmetic) — Me
 
-- [ ] **Toast wiring**: radix `<Toaster>` mounted but never called; `sonner.toast()` is called (safeguarding/share actions) but its `<Toaster>` is **never mounted** → user feedback may silently not render. Browser-confirm. — 🟡 M
-- [ ] **`dangerouslySetInnerHTML`** on the share path (`SharedReportPage`, `PrintableReport` render `rendered_svg`): confirm the SVG serializer (`lib/annotationRender.js`) can only emit structured coach-draw markup, not attacker input. Protected surface — verify, don't assume. — 🟡 M
+- [x] **Toast wiring FIXED**: App mounted the callerless radix `<Toaster>`; live code calls `sonner.toast()`. Swapped the mount to sonner's Toaster (browser-confirmed its live region now mounts) → safeguarding + share feedback renders. Radix toast is now fully dead (folds into #7). *Done.*
+- [x] **`dangerouslySetInnerHTML` VERIFIED SAFE**: `lib/annotationRender.js` escapes the only free-text field (`shape.text`), validates colors (`safeColor`+`esc`), and clamps/`toFixed` all numerics — no attacker-controllable markup; input is coach-authored. No change needed. *Verified.*
 
 ## 7. Dead-code & hygiene — Me (with Owner call on "parked" bits)
 
