@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Check, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -29,25 +29,45 @@ export default function SwimmerSafeguardingPanel({ swimmer }) {
     retry: false,
   });
 
+  // functions.getSwimmerConsent returns { data: { consent_record } } (parseResponse
+  // wraps the body under `data`) — the extra `.data` here is the fix that made the
+  // saved consent actually show, so the panel no longer looks like it "didn't save".
+  const savedRecord = data?.data?.consent_record;
+  const isRecorded = Boolean(savedRecord?.id);
+
   useEffect(() => {
-    const record = data?.consent_record;
-    if (!record) return;
+    if (!savedRecord) return;
     setForm({
-      is_minor: record.is_minor === true,
-      consent_status: record.consent_status || 'none',
-      guardian_name: record.guardian_name || '',
-      guardian_email: record.guardian_email || '',
-      consent_source: record.consent_source || '',
+      is_minor: savedRecord.is_minor === true,
+      consent_status: savedRecord.consent_status || 'none',
+      guardian_name: savedRecord.guardian_name || '',
+      guardian_email: savedRecord.guardian_email || '',
+      consent_source: savedRecord.consent_source || '',
     });
-  }, [data]);
+  }, [savedRecord]);
 
   const saveConsent = useMutation({
     mutationFn: () => functions.saveSwimmerConsent(swimmer.id, form),
     onSuccess: (result) => {
       queryClient.setQueryData(queryKey, result);
+      queryClient.invalidateQueries({ queryKey: ['analysis-swimmer-consent', swimmer?.id] });
       toast.success('Safeguarding record saved');
     },
     onError: (error) => toast.error(error?.message || 'Could not save the safeguarding record.'),
+  });
+
+  // Discard: clear the recorded consent back to "not recorded" (keeps the minor flag).
+  const discardConsent = useMutation({
+    mutationFn: () => functions.saveSwimmerConsent(swimmer.id, {
+      ...form, consent_status: 'none', guardian_name: '', guardian_email: '', consent_source: '',
+    }),
+    onSuccess: (result) => {
+      queryClient.setQueryData(queryKey, result);
+      queryClient.invalidateQueries({ queryKey: ['analysis-swimmer-consent', swimmer?.id] });
+      setForm((current) => ({ ...current, consent_status: 'none', guardian_name: '', guardian_email: '', consent_source: '' }));
+      toast.success('Consent discarded');
+    },
+    onError: (error) => toast.error(error?.message || 'Could not discard the consent record.'),
   });
 
   const guardianDetailsRequired = form.is_minor && form.consent_status === 'granted';
@@ -62,9 +82,16 @@ export default function SwimmerSafeguardingPanel({ swimmer }) {
           <ShieldCheck className="h-4 w-4 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 id="swimmer-safeguarding-title" className="text-sm font-bold text-foreground">
-            Safeguarding and consent
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 id="swimmer-safeguarding-title" className="text-sm font-bold text-foreground">
+              Safeguarding and consent
+            </h3>
+            {savedRecord?.consent_status === 'granted' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                <Check className="h-3 w-3" /> Recorded
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Record the club's approved consent status before using footage. Policy wording remains a draft until reviewed by a qualified lawyer.
           </p>
@@ -149,15 +176,35 @@ export default function SwimmerSafeguardingPanel({ swimmer }) {
             <p className="text-xs text-muted-foreground">
               Guardian contact is restricted to authorised club staff and is excluded from shared reports.
             </p>
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-11 sm:min-w-32"
-              disabled={isLoading || saveConsent.isPending || !canSave}
-              onClick={() => saveConsent.mutate()}
-            >
-              {saveConsent.isPending ? 'Saving...' : 'Save consent'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="min-h-11 sm:min-w-32"
+                disabled={isLoading || saveConsent.isPending || discardConsent.isPending || !canSave}
+                onClick={() => saveConsent.mutate()}
+              >
+                {saveConsent.isPending
+                  ? 'Saving...'
+                  : saveConsent.isSuccess
+                    ? <><Check className="mr-1 h-3.5 w-3.5" /> Saved</>
+                    : isRecorded ? 'Update consent' : 'Save consent'}
+              </Button>
+              {isRecorded && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11 px-3 text-destructive hover:bg-destructive/10"
+                  title="Discard the recorded consent"
+                  aria-label="Discard the recorded consent"
+                  disabled={isLoading || saveConsent.isPending || discardConsent.isPending}
+                  onClick={() => discardConsent.mutate()}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
