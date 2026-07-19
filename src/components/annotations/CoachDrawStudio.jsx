@@ -882,7 +882,7 @@ export default function CoachDrawStudio({
     if (!onReshare) return;
     try {
       await onReshare();
-      setActionFeedback({ type: 'success', msg: 'Re-shared — the original link works again with the updated report.' });
+      setActionFeedback({ type: 'success', msg: 'Shared — the link is live with the updated report.' });
     } catch (error) {
       console.warn('Re-share did not complete.', error?.message || error);
       setActionFeedback({ type: 'error', msg: `Could not re-share: ${readableError(error)}.` });
@@ -2514,7 +2514,7 @@ export default function CoachDrawStudio({
                 )}
                 {!shareLink && onReshare && (
                   <Button className="h-11 w-full bg-cyan-500 text-white hover:bg-cyan-400" onClick={runReshare} disabled={resharing}>
-                    <Share2 className="mr-1.5 h-4 w-4" /> {resharing ? 'Re-sharing…' : 'Re-share updated report'}
+                    <Share2 className="mr-1.5 h-4 w-4" /> {resharing ? 'Sharing…' : 'Share updated report'}
                   </Button>
                 )}
                 <Button variant="outline" className="h-11 w-full border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={() => setFinaliseFlow('idle')}>

@@ -15,7 +15,36 @@ import {
   ArrowRight, Activity, Archive, Users, User, Target, ExternalLink, Lock, Palette
 } from 'lucide-react';
 import ClubInviteManager from '@/components/club/ClubInviteManager';
+import MemberAvatar from '@/components/shared/MemberAvatar';
 import { Link, useNavigate } from 'react-router-dom';
+
+// ── Club members list (avatars + names) via the club-scoped SECURITY DEFINER RPC ──
+function ClubMembersList({ club }) {
+  const { data: members = [] } = useQuery({
+    queryKey: ['club-member-avatars', club?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('club_member_avatars', { target_club_id: club.id });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!club?.id,
+    staleTime: 2 * 60 * 1000,
+  });
+  if (!members.length) return null;
+  return (
+    <div className="mb-4">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Members ({members.length})</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {members.map((m) => (
+          <div key={m.user_id} className="flex items-center gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+            <MemberAvatar name={m.full_name} path={m.avatar_url} size="sm" />
+            <div className="min-w-0 truncate text-xs font-medium text-foreground">{m.full_name || 'Member'}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ── Shared club save (existing `clubs` columns only, with migration-011 fallback) ──
 function useClubSave() {
@@ -675,6 +704,7 @@ export default function ClubSettings() {
             <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-primary" /> Members & Invites
             </h3>
+            <ClubMembersList club={club} />
             <ClubInviteManager club={club} memberRole={memberRole} />
             <p className="text-[10px] text-muted-foreground mt-3">Changing existing member roles and removing members is coming later.</p>
           </div>
