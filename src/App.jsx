@@ -68,6 +68,18 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// Authenticated visitors who land on the marketing root get sent into the app
+// instead of the public homepage. Render HomePage until auth resolves so logged-out
+// visitors (the common case) see the landing page with no delay; once authenticated,
+// redirect to /dashboard and let AppLayout route coaches vs swimmers/parents.
+function HomeRoute() {
+  const { isAuthenticated, authChecked } = useAuth();
+  if (authChecked && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <HomePage />;
+}
+
 function AnalyseRoute() {
   const location = useLocation();
   const { club, memberRole } = useClubContext();
@@ -149,7 +161,7 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Public website routes — crawlable marketing structure, no app sidebar */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<HomeRoute />} />
       <Route path="/for-coaches" element={<ForCoachesPage />} />
       <Route path="/coach-approved-ai" element={<CoachApprovedAIPage />} />
       <Route path="/privacy-video-review" element={<PrivacyVideoReviewPage />} />
