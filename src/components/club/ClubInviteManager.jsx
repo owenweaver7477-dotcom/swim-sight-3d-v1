@@ -34,6 +34,7 @@ export default function ClubInviteManager({ club, memberRole }) {
   const [maxUses, setMaxUses] = useState('');
   const [expiryDays, setExpiryDays] = useState('');
   const [copied, setCopied] = useState('');
+  const [emailNote, setEmailNote] = useState('');
 
   const { data: invites = [] } = useQuery({
     queryKey: ['club-invites', club?.id],
@@ -81,10 +82,17 @@ export default function ClubInviteManager({ club, memberRole }) {
         max_uses: maxUses ? parseInt(maxUses, 10) : undefined,
         expires_at: expiresAt,
       });
-      return data.invite;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['club-invites', club?.id] });
+      if (data?.invite?.email) {
+        setEmailNote(data?.email?.sent
+          ? `Invite emailed to ${data.invite.email}.`
+          : 'Invite created — email delivery isn’t set up yet, so share the link below.');
+      } else {
+        setEmailNote('');
+      }
       setNewEmail('');
       setMaxUses('');
       setExpiryDays('');
@@ -171,6 +179,9 @@ export default function ClubInviteManager({ club, memberRole }) {
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
               {createInvite.error?.message || 'Unable to create invite.'}
             </div>
+          )}
+          {emailNote && !createInvite.isError && (
+            <div className="text-[11px] text-muted-foreground">{emailNote}</div>
           )}
         </div>
       )}

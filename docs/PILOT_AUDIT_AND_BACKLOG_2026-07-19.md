@@ -48,7 +48,7 @@ copy will trip it. **Repoint the guard, never delete the assertion.**
 - [x] **C6-004** "Reset Stuck Videos" copy fixed to the real action (delete + re-upload). *Done.*
 - [ ] **C6-003** "Re-share updated report" wording on first finalise. **Protected share flow — left for Owner (APPROVE-gated).**
 - [x] **C6-005** "Team Leaderboard" now deep-links `?tab=leaderboard` (added query-param tab support to ClubProgress). *Done.*
-- [x] **C6-006/007** Email options relabelled honestly ("Email (not yet available)" / "invites are shared by link") — non-destructive interim; wiring a provider is still an Owner call. *Done (interim).*
+- [x] **C6-006/007 / email** — provider-agnostic integration **built** (`api/_lib/email.js`, wired into invite creation; the invite UI reports whether it emailed or is link-only). **Dormant until keyed:** set `EMAIL_API_KEY` + `EMAIL_FROM` (+ optional `APP_BASE_URL`) in Vercel — e.g. a Resend account with a verified sending domain — to activate. Invites work by link until then. *Done (code); Owner provisions the provider.*
 - [x] **C6-008** "Why reject this AI draft?" → "Why reject this finding?" (neutral). *Done.*
 - [x] **C6-009/010/011** Honest copy reworded as intentional (share-by-link, PDF-from-browser). *Done.* · [ ] **C6-012** duplicate "Invite Coach" dest — keep (deep-link post-pilot).
 
