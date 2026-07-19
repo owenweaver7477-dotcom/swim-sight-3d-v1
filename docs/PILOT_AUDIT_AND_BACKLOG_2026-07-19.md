@@ -26,9 +26,9 @@ Severity: 🔴 blocker · 🟠 high · 🟡 med · 🟢 low. Effort: S/M/L.
 
 The public site is flat/modernist now; the logged-in app still wears the old futuristic skin.
 
-- [ ] **SharedReportPage.jsx** (`/shared-report/:token`) — dark gradient page + cyan/blue blocks + backdrop-blur → flat light. **What parents/swimmers see.** Protected surface: className/layout only, no data/visibility change. — 🟠 M
-- [ ] **TeamDashboard.jsx** — 8 gradients + radial bloom + cyan + glow; **0 theme tokens / 58 hardcoded colors** → flat + tokenised (also fixes dark mode). Main coach landing. — 🟠 M
-- [ ] **PrintableReport.jsx** — gradient print button + logo block → flat (shows in PDF). — 🟡 S
+- [x] **SharedReportPage.jsx** (`/shared-report/:token`) — dark → flat light, className-only (protected invariant verified), public-report-safety green. *Done — commit `833b5a0`.*
+- [x] **TeamDashboard.jsx** — gradients/radial/cyan/glow removed + **fully tokenised** (0 hardcoded light colors → dark mode now works). *Done — commit `833b5a0`.*
+- [x] **PrintableReport.jsx** — gradient print button/score block + cyan pill → flat; card de-glowed. *Done — commit `833b5a0`.*
 - [ ] **CoachDrawStudio.jsx** — `cyan-400` systemic accent (34 refs) → sky-700. Studio stays dark; just the accent. — 🟡 M
 - [ ] Smaller leftovers: `PageNotFound` (dark + cyan pills), `AIInTestingCard`, `Sidebar` avatar gradient, `AICreditIndicator`. — 🟢 S each
 
