@@ -39,7 +39,7 @@ function TrendCard({ swimmer, squad, reports, findings }) {
   const latestReport = [...reports].sort((a, b) => new Date(reportDate(b)) - new Date(reportDate(a)))[0];
 
   return (
-    <div className="p-4 rounded-xl bg-white border border-border">
+    <div className="p-4 rounded-xl bg-card border border-border">
       <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Waves className="w-5 h-5 text-primary" />
@@ -77,9 +77,9 @@ function TrendCard({ swimmer, squad, reports, findings }) {
           </div>
         </div>
       ) : (
-        <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-          <div className="text-xs font-semibold text-slate-700">Trend appears after {MIN_TREND_REPORTS} scored finalised reports</div>
-          <p className="text-[10px] text-slate-500 mt-1">Current scored reports: {trend.count}. The app will not infer improvement from insufficient data.</p>
+        <div className="mb-4 p-3 rounded-lg bg-muted border border-border">
+          <div className="text-xs font-semibold text-foreground">Trend appears after {MIN_TREND_REPORTS} scored finalised reports</div>
+          <p className="text-[10px] text-muted-foreground mt-1">Current scored reports: {trend.count}. The app will not infer improvement from insufficient data.</p>
         </div>
       )}
 
@@ -148,7 +148,7 @@ function latestFocus(findings, limit) {
 // ── Small metric card ─────────────────────────────────────────────────────────
 function Metric({ icon: Icon, label, value, sub }) {
   return (
-    <div className="p-4 rounded-xl bg-white border border-border">
+    <div className="p-4 rounded-xl bg-card border border-border">
       <Icon className="w-4 h-4 text-primary mb-2" />
       <div className="text-2xl font-black text-foreground">{value}</div>
       <div className="text-[10px] text-muted-foreground">{label}</div>
@@ -160,10 +160,10 @@ function Metric({ icon: Icon, label, value, sub }) {
 // ── Honest low-data state for aggregate scopes ────────────────────────────────────
 function LowDataState({ scopeLabel, scoredCount }) {
   return (
-    <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center">
+    <div className="p-6 rounded-xl bg-muted border border-border text-center">
       <AlertTriangle className="w-7 h-7 text-amber-500 mx-auto mb-2" />
-      <div className="text-sm font-semibold text-slate-800">Not enough data for a {scopeLabel} trend yet</div>
-      <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
+      <div className="text-sm font-semibold text-foreground">Not enough data for a {scopeLabel} trend yet</div>
+      <p className="text-[11px] text-muted-foreground mt-1 max-w-md mx-auto">
         A trend line appears after {MIN_TREND_REPORTS}+ scored, coach-approved reports in this view. Currently {scoredCount}. The app will not infer progress from insufficient data.
       </p>
     </div>
@@ -194,7 +194,7 @@ function AggregateTrend({ scopeLabel, reports, findings, swimmerCount, membershi
       {membershipNote && <div className="text-[10px] text-muted-foreground">{membershipNote}</div>}
 
       {enough ? (
-        <div className="p-4 rounded-xl bg-white border border-border">
+        <div className="p-4 rounded-xl bg-card border border-border">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Average overall score over time</div>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={series} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
@@ -212,7 +212,7 @@ function AggregateTrend({ scopeLabel, reports, findings, swimmerCount, membershi
       )}
 
       {topFaults.length > 0 && (
-        <div className="p-4 rounded-xl bg-white border border-border">
+        <div className="p-4 rounded-xl bg-card border border-border">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Top approved findings</div>
           <div className="space-y-1.5">
             {topFaults.map((fault, index) => (
@@ -327,7 +327,7 @@ export default function SwimmerTrends() {
   if (!club) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="p-10 rounded-xl bg-white border border-border text-center">
+        <div className="p-10 rounded-xl bg-card border border-border text-center">
           <Waves className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
           <div className="text-sm font-medium text-foreground mb-1">No club workspace selected</div>
           <p className="text-xs text-muted-foreground">Create or join a club to view swimmer trends.</p>
@@ -361,13 +361,13 @@ export default function SwimmerTrends() {
       </div>
 
       {/* Scope selector */}
-      <div className="mb-5 inline-flex rounded-xl bg-slate-100 p-1">
+      <div className="mb-5 inline-flex rounded-xl bg-muted p-1">
         {scopes.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setScope(id)}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-              scope === id ? 'bg-white text-primary shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'
+              scope === id ? 'bg-card text-primary shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {label}
@@ -376,17 +376,17 @@ export default function SwimmerTrends() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-2 p-3 rounded-xl bg-white border border-border">
+      <div className="mb-6 flex flex-wrap gap-2 p-3 rounded-xl bg-card border border-border">
         {scope !== 'club' && (
-          <select value={squadFilter} onChange={event => setSquadFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
+          <select value={squadFilter} onChange={event => setSquadFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-card">
             <option value="all">{scope === 'squad' ? 'Select a squad…' : 'All squads'}</option>
             {squads.map(squad => <option key={squad.id} value={squad.id}>{squad.name}</option>)}
           </select>
         )}
-        <select value={strokeFilter} onChange={event => setStrokeFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
+        <select value={strokeFilter} onChange={event => setStrokeFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-card">
           {STROKE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
-        <select value={rangeFilter} onChange={event => setRangeFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-white">
+        <select value={rangeFilter} onChange={event => setRangeFilter(event.target.value)} className="text-xs px-3 py-2 rounded-lg border border-border bg-card">
           {RANGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
       </div>
@@ -406,7 +406,7 @@ export default function SwimmerTrends() {
           </div>
 
           {data.individualVisible.length === 0 ? (
-            <div className="p-10 rounded-xl bg-white border border-border text-center">
+            <div className="p-10 rounded-xl bg-card border border-border text-center">
               <Waves className="w-9 h-9 text-muted-foreground mx-auto mb-3 opacity-50" />
               <div className="text-sm font-semibold text-foreground">No finalised reports in this view</div>
               <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
@@ -422,9 +422,9 @@ export default function SwimmerTrends() {
           )}
 
           {data.individualNoReports.length > 0 && (
-            <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
-              <p className="text-[10px] text-amber-800 leading-relaxed">
+            <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 dark:bg-amber-500/10 dark:border-amber-500/30">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 dark:text-amber-400" />
+              <p className="text-[10px] text-amber-800 leading-relaxed dark:text-amber-300">
                 {data.individualNoReports.length} swimmer{data.individualNoReports.length !== 1 ? 's' : ''} in this filter have no finalised reports yet.
               </p>
             </div>
@@ -432,7 +432,7 @@ export default function SwimmerTrends() {
         </>
       ) : scope === 'squad' ? (
         squadFilter === 'all' ? (
-          <div className="p-10 rounded-xl bg-white border border-border text-center">
+          <div className="p-10 rounded-xl bg-card border border-border text-center">
             <Users className="w-9 h-9 text-muted-foreground mx-auto mb-3 opacity-50" />
             <div className="text-sm font-semibold text-foreground">Select a squad</div>
             <p className="text-xs text-muted-foreground mt-1">

@@ -25,7 +25,7 @@ const STROKES = ['All', 'Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
-    <div className="p-4 rounded-xl bg-white border border-border">
+    <div className="p-4 rounded-xl bg-card border border-border">
       <div className="flex items-center gap-2 mb-2">
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
           <Icon className="w-4 h-4 text-primary" />
@@ -40,7 +40,7 @@ function StatCard({ icon: Icon, label, value, sub }) {
 
 function EmptyState() {
   return (
-    <div className="p-10 rounded-xl bg-white border border-border text-center space-y-3">
+    <div className="p-10 rounded-xl bg-card border border-border text-center space-y-3">
       <Waves className="w-9 h-9 text-muted-foreground mx-auto opacity-50" />
       <div className="text-sm font-semibold text-foreground">Not enough finalised reports yet</div>
       <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
@@ -167,7 +167,7 @@ export default function ClubProgress() {
   if (!club) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="p-10 rounded-xl bg-white border border-border text-center">
+        <div className="p-10 rounded-xl bg-card border border-border text-center">
           <Waves className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
           <div className="text-sm font-medium text-foreground mb-1">No club workspace selected</div>
           <p className="text-xs text-muted-foreground">Create or join a club to view progress.</p>
@@ -211,7 +211,7 @@ export default function ClubProgress() {
             type="button"
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold ${
-              activeTab === key ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              activeTab === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Icon className="w-3.5 h-3.5" /> {label}
@@ -232,7 +232,7 @@ export default function ClubProgress() {
 
           {!canChart ? <EmptyState /> : (
             <>
-              <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-white border border-border">
+              <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-card border border-border">
                 <span className="text-[10px] text-muted-foreground self-center mr-1">Stroke</span>
                 {STROKES.map(stroke => (
                   <button
@@ -266,7 +266,7 @@ export default function ClubProgress() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-white border border-border">
+                <div className="p-4 rounded-xl bg-card border border-border">
                   <div className="text-xs font-bold text-foreground mb-3">Reports by Stroke</div>
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={progress.reportsByStroke}>
@@ -279,7 +279,7 @@ export default function ClubProgress() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="p-4 rounded-xl bg-white border border-border">
+                <div className="p-4 rounded-xl bg-card border border-border">
                   <div className="text-xs font-bold text-foreground mb-3">Reviews</div>
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={progress.modeCounts}>
@@ -293,7 +293,7 @@ export default function ClubProgress() {
                 </div>
 
                 {progress.commonFindings.length > 0 && (
-                  <div className="p-4 rounded-xl bg-white border border-border">
+                  <div className="p-4 rounded-xl bg-card border border-border">
                     <div className="flex items-center gap-2 mb-3">
                       <Target className="w-4 h-4 text-primary" />
                       <div className="text-xs font-bold text-foreground">Common Approved Findings</div>
@@ -315,7 +315,7 @@ export default function ClubProgress() {
                 )}
 
                 {progress.phaseFocus.length > 0 && (
-                  <div className="p-4 rounded-xl bg-white border border-border">
+                  <div className="p-4 rounded-xl bg-card border border-border">
                     <div className="flex items-center gap-2 mb-3">
                       <Waves className="w-4 h-4 text-primary" />
                       <div className="text-xs font-bold text-foreground">Stroke Phases Needing Attention</div>
@@ -332,7 +332,7 @@ export default function ClubProgress() {
                 )}
 
                 {progress.reportsBySquad.length > 0 && (
-                  <div className="p-4 rounded-xl bg-white border border-border">
+                  <div className="p-4 rounded-xl bg-card border border-border">
                     <div className="text-xs font-bold text-foreground mb-3">Reports by Squad</div>
                     <div className="space-y-2">
                       {progress.reportsBySquad.map(item => (
@@ -346,7 +346,7 @@ export default function ClubProgress() {
                 )}
 
                 {severityTotal > 0 && (
-                  <div className="p-4 rounded-xl bg-white border border-border">
+                  <div className="p-4 rounded-xl bg-card border border-border">
                     <div className="text-xs font-bold text-foreground mb-3">Severity Mix</div>
                     <div className="space-y-2">
                       {Object.entries(progress.severity).filter(([, count]) => count > 0).map(([severity, count]) => (
@@ -365,7 +365,7 @@ export default function ClubProgress() {
                 )}
               </div>
 
-              <div className="p-4 rounded-xl bg-white border border-border">
+              <div className="p-4 rounded-xl bg-card border border-border">
                 <div className="text-xs font-bold text-foreground mb-3">Recent Finalised Reports</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {progress.recentReports.map(({ report, swimmer, squad }) => (

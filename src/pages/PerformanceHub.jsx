@@ -35,7 +35,7 @@ function HubCard({ card, metric }) {
     <button
       type="button"
       onClick={() => navigate(card.to)}
-      className="group w-full text-left p-5 rounded-xl bg-white border border-border hover:border-primary/40 hover:shadow-sm transition-all"
+      className="group w-full text-left p-5 rounded-lg bg-card border border-border hover:border-primary/40 hover:shadow-sm transition-all"
     >
       <div className="flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -54,7 +54,7 @@ function HubCard({ card, metric }) {
 
 function MiniMetric({ icon: Icon, label, value, sub }) {
   return (
-    <div className="p-4 rounded-xl bg-white border border-border">
+    <div className="p-4 rounded-lg bg-card border border-border">
       <Icon className="w-4 h-4 text-primary mb-2" />
       <div className="text-2xl font-black text-foreground">{value}</div>
       <div className="text-[10px] text-muted-foreground">{label}</div>
@@ -111,7 +111,7 @@ export default function PerformanceHub() {
   if (!club) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="p-10 rounded-xl bg-white border border-border text-center">
+        <div className="p-10 rounded-lg bg-card border border-border text-center">
           <Waves className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
           <div className="text-sm font-medium text-foreground mb-1">No club workspace selected</div>
           <p className="text-xs text-muted-foreground">Create or join a club to view progress tools.</p>
@@ -150,7 +150,7 @@ export default function PerformanceHub() {
           </div>
 
           {summary.completed.length === 0 && (
-            <div className="mb-6 p-5 rounded-xl bg-white border border-border text-center">
+            <div className="mb-6 p-5 rounded-lg bg-card border border-border text-center">
               <Waves className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-50" />
               <div className="text-sm font-semibold text-foreground">Progress unlocks after finalised reports</div>
               <p className="text-xs text-muted-foreground mt-1">Run a review, approve findings, and finalise the report to start building honest trend data.</p>
@@ -158,10 +158,10 @@ export default function PerformanceHub() {
           )}
 
           {summary.commonFocus && (
-            <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700 mb-1">Current common focus</div>
-              <div className="text-sm font-semibold text-amber-950">{summary.commonFocus.name}</div>
-              <div className="text-xs text-amber-700 mt-1">{summary.commonFocus.count} approved finding{summary.commonFocus.count !== 1 ? 's' : ''}</div>
+            <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/30">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1">Current common focus</div>
+              <div className="text-sm font-semibold text-amber-950 dark:text-amber-100">{summary.commonFocus.name}</div>
+              <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">{summary.commonFocus.count} approved finding{summary.commonFocus.count !== 1 ? 's' : ''}</div>
             </div>
           )}
 
