@@ -205,6 +205,28 @@
     page-break-inside: avoid !important;
   }
 
+  /* Screenshot galleries: Chrome's print engine does NOT reliably honour
+     break-inside:avoid on CSS-GRID items, so screenshot cards straddle the page
+     break and overlap. In print, flow the image-gallery cards as block-level,
+     one per row, so each card paginates cleanly and can never overlap the page. */
+  .report-print-cards {
+    display: block !important;
+  }
+  .report-print-cards > * {
+    display: block !important;
+    width: 100% !important;
+    max-width: 460px;
+    margin: 0 auto 14px auto !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  /* Belt-and-braces: no report image may exceed the printable page, and its
+     wrapper never splits across a page. */
+  .report-print-cards img,
+  .report-print-cards svg {
+    max-height: 60vh !important;
+  }
+
   /* Hide print button itself when printing */
   .print\:hidden {
     display: none !important;

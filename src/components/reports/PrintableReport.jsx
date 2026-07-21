@@ -402,7 +402,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
         {phaseMoments.length > 0 && (
           <div className="border-t border-slate-200 px-8 py-6">
             <SectionHeading icon={Camera} count={phaseMoments.length}>Phase Moments</SectionHeading>
-            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4">
+            <div className="report-print-cards grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4">
               {phaseMoments.map(annotation => (
                 <GalleryCard key={annotation.id} annotation={annotation} findingNumber={findingNumberById.get(annotation.finding_id)} kind="moment" />
               ))}
@@ -414,7 +414,7 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
         {coachDrawings.length > 0 && (
           <div className="border-t border-slate-200 px-8 py-6">
             <SectionHeading icon={Pencil} count={coachDrawings.length}>Coach Drawings</SectionHeading>
-            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4">
+            <div className="report-print-cards grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4">
               {coachDrawings.map(annotation => (
                 <GalleryCard key={annotation.id} annotation={annotation} findingNumber={findingNumberById.get(annotation.finding_id)} kind="drawing" />
               ))}
