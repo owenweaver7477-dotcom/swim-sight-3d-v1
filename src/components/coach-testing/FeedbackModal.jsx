@@ -10,7 +10,7 @@ const FEEDBACK_TYPES = [
   { value: 'usability',          label: 'Usability' },
   { value: 'visual_design',      label: 'Visual Design' },
   { value: 'workflow_confusion', label: 'Workflow Confusion' },
-  { value: 'ai_trust',           label: 'AI Trust' },
+  { value: 'ai_trust',           label: 'Review quality' },
   { value: 'report_quality',     label: 'Report Quality' },
   { value: 'bug',                label: 'Bug' },
   { value: 'feature_request',    label: 'Feature Request' },

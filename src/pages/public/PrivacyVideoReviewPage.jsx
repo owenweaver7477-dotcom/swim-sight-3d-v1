@@ -51,7 +51,7 @@ export default function PrivacyVideoReviewPage() {
         actions={
           <>
             <Link to="/sample-report" className="rounded-lg bg-slate-950 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800">View sample report</Link>
-            <Link to="/coach-approved-ai" className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Coach-approved AI</Link>
+            <Link to="/coach-approved-ai" className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">Trust &amp; privacy</Link>
           </>
         }
       >
