@@ -75,13 +75,17 @@ export default function Sidebar() {
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
     return (
-      <Link to={item.to}>
+      {/* The desktop rail collapses to icons only, so the label is not always
+          visible. `title` gives sighted users a hover tooltip and `aria-label`
+          gives assistive tech a name even while the text is clipped, plus
+          aria-current marks the active page. */}
+      <Link to={item.to} title={item.label} aria-label={item.label} aria-current={active ? 'page' : undefined}>
         <div className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer ${
           active
             ? 'bg-primary/10 text-primary font-semibold ring-1 ring-primary/10 shadow-sm shadow-primary/5'
             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 motion-reduce:hover:translate-x-0'
         }`}>
-          <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'}`} />
+          <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'}`} aria-hidden="true" />
           <span className="sb-label">{item.label}</span>
         </div>
       </Link>
