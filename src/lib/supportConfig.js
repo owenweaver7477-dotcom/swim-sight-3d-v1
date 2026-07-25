@@ -1,4 +1,7 @@
-export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'swimsight3d.support@gmail.com';
+// ⚠️ MERGE PREREQUISITE: the support@swimsight3d.com mailbox (or a forward to the
+// existing inbox) must exist before this branch is merged, or support mail bounces.
+// Until then it can be overridden without a code change by setting VITE_SUPPORT_EMAIL.
+export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'support@swimsight3d.com';
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 // Public-site pilot booking CTA — a plain email for now (no form/booking tool yet).
 export const PILOT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Swim Sight 3D pilot enquiry')}`;
