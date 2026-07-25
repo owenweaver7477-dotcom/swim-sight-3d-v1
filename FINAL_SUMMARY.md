@@ -56,6 +56,9 @@ clean, dedicated task with the worker repo and migrations handled deliberately.
 | `36f9d01` | **Theme contrast guard (audit CRITICAL a11y).** `--primary`/`--accent` are used as *text*, not just fills, so vivid club colours became unreadable body text. Added `ensureTextContrast()` which nudges only **lightness** (hue/saturation preserved) until AA 4.5:1 against the **current** surface; re-runs on theme toggle. **Measured:** 14/16 presets already pass and are untouched; Sky 4.10→4.51, Sunset 3.56→4.53; custom `#ffe600` 1.27→4.53 light, correctly left vivid (13.31) dark. Keeps your 16 presets instead of cutting to 4–6. |
 | `8618187` + `c88c8fe` | **Accessible names on the collapsed icon rail** (`title`, `aria-label`, `aria-current`, `aria-hidden` icons). ⚠️ `8618187` shipped a **broken build** — my verification command used `;` separators so the commit ran despite lint/build failing. Caught in self-review and fixed in `c88c8fe`. Logged rather than hidden. |
 
+| `1eab89c` | **Drill library differentiation (audit A8, CRITICAL).** *Diagnosis first:* the audit blamed the drill **data**, but the bundled defaults are already rich — **107 drills, 8 categories, 34 distinct doses**. The real defect was **rendering**: all four strokes collapsed to one "Technique" badge, one sky accent and one `Waves` icon. Now a distinct icon/accent/chip per category (**8 distinct icons, was 4**) and the badge carries **difficulty** instead of a constant. |
+| `ece8477` | **Report attribution is now per-tier (audit S5).** Derived from the existing `clubs.plan_key` — **no migration**. Paid club tiers get a report headed by their own logo/name instead of "Powered by Swim Sight 3D". Applied to the PDF; the shared-link half is **escalated** (see below). |
+
 Plus, on `main` before this branch: **P0-1** (removing the "Pilot recovery mode" banner and
 instability copy from all coach workflow screens) — `b5aeaea`.
 
@@ -80,6 +83,8 @@ instability copy from all coach workflow screens) — `b5aeaea`.
 | **The "3D" name** | Strategic. There is no 3D; the audit says either earn it (angle/pose overlay) or evolve the name. I did **not** unilaterally rename. |
 | **Seeded demo club (P0-2)** | Needs your call: real Supabase rows (a DB write requiring approval) vs. a front-end "Explore with a demo squad" mode. I recommend demo-mode — no write, no risk of polluting a real club's analytics. |
 | **Compliance content** | Hosting region, encryption, retention, sub-processors — needs real answers, not invented ones |
+| **Shared-link attribution** | `api/shared-reports/[token].js` exposes only `club:{name}` by design. Gating the "Powered by" line there needs that **protected** endpoint to return a *computed boolean* (never `plan_key` — a share link must not disclose a club's commercial tier). Needs approval. |
+| **9 uniform `shared_default` drill rows in the DB** | All carry the identical "4 x 25m easy technique" the audit screenshotted. They are *added* to the good defaults, not merged over them. Cleaning them is a DB change — owner approval. |
 | **Test infrastructure** | Playwright + axe + Lighthouse CI don't exist; building them is its own workstream |
 | **Phases 5–9** | The review room, finding composer, analytics consolidation, component library, motion system — ranked and ready in `docs/MERIDIAN_AUDIT_TRACKER.md` |
 
