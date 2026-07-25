@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import {
   Search, X, Filter, Plus, Clock, MoreVertical, BookOpen, Loader2,
   Waves, Flag, RotateCcw, ArrowDownToLine, Trash2, Eye,
+  Repeat, Activity, Zap, Shuffle, Dumbbell,
 } from 'lucide-react';
 import DrillDetailModal from '@/components/drills/DrillDetailModal';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
@@ -40,29 +41,46 @@ const PHASES = ['All', 'Body Line', 'Catch', 'Pull', 'Recovery', 'Breathing', 'K
   'Set position', 'Reaction and entry', 'Streamline', 'Underwater breakout', 'Approach', 'Wall contact', 'Push-off'];
 const DIFFICULTIES = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Elite'];
 
-const TAG_COLORS = {
-  Technique: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
-  Starts: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
-  Turns: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-  Underwaters: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
-  IM: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+// One visual identity per stroke/skill. Previously every stroke drill collapsed to
+// the same Waves icon, the same sky accent and the same "Technique" badge, so the
+// list was a wall of identical rows with nothing for the eye to lock onto (design
+// audit A8). Icon, accent and chip now differ per category, and the badge carries
+// the drill's difficulty — real information that varies row to row.
+const STROKE_STYLES = {
+  Freestyle:    { icon: Waves,           text: 'text-sky-600 dark:text-sky-400',         chip: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' },
+  Backstroke:   { icon: Repeat,          text: 'text-violet-600 dark:text-violet-400',   chip: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' },
+  Breaststroke: { icon: Activity,        text: 'text-teal-600 dark:text-teal-400',       chip: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' },
+  Butterfly:    { icon: Zap,             text: 'text-amber-600 dark:text-amber-400',     chip: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' },
+  IM:           { icon: Shuffle,         text: 'text-orange-600 dark:text-orange-400',   chip: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' },
+  Starts:       { icon: Flag,            text: 'text-indigo-600 dark:text-indigo-400',   chip: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' },
+  Turns:        { icon: RotateCcw,       text: 'text-emerald-600 dark:text-emerald-400', chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
+  Underwater:   { icon: ArrowDownToLine, text: 'text-blue-600 dark:text-blue-400',       chip: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' },
+  General:      { icon: Dumbbell,        text: 'text-slate-600 dark:text-slate-300',     chip: 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300' },
+};
+const FALLBACK_STYLE = STROKE_STYLES.General;
+const strokeStyle = (stroke) => STROKE_STYLES[stroke] || FALLBACK_STYLE;
+
+const DIFFICULTY_CHIP = {
+  Beginner:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+  Intermediate: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+  Advanced:     'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  Elite:        'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
 };
 
-function categoryTag(stroke) {
-  if (stroke === 'Starts') return 'Starts';
-  if (stroke === 'Turns') return 'Turns';
-  if (stroke === 'Underwater') return 'Underwaters';
-  if (stroke === 'IM') return 'IM';
-  return 'Technique';
+/** Badge text: the drill's difficulty when known, else its category. */
+function drillBadge(drill) {
+  if (drill.difficulty && DIFFICULTY_CHIP[drill.difficulty]) {
+    return { label: drill.difficulty, className: DIFFICULTY_CHIP[drill.difficulty] };
+  }
+  const stroke = drill.stroke;
+  const label = stroke === 'Underwater' ? 'Underwaters' : (stroke || 'Drill');
+  return { label, className: strokeStyle(stroke).chip };
 }
 function categoryText(stroke) {
-  if (stroke === 'Starts') return 'text-indigo-600 dark:text-indigo-400';
-  if (stroke === 'Turns') return 'text-emerald-600 dark:text-emerald-400';
-  if (stroke === 'Underwater') return 'text-blue-600 dark:text-blue-400';
-  return 'text-sky-600 dark:text-sky-400';
+  return strokeStyle(stroke).text;
 }
 function CategoryIcon({ stroke, className }) {
-  const Icon = stroke === 'Starts' ? Flag : stroke === 'Turns' ? RotateCcw : stroke === 'Underwater' ? ArrowDownToLine : Waves;
+  const Icon = strokeStyle(stroke).icon;
   return <Icon className={className} />;
 }
 
@@ -83,11 +101,11 @@ function DrillRow({ drill, onOpen, canManage, onDelete }) {
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [menuOpen]);
-  const tag = categoryTag(drill.stroke);
+  const badge = drillBadge(drill);
   return (
     <div className="group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-secondary/40">
       <button type="button" onClick={() => onOpen(drill)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
+        <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${strokeStyle(drill.stroke).chip}`}>
           <CategoryIcon stroke={drill.stroke} className="h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -100,7 +118,7 @@ function DrillRow({ drill, onOpen, canManage, onDelete }) {
         {drill.duration_or_reps && (
           <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex"><Clock className="h-3.5 w-3.5" /> {drill.duration_or_reps}</span>
         )}
-        <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${TAG_COLORS[tag] || TAG_COLORS.Technique}`}>{tag}</span>
+        <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${badge.className}`}>{badge.label}</span>
         <div className="relative" ref={menuRef}>
           <button type="button" onClick={() => setMenuOpen((v) => !v)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label="Drill options">
             <MoreVertical className="h-4 w-4" />
