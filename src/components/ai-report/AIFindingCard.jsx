@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Brain, Clock, ChevronDown, ChevronUp,
+  Clapperboard, Clock, ChevronDown, ChevronUp,
   ThumbsUp, ThumbsDown, Pencil, Check, X, MessageSquare, Box, Dumbbell
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -106,7 +106,7 @@ export default function AIFindingCard({
       >
         <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
           {isAiFinding
-            ? <Brain className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+            ? <Clapperboard className="w-3.5 h-3.5 text-primary flex-shrink-0" />
             : <Pencil className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
           <span className="text-xs font-bold text-foreground">{finding.finding_name}</span>
           {finding.severity && <SeverityBadge severity={finding.severity} />}
@@ -135,7 +135,7 @@ export default function AIFindingCard({
             )}
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               {isAiFinding
-                ? <Brain className="w-3 h-3 text-primary" />
+                ? <Clapperboard className="w-3 h-3 text-primary" />
                 : <Pencil className="w-3 h-3 text-primary" />} {isAiFinding ? 'AI draft — verify on video' : 'Coach finding'}
             </span>
           </div>

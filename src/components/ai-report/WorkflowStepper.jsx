@@ -1,9 +1,12 @@
 import React from 'react';
-import { CheckCircle2, Brain, ClipboardCheck, FileText, Share2 } from 'lucide-react';
+import { CheckCircle2, Clapperboard, ClipboardCheck, FileText, Share2 } from 'lucide-react';
 
+// Step keys are stable identifiers used by callers; only the labels/icons are
+// coach-facing. The first step is the coach marking moments on the video — the
+// product is fully coach-authored, so no step is framed as machine-generated.
 const STEPS = [
-  { key: 'ai',       label: 'AI Suggested',         icon: Brain },
-  { key: 'review',   label: 'Coach Review',          icon: ClipboardCheck },
+  { key: 'ai',       label: 'Video Review',          icon: Clapperboard },
+  { key: 'review',   label: 'Coach Findings',        icon: ClipboardCheck },
   { key: 'final',    label: 'Final Report',          icon: FileText },
   { key: 'export',   label: 'Export / Share',        icon: Share2 },
 ];

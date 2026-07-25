@@ -607,7 +607,7 @@ function ComingLaterCard() {
 function AdminPlatformLinks() {
   const links = [
     { to: '/roadmap', icon: Map, title: 'Product Roadmap', desc: "Feature status, what's live, what's coming" },
-    { to: '/ai-reviews', icon: FlaskConical, title: 'AI Review Queue', desc: 'Pending approvals, failed jobs, finalised reports' },
+    { to: '/ai-reviews', icon: FlaskConical, title: 'Review Queue', desc: 'Reviews in progress and finalised reports' },
     { to: '/analyse', icon: RotateCcw, title: 'Reset Stuck Videos', desc: 'Open Analyse Video to delete and re-upload a stuck video' },
     { to: '/ai-jobs', icon: Activity, title: 'AI Job Monitor', desc: 'Debug pose analysis pipeline, track job status and errors' },
   ];

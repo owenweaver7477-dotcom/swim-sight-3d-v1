@@ -5,9 +5,9 @@ import { useClubContext } from '@/lib/useClubContext';
 import { resetClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
 import {
-  LayoutDashboard, Users, FlaskConical,
+  LayoutDashboard, Users, Video,
   Settings, ChevronDown, ChevronRight, Dumbbell,
-  Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Brain,
+  Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Clapperboard,
   ShieldAlert, Activity, TrendingUp, BarChart3, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,8 @@ import {
 // ── Grouped navigation structure ──────────────────────────────────────────────
 const NAV_MAIN = [
   { to: '/dashboard',       label: 'Dashboard',       icon: LayoutDashboard },
-  { to: '/analyse',         label: 'Analyse Video',   icon: FlaskConical },
-  { to: '/ai-reviews',      label: 'Coach Studio',    icon: Brain },
+  { to: '/analyse',         label: 'New Review',      icon: Video },
+  { to: '/ai-reviews',      label: 'Coach Studio',    icon: Clapperboard },
   { to: '/swimmers',        label: 'Swimmers',        icon: Users },
   { to: '/drill-library',   label: 'Drill Library',   icon: Dumbbell },
 ];
