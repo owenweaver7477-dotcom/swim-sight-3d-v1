@@ -1052,7 +1052,7 @@ export default function CoachDrawStudio({
       {studioMode && !fullscreenOpen && (
         <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Manual Coach Review</div>
+            <div className="text-[10px] font-bold tracking-wider text-primary">Manual Coach Review</div>
             <h2 className="truncate text-sm font-bold text-foreground">
               {swimmer?.name ? `${swimmer.name} · ` : ''}{video?.stroke_type || 'Manual review'}
             </h2>
@@ -1103,7 +1103,7 @@ export default function CoachDrawStudio({
       <div className="p-3 rounded-xl bg-secondary/40 border border-border space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div>
-            <div className="text-xs font-bold text-foreground uppercase tracking-wider">Coach Studio Controls</div>
+            <div className="text-xs font-bold text-foreground tracking-wider">Coach Studio Controls</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               Slow the private video, pause at a moment, then save a timestamp, finding, or Coach Draw annotation.
             </p>
@@ -1194,7 +1194,7 @@ export default function CoachDrawStudio({
               </button>
             </div>
             <div className="flex flex-col items-center gap-1.5">
-              <span className="text-sm font-bold uppercase tracking-[0.2em] text-white">Coach Studio</span>
+              <span className="text-sm font-bold tracking-[0.2em] text-white">Coach Studio</span>
               {/* Stepper — numbered circles, thin connectors, no pill (reference style) */}
               <div className="flex items-center" role="tablist" aria-label="Coach Studio steps">
                 {STUDIO_STEPS.map((step, index) => {
@@ -1264,12 +1264,12 @@ export default function CoachDrawStudio({
             <span className="min-w-4 flex-1" />
             {video?.stroke_type && (
               <span className="rounded-lg border border-white/15 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-200">
-                <span className="mr-1.5 text-[10px] uppercase tracking-wider text-slate-500">Stroke</span>{video.stroke_type}
+                <span className="mr-1.5 text-[10px] tracking-wider text-slate-500">Stroke</span>{video.stroke_type}
               </span>
             )}
             {video?.camera_angle && (
               <span className="hidden rounded-lg border border-white/15 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-200 sm:inline-block">
-                <span className="mr-1.5 text-[10px] uppercase tracking-wider text-slate-500">View</span>{video.camera_angle}
+                <span className="mr-1.5 text-[10px] tracking-wider text-slate-500">View</span>{video.camera_angle}
               </span>
             )}
             {currentStep === 'analysis' && (
@@ -1338,7 +1338,7 @@ export default function CoachDrawStudio({
                     CSS) so switching steps never remounts anything. */}
                 <div key="findings-list" className={currentStep === 'findings' ? 'ssd-step-enter space-y-2.5' : 'hidden'}>
                   <div>
-                    <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Moments</div>
+                    <div className="text-[15px] font-bold tracking-[0.14em]">Moments</div>
                     <div className="text-[11px] text-slate-400">Your Analysis moments — add a finding to each one that matters.</div>
                   </div>
                   <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
@@ -1399,7 +1399,7 @@ export default function CoachDrawStudio({
                         moment) stay reachable here — edit works exactly the same. */}
                     {unlinkedFindings.length > 0 && (
                       <>
-                        <div className="pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Findings without a moment</div>
+                        <div className="pt-1 text-[10px] font-bold tracking-wider text-slate-500">Findings without a moment</div>
                         {unlinkedFindings.map((finding) => {
                           const active = selectedFindingId === finding.id;
                           const thumb = findingThumbById.get(finding.id) || null;
@@ -1577,7 +1577,7 @@ export default function CoachDrawStudio({
                   {currentStep === 'analysis' ? (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Key Moments</div>
+                        <div className="text-[15px] font-bold tracking-[0.14em]">Key Moments</div>
                         <Button
                           size="sm"
                           variant="outline"
@@ -1658,7 +1658,7 @@ export default function CoachDrawStudio({
                   ) : editorFinding ? (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0 text-[15px] font-bold uppercase tracking-[0.14em]">
+                        <div className="min-w-0 text-[15px] font-bold tracking-[0.14em]">
                           Edit Finding <span className="text-sky-300">· {tagLabel(editorFinding.stroke_phase || editorFinding.phase || 'Finding')}</span>
                         </div>
                         <button
@@ -1832,7 +1832,7 @@ export default function CoachDrawStudio({
                           finding takes the moment's time and image (one-to-one), so
                           the report screenshot is always the annotated moment frame. */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0 truncate text-[15px] font-bold uppercase tracking-wider">
+                        <div className="min-w-0 truncate text-[15px] font-bold tracking-wider">
                           {readOnly ? 'Review (read-only)' : <>New Finding <span className="text-sky-300">· {selectedMoment.phase}</span></>}
                         </div>
                         <span className="flex-shrink-0 rounded border border-sky-300/20 bg-sky-400/10 px-2 py-0.5 font-mono text-[10px] text-sky-200">{formatTimestamp(selectedMoment.seconds)}</span>
@@ -1987,7 +1987,7 @@ export default function CoachDrawStudio({
                     return (
                       <>
                         <div>
-                          <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Drills</div>
+                          <div className="text-[15px] font-bold tracking-[0.14em]">Drills</div>
                           <div className="text-[11px] text-slate-400">Attach drills to support each finding.</div>
                         </div>
                         {sortedFindings.length === 0 ? (
@@ -2093,7 +2093,7 @@ export default function CoachDrawStudio({
                                   <div key={`${drill.title}-${index}`} className="flex items-start gap-2 rounded-xl border border-white/10 bg-slate-900/50 p-3">
                                     <div className="min-w-0 flex-1">
                                       <div className="flex flex-wrap items-center gap-1.5">
-                                        <span className="rounded-sm bg-sky-400/30 px-1 text-[9px] uppercase tracking-wide text-sky-100">{index === 0 ? 'Primary' : `Drill ${index + 1}`}</span>
+                                        <span className="rounded-sm bg-sky-400/30 px-1 text-[9px] tracking-wide text-sky-100">{index === 0 ? 'Primary' : `Drill ${index + 1}`}</span>
                                         <span className="text-[13px] font-bold text-white">{drill.title}</span>
                                       </div>
                                       {drill.summary && <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-400">{drill.summary}</div>}
@@ -2127,7 +2127,7 @@ export default function CoachDrawStudio({
                             {/* Drill Library — the asset browser: search, favourites, recents, full list, custom */}
                             <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
                               <div className="flex items-baseline justify-between gap-2">
-                                <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-300">Drill Library</div>
+                                <div className="text-xs font-bold tracking-[0.14em] text-slate-300">Drill Library</div>
                                 <span className="text-[10px] text-slate-500">{drillListForPicker.length} drills</span>
                               </div>
                               <div className="relative">
@@ -2143,7 +2143,7 @@ export default function CoachDrawStudio({
                                 <div className="space-y-1.5">
                                   {favouriteDrillList.length > 0 && (
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Favourites</span>
+                                      <span className="text-[10px] font-semibold tracking-wide text-slate-500">Favourites</span>
                                       {favouriteDrillList.slice(0, 6).map((drill) => (
                                         <button
                                           key={drill.id}
@@ -2160,7 +2160,7 @@ export default function CoachDrawStudio({
                                   )}
                                   {recentDrills.length > 0 && (
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Recent</span>
+                                      <span className="text-[10px] font-semibold tracking-wide text-slate-500">Recent</span>
                                       {recentDrills.slice(0, 6).map((drill) => (
                                         <button
                                           key={drill.id}
@@ -2280,7 +2280,7 @@ export default function CoachDrawStudio({
                 {/* STEP 3 ONLY: Coach comments + live report preview + finalise. */}
                 <div key="comments-col" className={currentStep === 'drills' ? 'ssd-step-enter space-y-3' : 'hidden'}>
                   <div>
-                    <div className="text-[15px] font-bold uppercase tracking-[0.14em]">Coach Comments</div>
+                    <div className="text-[15px] font-bold tracking-[0.14em]">Coach Comments</div>
                     <div className="text-[11px] text-slate-400">Add private notes and swimmer-ready feedback.</div>
                   </div>
                   <div className={`space-y-3.5 rounded-2xl border border-white/10 bg-white/5 p-4 ${readOnly ? 'pointer-events-none opacity-60' : ''}`}>
@@ -2325,7 +2325,7 @@ export default function CoachDrawStudio({
                   </div>
                   <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div>
-                      <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-300">Report Preview</div>
+                      <div className="text-xs font-bold tracking-[0.14em] text-slate-300">Report Preview</div>
                       <div className="text-[11px] text-slate-400">This is how your report will look for swimmers and parents.</div>
                     </div>
                     {(() => {
@@ -2349,7 +2349,7 @@ export default function CoachDrawStudio({
                                 <p className="text-[11px] leading-4 text-slate-300">{first.observation || first.coach_sees || ''}</p>
                                 {(first.correction_cue || first.cue) && (
                                   <div>
-                                    <div className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Coach Cue</div>
+                                    <div className="text-[9px] font-bold tracking-wide text-slate-500">Coach Cue</div>
                                     <p className="text-[11px] leading-4 text-slate-300">{first.correction_cue || first.cue}</p>
                                   </div>
                                 )}
