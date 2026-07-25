@@ -65,7 +65,7 @@ const FINDING_TAGS = [
 const SEVERITY_OPTIONS = ['low', 'medium', 'high'];
 // Client-side marker colours for key moments (no colour column by design —
 // colours rotate by list position, matching the reference visuals).
-const MOMENT_COLORS = ['bg-amber-400', 'bg-sky-400', 'bg-orange-400', 'bg-emerald-400', 'bg-fuchsia-400', 'bg-cyan-400'];
+const MOMENT_COLORS = ['bg-amber-400', 'bg-sky-400', 'bg-orange-400', 'bg-emerald-400', 'bg-fuchsia-400', 'bg-teal-400'];
 const tagLabel = (value = '') => String(value).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 const THUMBNAIL_MAX_WIDTH = 480;
 
@@ -1379,8 +1379,8 @@ export default function CoachDrawStudio({
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="truncate text-xs font-bold text-white">{moment.phase}</span>
-                                <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(moment.seconds)}</span>
-                                {annotated && <PencilLine className="h-3 w-3 flex-shrink-0 text-cyan-300" aria-label="Has coach drawing" />}
+                                <span className="font-mono text-[10px] text-sky-200">{formatTimestamp(moment.seconds)}</span>
+                                {annotated && <PencilLine className="h-3 w-3 flex-shrink-0 text-sky-300" aria-label="Has coach drawing" />}
                               </div>
                               {linked ? (
                                 <>
@@ -1421,7 +1421,7 @@ export default function CoachDrawStudio({
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     <span className={`h-2 w-2 flex-shrink-0 rounded-full ${finding.severity === 'high' || finding.severity === 'critical' ? 'bg-orange-400' : finding.severity === 'low' ? 'bg-emerald-400' : 'bg-amber-300'}`} />
                                     <span className="text-xs font-bold text-white">{tagLabel(finding.stroke_phase || finding.phase || 'Finding')}</span>
-                                    {Number.isFinite(seconds) && <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(seconds)}</span>}
+                                    {Number.isFinite(seconds) && <span className="font-mono text-[10px] text-sky-200">{formatTimestamp(seconds)}</span>}
                                   </div>
                                   <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-300">{finding.observation || finding.coach_sees || ''}</div>
                                 </div>
@@ -1536,7 +1536,7 @@ export default function CoachDrawStudio({
                               key={segment.key}
                               type="button"
                               onClick={() => selectImSegment(segment.key)}
-                              className={`min-h-9 rounded-md border px-2 text-[11px] font-semibold transition-colors ${imSegment === segment.key ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-300/50'}`}
+                              className={`min-h-9 rounded-md border px-2 text-[11px] font-semibold transition-colors ${imSegment === segment.key ? 'border-sky-400 bg-sky-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-300 hover:border-sky-300/50'}`}
                             >
                               {segment.label}
                             </button>
@@ -1581,7 +1581,7 @@ export default function CoachDrawStudio({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-9 flex-shrink-0 border-cyan-300/40 bg-white/5 px-2.5 text-[11px] font-semibold text-white hover:bg-white/10"
+                          className="h-9 flex-shrink-0 border-sky-300/40 bg-white/5 px-2.5 text-[11px] font-semibold text-white hover:bg-white/10"
                           onClick={() => setCustomMomentOpen((open) => !open)}
                           disabled={readOnly || !signedVideoUrl}
                         >
@@ -1589,7 +1589,7 @@ export default function CoachDrawStudio({
                         </Button>
                       </div>
                       {customMomentOpen && !readOnly && (
-                        <div className="space-y-2 rounded-lg border border-cyan-300/30 bg-cyan-400/5 p-2.5">
+                        <div className="space-y-2 rounded-lg border border-sky-300/30 bg-sky-400/5 p-2.5">
                           <div className="text-xs font-semibold text-slate-200">Add Custom Moment</div>
                           <Input
                             value={customMomentName}
@@ -1600,7 +1600,7 @@ export default function CoachDrawStudio({
                           />
                           <div className="flex items-center gap-2 text-[11px] text-slate-300">
                             <span className="font-semibold">Time</span>
-                            <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-cyan-200">{formatTimestamp(timestamp)}</span>
+                            <span className="rounded border border-sky-300/20 bg-sky-400/10 px-2 py-0.5 font-mono text-sky-200">{formatTimestamp(timestamp)}</span>
                             <span className="text-slate-500">from the video position</span>
                           </div>
                           <Input
@@ -1614,7 +1614,7 @@ export default function CoachDrawStudio({
                             <Button size="sm" variant="outline" className="h-9 flex-1 border-white/20 bg-white/5 text-xs text-white hover:bg-white/10" onClick={() => setCustomMomentOpen(false)}>
                               Cancel
                             </Button>
-                            <Button size="sm" className="h-9 flex-1 bg-cyan-400 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50" onClick={handleSaveCustomMoment} disabled={!customMomentName.trim() || savingMarker}>
+                            <Button size="sm" className="h-9 flex-1 bg-sky-400 text-xs font-semibold text-slate-950 hover:bg-sky-300 disabled:opacity-50" onClick={handleSaveCustomMoment} disabled={!customMomentName.trim() || savingMarker}>
                               {savingMarker ? 'Saving…' : 'Save Moment'}
                             </Button>
                           </div>
@@ -1634,11 +1634,11 @@ export default function CoachDrawStudio({
                             key={m.id}
                             type="button"
                             onClick={() => { const current = activeVideo(); if (current && Number.isFinite(m.seconds)) { current.pause(); current.currentTime = m.seconds; setTimestamp(m.seconds); } }}
-                            className="flex w-full items-center gap-2.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-left transition-colors hover:border-cyan-300/50 motion-reduce:transition-none"
+                            className="flex w-full items-center gap-2.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-left transition-colors hover:border-sky-300/50 motion-reduce:transition-none"
                           >
                             <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${MOMENT_COLORS[index % MOMENT_COLORS.length]}`} aria-hidden="true" />
                             <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white">{m.phase}</span>
-                            <span className="flex-shrink-0 font-mono text-[10px] text-cyan-200">{formatTimestamp(m.seconds)}</span>
+                            <span className="flex-shrink-0 font-mono text-[10px] text-sky-200">{formatTimestamp(m.seconds)}</span>
                           </button>
                         ))}
                       </div>
@@ -1659,7 +1659,7 @@ export default function CoachDrawStudio({
                     <>
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 text-[15px] font-bold uppercase tracking-[0.14em]">
-                          Edit Finding <span className="text-cyan-300">· {tagLabel(editorFinding.stroke_phase || editorFinding.phase || 'Finding')}</span>
+                          Edit Finding <span className="text-sky-300">· {tagLabel(editorFinding.stroke_phase || editorFinding.phase || 'Finding')}</span>
                         </div>
                         <button
                           type="button"
@@ -1671,7 +1671,7 @@ export default function CoachDrawStudio({
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
                         <span className="font-semibold">Time</span>
-                        <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-cyan-200">
+                        <span className="rounded border border-sky-300/20 bg-sky-400/10 px-2 py-0.5 font-mono text-sky-200">
                           {formatTimestamp(Number(editorFinding.timestamp_seconds ?? editorFinding.timestamp_start ?? 0) || 0)}
                         </span>
                         {momentByFindingId.get(editorFinding.id) ? (
@@ -1728,7 +1728,7 @@ export default function CoachDrawStudio({
                                 key={label}
                                 type="button"
                                 onClick={() => setEditPhase(active ? '' : key)}
-                                className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                                className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-sky-400 bg-sky-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-sky-300/50'}`}
                               >
                                 {label}
                               </button>
@@ -1756,7 +1756,7 @@ export default function CoachDrawStudio({
                       </div>
                       <details className="group rounded-lg border border-white/10 bg-white/5">
                         <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
-                          <span>Notes {editNotes.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
+                          <span>Notes {editNotes.trim() ? <span className="text-sky-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
                           <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
                         </summary>
                         <div className="px-3 pb-3">
@@ -1771,7 +1771,7 @@ export default function CoachDrawStudio({
                       </details>
                       <div className="space-y-2 border-t border-white/10 pt-3">
                         <Button
-                          className="h-11 w-full bg-cyan-400 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
+                          className="h-11 w-full bg-sky-400 text-sm font-semibold text-slate-950 hover:bg-sky-300 disabled:opacity-50"
                           onClick={handleSaveFindingDetails}
                           disabled={readOnly || savingFindingDetails || !editObservation.trim()}
                         >
@@ -1833,9 +1833,9 @@ export default function CoachDrawStudio({
                           the report screenshot is always the annotated moment frame. */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 truncate text-[15px] font-bold uppercase tracking-wider">
-                          {readOnly ? 'Review (read-only)' : <>New Finding <span className="text-cyan-300">· {selectedMoment.phase}</span></>}
+                          {readOnly ? 'Review (read-only)' : <>New Finding <span className="text-sky-300">· {selectedMoment.phase}</span></>}
                         </div>
-                        <span className="flex-shrink-0 rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-mono text-[10px] text-cyan-200">{formatTimestamp(selectedMoment.seconds)}</span>
+                        <span className="flex-shrink-0 rounded border border-sky-300/20 bg-sky-400/10 px-2 py-0.5 font-mono text-[10px] text-sky-200">{formatTimestamp(selectedMoment.seconds)}</span>
                       </div>
                       <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-slate-900/50 p-2">
                         {selectedMoment.thumb ? (
@@ -1906,7 +1906,7 @@ export default function CoachDrawStudio({
                                 key={label}
                                 type="button"
                                 onClick={() => setEditPhase(active ? '' : key)}
-                                className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-cyan-400 bg-cyan-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/50'}`}
+                                className={`min-h-9 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${active ? 'border-sky-400 bg-sky-400 text-slate-950' : 'border-white/15 bg-white/5 text-slate-200 hover:border-sky-300/50'}`}
                               >
                                 {label}
                               </button>
@@ -1934,7 +1934,7 @@ export default function CoachDrawStudio({
                       </div>
                       <details className="group rounded-lg border border-white/10 bg-white/5">
                         <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 [&::-webkit-details-marker]:hidden">
-                          <span>Notes {editNotes.trim() ? <span className="text-cyan-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
+                          <span>Notes {editNotes.trim() ? <span className="text-sky-300">· added</span> : <span className="text-slate-500">(optional)</span>}</span>
                           <span className="text-slate-500 transition-transform group-open:rotate-90">›</span>
                         </summary>
                         <div className="px-3 pb-3">
@@ -2022,7 +2022,7 @@ export default function CoachDrawStudio({
                                         goToStep('findings');
                                       }}
                                       title={linked ? `Assign drills to ${moment.phase}` : `${moment.phase} has no finding yet — create one in Findings`}
-                                      className={`w-28 flex-shrink-0 rounded-xl border p-1.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-cyan-400/80 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]' : linked ? 'border-white/10 bg-white/5 hover:border-cyan-300/50' : 'border-dashed border-white/15 bg-white/[0.03] opacity-60 hover:opacity-90'}`}
+                                      className={`w-28 flex-shrink-0 rounded-xl border p-1.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-sky-400/80 bg-sky-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]' : linked ? 'border-white/10 bg-white/5 hover:border-sky-300/50' : 'border-dashed border-white/15 bg-white/[0.03] opacity-60 hover:opacity-90'}`}
                                     >
                                       {moment.thumb ? (
                                         <img src={moment.thumb} alt="" className="h-12 w-full rounded-lg border border-white/10 object-cover" />
@@ -2031,7 +2031,7 @@ export default function CoachDrawStudio({
                                       )}
                                       <div className="mt-1 truncate text-[10px] font-bold text-white">{moment.phase}</div>
                                       <div className="flex items-center justify-between gap-1">
-                                        <span className="font-mono text-[9px] text-cyan-200">{formatTimestamp(moment.seconds)}</span>
+                                        <span className="font-mono text-[9px] text-sky-200">{formatTimestamp(moment.seconds)}</span>
                                         {linked ? (
                                           <span className={`rounded px-1 text-[8px] font-bold ${drillCount ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
                                             {drillCount ? `${drillCount} drill${drillCount > 1 ? 's' : ''}` : 'No drills'}
@@ -2054,7 +2054,7 @@ export default function CoachDrawStudio({
                                       type="button"
                                       onClick={() => setDrillFindingId(finding.id)}
                                       title={`Assign drills to ${tagLabel(finding.stroke_phase || finding.phase || 'Finding')}`}
-                                      className={`w-28 flex-shrink-0 rounded-xl border p-1.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-cyan-400/80 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]' : 'border-white/10 bg-white/5 hover:border-cyan-300/50'}`}
+                                      className={`w-28 flex-shrink-0 rounded-xl border p-1.5 text-left transition-all motion-reduce:transition-none ${active ? 'border-sky-400/80 bg-sky-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]' : 'border-white/10 bg-white/5 hover:border-sky-300/50'}`}
                                     >
                                       {thumb ? (
                                         <img src={thumb} alt="" className="h-12 w-full rounded-lg border border-white/10 object-cover" />
@@ -2063,7 +2063,7 @@ export default function CoachDrawStudio({
                                       )}
                                       <div className="mt-1 truncate text-[10px] font-bold text-white">{tagLabel(finding.stroke_phase || finding.phase || 'Finding')}</div>
                                       <div className="flex items-center justify-between gap-1">
-                                        {Number.isFinite(seconds) && <span className="font-mono text-[9px] text-cyan-200">{formatTimestamp(seconds)}</span>}
+                                        {Number.isFinite(seconds) && <span className="font-mono text-[9px] text-sky-200">{formatTimestamp(seconds)}</span>}
                                         <span className={`rounded px-1 text-[8px] font-bold ${drillCount ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
                                           {drillCount ? `${drillCount} drill${drillCount > 1 ? 's' : ''}` : 'No drills'}
                                         </span>
@@ -2075,10 +2075,10 @@ export default function CoachDrawStudio({
                               {drillFinding && (
                                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
                                   <span className="font-semibold">Drills for</span>
-                                  <span className="rounded border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 font-semibold text-cyan-200">
+                                  <span className="rounded border border-sky-300/20 bg-sky-400/10 px-2 py-0.5 font-semibold text-sky-200">
                                     {momentByFindingId.get(drillFinding.id)?.phase || tagLabel(drillFinding.stroke_phase || drillFinding.phase || 'Finding')}
                                   </span>
-                                  <span className="font-mono text-[10px] text-cyan-200">
+                                  <span className="font-mono text-[10px] text-sky-200">
                                     {formatTimestamp(Number(drillFinding.timestamp_seconds ?? drillFinding.timestamp_start ?? 0) || 0)}
                                   </span>
                                 </div>
@@ -2093,7 +2093,7 @@ export default function CoachDrawStudio({
                                   <div key={`${drill.title}-${index}`} className="flex items-start gap-2 rounded-xl border border-white/10 bg-slate-900/50 p-3">
                                     <div className="min-w-0 flex-1">
                                       <div className="flex flex-wrap items-center gap-1.5">
-                                        <span className="rounded-sm bg-cyan-400/30 px-1 text-[9px] uppercase tracking-wide text-cyan-100">{index === 0 ? 'Primary' : `Drill ${index + 1}`}</span>
+                                        <span className="rounded-sm bg-sky-400/30 px-1 text-[9px] uppercase tracking-wide text-sky-100">{index === 0 ? 'Primary' : `Drill ${index + 1}`}</span>
                                         <span className="text-[13px] font-bold text-white">{drill.title}</span>
                                       </div>
                                       {drill.summary && <div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-400">{drill.summary}</div>}
@@ -2167,7 +2167,7 @@ export default function CoachDrawStudio({
                                           type="button"
                                           onClick={() => attachDrill(drill)}
                                           disabled={savingFindingDetails || attached.some((d) => d.title === drill.title)}
-                                          className="min-h-8 rounded-full border border-white/15 bg-white/5 px-2.5 text-[11px] font-semibold text-slate-200 transition-colors hover:border-cyan-300/50 disabled:opacity-40"
+                                          className="min-h-8 rounded-full border border-white/15 bg-white/5 px-2.5 text-[11px] font-semibold text-slate-200 transition-colors hover:border-sky-300/50 disabled:opacity-40"
                                           title={`Attach ${drill.title}`}
                                         >
                                           {drill.title}
@@ -2207,7 +2207,7 @@ export default function CoachDrawStudio({
                                           type="button"
                                           onClick={() => !already && writeFindingDrills(drillFinding, [...attached, { title: drill.title, summary: drillSummary(drill), id: drill.id }])}
                                           disabled={already || savingFindingDetails}
-                                          className={`mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md disabled:opacity-60 ${already ? 'text-emerald-300' : 'bg-cyan-400/20 text-cyan-200 hover:bg-cyan-400/40'}`}
+                                          className={`mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md disabled:opacity-60 ${already ? 'text-emerald-300' : 'bg-sky-400/20 text-sky-200 hover:bg-sky-400/40'}`}
                                           title={already ? 'Already attached' : `Add ${drill.title}`}
                                           aria-label={already ? 'Already attached' : `Add ${drill.title}`}
                                         >
@@ -2248,7 +2248,7 @@ export default function CoachDrawStudio({
                                   <div className="flex gap-2">
                                     <Button
                                       size="sm"
-                                      className="h-9 flex-1 bg-cyan-400 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
+                                      className="h-9 flex-1 bg-sky-400 text-xs font-semibold text-slate-950 hover:bg-sky-300 disabled:opacity-50"
                                       onClick={submitCustomDrill}
                                       disabled={!customDrillTitle.trim() || savingFindingDetails}
                                     >
@@ -2343,7 +2343,7 @@ export default function CoachDrawStudio({
                                   <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden="true" />
                                   <span className="text-[13px] font-bold text-white">{tagLabel(first.stroke_phase || first.phase || 'Finding')}</span>
                                   {Number.isFinite(Number(first.timestamp_seconds ?? first.timestamp_start)) && (
-                                    <span className="font-mono text-[10px] text-cyan-200">{formatTimestamp(Number(first.timestamp_seconds ?? first.timestamp_start) || 0)}</span>
+                                    <span className="font-mono text-[10px] text-sky-200">{formatTimestamp(Number(first.timestamp_seconds ?? first.timestamp_start) || 0)}</span>
                                   )}
                                 </div>
                                 <p className="text-[11px] leading-4 text-slate-300">{first.observation || first.coach_sees || ''}</p>
@@ -2504,7 +2504,7 @@ export default function CoachDrawStudio({
             </div>
             {finaliseFlow === 'ready' && (
               <div className="space-y-2">
-                <Button className="h-11 w-full bg-cyan-400 text-slate-950 hover:bg-cyan-300" onClick={() => onPrintReport?.()}>
+                <Button className="h-11 w-full bg-sky-400 text-slate-950 hover:bg-sky-300" onClick={() => onPrintReport?.()}>
                   <Download className="mr-1.5 h-4 w-4" /> View / Print PDF
                 </Button>
                 {shareLink && (
@@ -2513,7 +2513,7 @@ export default function CoachDrawStudio({
                   </Button>
                 )}
                 {!shareLink && onReshare && (
-                  <Button className="h-11 w-full bg-cyan-500 text-white hover:bg-cyan-400" onClick={runReshare} disabled={resharing}>
+                  <Button className="h-11 w-full bg-sky-500 text-white hover:bg-sky-400" onClick={runReshare} disabled={resharing}>
                     <Share2 className="mr-1.5 h-4 w-4" /> {resharing ? 'Sharing…' : 'Share updated report'}
                   </Button>
                 )}
