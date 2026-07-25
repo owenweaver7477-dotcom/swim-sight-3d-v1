@@ -217,7 +217,12 @@ export default function TeamDashboard() {
     awaitingReview.length > 0 && {
       icon: Brain, iconColor: 'text-amber-500', urgent: true, badge: 'Review needed', badgeTone: 'amber',
       label: `${awaitingReview.length} report${awaitingReview.length > 1 ? 's' : ''} awaiting coach review`,
-      meta: `${pendingAIFindings.length} finding${pendingAIFindings.length !== 1 ? 's' : ''} need approval`,
+      // Only mention findings when some are actually pending — otherwise this read
+      // "1 report awaiting coach review / 0 findings need approval", a contradiction
+      // (and always 0 while AI is locked for the manual-first pilot).
+      meta: pendingAIFindings.length > 0
+        ? `${pendingAIFindings.length} finding${pendingAIFindings.length !== 1 ? 's' : ''} to approve`
+        : 'Mark moments, write findings, then finalise',
       cta: 'Open Coach Studio', onClick: () => navigate('/ai-reviews'),
     },
     errorVideos.length > 0 && {
@@ -234,8 +239,8 @@ export default function TeamDashboard() {
     },
     manualReviewReports.length > 0 && {
       icon: AlertCircle, iconColor: 'text-orange-500', urgent: true, badge: 'Manual review', badgeTone: 'orange',
-      label: `${manualReviewReports.length} report${manualReviewReports.length > 1 ? 's' : ''} need manual coach review`,
-      meta: 'AI evidence was weak, filtered, or unavailable',
+      label: `${manualReviewReports.length} report${manualReviewReports.length > 1 ? 's are' : ' is'} ready for your review`,
+      meta: 'Open Coach Studio to mark moments and write your findings',
       cta: 'Open Coach Studio', onClick: () => navigate('/ai-reviews'),
     },
     processingVideos.length > 0 && {
@@ -253,7 +258,9 @@ export default function TeamDashboard() {
   ].filter(Boolean);
 
   const allClear = priorityItems.length === 0;
-  const reviewTotal = awaitingReview.length + processingVideos.length + manualReviewReports.length + errorVideos.length;
+  // Bind the printed count to what is actually rendered (it previously summed four
+  // categories while the list can render six, so the number contradicted the cards).
+  const reviewTotal = priorityItems.length;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 pb-24 sm:px-6">

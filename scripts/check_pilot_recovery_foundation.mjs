@@ -43,7 +43,12 @@ assert.match(pilotWarning, /manual coach review/i);
 assert.match(recoveryCard, /support/i);
 assert.match(recoveryCard, /Continue manual review|manual review/);
 
-assert.match(analysePage, /PilotReadinessWarning/);
+// The "Pilot recovery mode" banner no longer renders on the coach workflow screens
+// (Analyse / AI review / reviews list) — a product audit found that surfacing internal
+// operational state to coaches was the app's biggest trust leak. It now lives only on
+// the internal PilotLaunchPage. What must still hold is the BEHAVIOUR this guard exists
+// to protect: every AI failure path still hands the coach a manual-review route, which
+// the assertions below (and the aiReportPage recovery states) pin directly.
 assert.match(analysePage, /AnalysisFocusChecklist/);
 assert.match(analysePage, /AICreditIndicator/);
 assert.match(analysePage, /Continue manual coach review|manual coach review/i);
@@ -53,7 +58,7 @@ assert.match(videoLibrary, /RecoveryActionCard/);
 assert.match(videoLibrary, /AI processing is taking longer than expected/);
 assert.match(videoLibrary, /continue manual coach review/i);
 
-assert.match(aiReportPage, /PilotReadinessWarning/);
+// (Banner removed from this workflow screen too — see the note above.)
 // The review page used to render <RecoveryActionCard>; it now renders an inline
 // status card per AI state. Pin the recovery *behaviour* rather than the old
 // component name: every failure state must still say the video survived and

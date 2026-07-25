@@ -12,7 +12,6 @@ import {
   Loader2, Upload, Trash2, X, Search, PlayCircle
 } from 'lucide-react';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
-import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { format } from 'date-fns';
 import { isPilotRole } from '@/lib/permissions';
 
@@ -53,7 +52,7 @@ function ReliabilityLabel({ report, job }) {
     return <span className="text-[10px] font-medium text-amber-700">Partial pose evidence — manual review first</span>;
   }
   if (report.real_pose_detected === false || job?.status === 'manual_review_recommended') {
-    return <span className="text-[10px] font-medium text-amber-700">Quality gate failed — manual review recommended</span>;
+    return <span className="text-[10px] font-medium text-amber-700">Best reviewed by you</span>;
   }
   return <span className="text-[10px] font-medium text-amber-600">Evidence requires coach verification</span>;
 }
@@ -298,8 +297,6 @@ export default function AIReportsListPage() {
           </Link>
         }
       />
-
-      <PilotReadinessWarning className="mb-4" />
 
       <div className="mb-5 text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg px-4 py-2.5">
         Coach Studio is your manual review workspace.

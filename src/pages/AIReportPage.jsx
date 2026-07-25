@@ -32,7 +32,6 @@ import AnnotationTimeline from '@/components/annotations/AnnotationTimeline';
 import KeyStampGallery from '@/components/annotations/KeyStampGallery';
 import { formatTimestamp } from '@/lib/annotationRender';
 import AIReviewTrustSummary from '@/components/ai/AIReviewTrustSummary';
-import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
 import CoachStudioWorkflowPanel from '@/components/coach-studio/CoachStudioWorkflowPanel';
 import { isCoachAppRole, isPilotRole, isAdminRole } from '@/lib/permissions';
@@ -1152,7 +1151,6 @@ export default function AIReportPage() {
               in the fullscreen manual workspace, not this page. */}
           {!studioMode && (
           <>
-          <PilotReadinessWarning />
 
           <CoachStudioWorkflowPanel
             video={video}

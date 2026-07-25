@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Coach Studio — swimming analysis workstation</title>
+<style>
+  :root{
+    /* Tonal layers (subtle depth, per the critique) */
+    --bg:#0b1117; --rail:#0d151e; --stage:#101923; --side:#141f2b; --panel:#1a2533;
+    --line:rgba(255,255,255,.055); --line-2:rgba(255,255,255,.09);
+    --ink:#eef3f8; --sub:#9fb0bf; --muted:#6b7d8c; --faint:#4c5c6a;
+    --accent:#3b82f6;            /* used sparingly */
+    --amber:#e0a33a; --emerald:#3fb37a; --water:#0e3350;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased}
+  .app{display:flex;flex-direction:column;height:100vh}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+  /* ── Header ── */
+  header{height:46px;flex:none;display:flex;align-items:center;gap:0;padding:0 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:baseline;gap:9px;padding-right:18px;margin-right:18px;border-right:1px solid var(--line)}
+  .brand .n{font-size:13px;font-weight:800;letter-spacing:-.01em}
+  .brand .n b{color:var(--accent)}
+  .crumb{font-size:11px;color:var(--muted)}
+  .crumb b{color:var(--sub);font-weight:600}
+  .steps{display:flex;height:46px}
+  .step{display:flex;align-items:center;height:100%;padding:0 16px;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent}
+  .step.active{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+  .step.done{color:var(--sub)}
+  .spacer{flex:1}
+  .saved{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:6px}
+  .saved i{width:5px;height:5px;border-radius:50%;background:var(--emerald);font-style:normal}
+  .who{margin-left:18px;padding-left:16px;border-left:1px solid var(--line);font-size:12px;color:var(--sub);display:flex;align-items:center;gap:8px}
+  .mini{width:22px;height:22px;border-radius:5px;background:#1c2937;display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--sub)}
+
+  .body{flex:1;display:flex;min-height:0}
+
+  /* ── Left tool rail (workstation) ── */
+  .toolrail{width:44px;flex:none;background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+  .tool{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:13px}
+  .tool.on{background:rgba(59,130,246,.16);color:#8fbaf5}
+  .tool svg{width:16px;height:16px}
+  .toolrail .gap{flex:1}
+
+  /* ── Center stage ── */
+  .stage{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--stage)}
+  .viewer{flex:1;position:relative;min-height:0}
+  .viewer svg.frame{position:absolute;inset:0;width:100%;height:100%;display:block}
+  /* HUD chips over the frame */
+  .hud{position:absolute;display:flex;gap:6px;font-size:10.5px}
+  .hud.tl{left:14px;top:12px}
+  .hud.tr{right:14px;top:12px}
+  .chip{background:rgba(8,14,20,.6);border:1px solid rgba(150,175,195,.14);color:#c6d3dd;padding:3px 8px;border-radius:5px;font-weight:600;backdrop-filter:blur(2px)}
+  .chip.lane{color:#eef3f8;border-color:rgba(224,163,58,.35)}
+  .frameread{position:absolute;left:14px;bottom:12px;font-size:11px;color:#dfe8ef;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:5px;letter-spacing:.02em}
+  .measure{position:absolute;right:14px;bottom:12px;font-size:10.5px;color:var(--sub);display:flex;gap:10px}
+  .measure b{color:var(--ink)}
+
+  /* transport (integrated) */
+  .transport{flex:none;height:44px;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--stage);border-top:1px solid var(--line)}
+  .tbtn{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--sub);font-size:12px}
+  .tbtn.play{background:var(--accent);color:#fff;width:32px;height:32px}
+  .tcode{font-size:11.5px;color:var(--sub)}
+  .tcode b{color:var(--ink)}
+  .speed{margin-left:auto;font-size:11px;color:var(--muted);display:flex;gap:2px;align-items:center}
+  .speed .v{color:var(--ink);font-weight:600;background:rgba(255,255,255,.05);padding:2px 7px;border-radius:5px}
+
+  /* ── Timeline (integrated editing surface) ── */
+  .timeline{flex:none;height:96px;background:var(--stage);border-top:1px solid var(--line-2);display:flex;flex-direction:column}
+  .ruler{height:18px;display:flex;align-items:flex-end;padding:0 14px 2px;gap:0;font-size:9px;color:var(--faint)}
+  .ruler .t{flex:1;border-left:1px solid var(--line);padding-left:3px}
+  .filmstrip{flex:1;display:flex;gap:2px;padding:0 14px 6px;position:relative}
+  .fcell{flex:1;border-radius:3px;position:relative;overflow:hidden;background:linear-gradient(160deg,#123049,#0a1a29)}
+  .fcell::after{content:"";position:absolute;inset:0;background:
+    repeating-linear-gradient(180deg,transparent 0 6px,rgba(255,255,255,.03) 6px 7px)}
+  .fcell .ph{position:absolute;left:20%;top:38%;width:36%;height:22%;border-radius:20px;background:rgba(180,210,235,.14)}
+  .track{height:16px;margin:0 14px 8px;position:relative;background:#0a121b;border-radius:4px}
+  .mk{position:absolute;top:0;bottom:0;width:2px;border-radius:2px}
+  .mk .lab{position:absolute;top:-15px;transform:translateX(-50%);font-size:9px;font-weight:700;white-space:nowrap;color:var(--sub)}
+  .phead{position:absolute;top:-20px;bottom:-8px;width:1.5px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.5)}
+  .phead::before{content:"";position:absolute;top:-1px;left:-3.5px;width:8px;height:6px;background:#fff;clip-path:polygon(0 0,100% 0,50% 100%)}
+
+  /* ── Sidebar ── */
+  aside{width:340px;flex:none;background:var(--side);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .sh{padding:12px 15px 6px;display:flex;align-items:baseline;justify-content:space-between}
+  .sh .t{font-size:12.5px;font-weight:700}
+  .sh .c{font-size:10.5px;color:var(--faint)}
+  .phases{padding:0 8px 8px;overflow:auto}
+  .ph-row{display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:7px}
+  .ph-row.sel{background:var(--panel);box-shadow:inset 2px 0 0 var(--accent)}
+  .ph-bar{width:3px;height:22px;border-radius:2px;flex:none}
+  .ph-t{font-size:12px;color:#c3d0da;width:44px;flex:none}
+  .ph-n{font-size:13px;color:var(--ink)}
+  .ph-meta{margin-left:auto;font-size:10px;color:var(--faint);display:flex;gap:8px;align-items:center}
+  .ph-meta .a{color:var(--emerald)}
+
+  /* Finding — floating panel, tonal, soft shadow, coach-first, denser metadata */
+  .finding{margin:6px 12px 14px;background:var(--panel);border-radius:11px;box-shadow:0 10px 30px -12px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.04) inset;overflow:hidden}
+  .f-head{padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+  .f-eyebrow{font-size:10px;color:var(--muted);letter-spacing:.02em}
+  .f-title{font-size:16px;font-weight:700;margin-top:2px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+  .sev{font-size:9.5px;font-weight:700;color:var(--amber);border:1px solid rgba(224,163,58,.4);padding:2px 7px;border-radius:4px}
+  .f-obs{padding:11px 14px;font-size:13px;line-height:1.5;color:#d7e1e9}
+  .f-obs .k{display:block;font-size:9.5px;letter-spacing:.14em;color:var(--faint);margin-bottom:4px;font-weight:700}
+  .cue{margin:0 14px 12px;padding:9px 11px;background:rgba(255,255,255,.03);border-left:2px solid var(--accent);border-radius:0 7px 7px 0}
+  .cue .q{font-size:12.5px;font-style:italic;color:#dbe4ec;line-height:1.45}
+  .cue .by{font-size:10px;color:var(--faint);margin-top:5px}
+  /* Coach-decision chain (coach-first; no fake AI confidence) */
+  .chain{display:flex;align-items:center;gap:0;padding:0 14px 12px;font-size:10.5px}
+  .cstep{display:flex;align-items:center;gap:5px;color:var(--muted)}
+  .cstep.done{color:var(--sub)} .cstep.now{color:var(--emerald);font-weight:600}
+  .cstep .b{width:5px;height:5px;border-radius:1px} .cstep.done .b{background:var(--sub)} .cstep.now .b{background:var(--emerald)} .cstep .b{background:#33465a}
+  .carrow{color:var(--faint);margin:0 7px}
+  .f-meta{border-top:1px solid var(--line);padding:9px 14px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
+  .mrow{display:flex;justify-content:space-between;font-size:10.5px}
+  .mrow span{color:var(--faint)} .mrow b{color:var(--sub);font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand"><span class="n">SWIM<b>SIGHT</b></span></div>
+    <div class="crumb"><b>Sample Swimmer</b> · Breaststroke · 21 Jul</div>
+    <div style="width:22px"></div>
+    <div class="steps">
+      <div class="step active">Analysis</div>
+      <div class="step">Findings</div>
+      <div class="step">Report</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="saved"><i></i>Saved 2s ago</div>
+    <div class="who">Coach Owen <span class="mini">O</span></div>
+  </header>
+
+  <div class="body">
+
+    <!-- Analysis tool rail -->
+    <div class="toolrail">
+      <div class="tool on" title="Select"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 8-6 1-3 6z"/></svg></div>
+      <div class="tool" title="Line"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 20L20 4"/></svg></div>
+      <div class="tool" title="Angle"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M5 19h14M5 19L14 6"/></svg></div>
+      <div class="tool" title="Marker"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 13v7"/></svg></div>
+      <div class="tool" title="Body line"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 12h16" stroke-dasharray="3 3"/></svg></div>
+      <div class="tool" title="Path"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 16c5-9 11-9 16 0"/></svg></div>
+      <div class="gap"></div>
+      <div class="tool" title="Compare"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="5" width="8" height="14" rx="1"/><rect x="13" y="5" width="8" height="14" rx="1"/></svg></div>
+    </div>
+
+    <!-- Stage: the loaded frame fills the viewer, with ANALYTICAL overlays -->
+    <div class="stage">
+      <div class="viewer">
+        <svg class="frame" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="pool" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0f3a5c"/><stop offset="0.5" stop-color="#0b2a44"/><stop offset="1" stop-color="#071b2c"/>
+            </linearGradient>
+            <radialGradient id="vig" cx="50%" cy="42%" r="75%">
+              <stop offset="55%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,.55)"/>
+            </radialGradient>
+          </defs>
+          <!-- water -->
+          <rect width="1000" height="520" fill="url(#pool)"/>
+          <!-- lane ropes / lines (swimming identity) -->
+          <g opacity="0.5">
+            <line x1="0" y1="120" x2="1000" y2="128" stroke="#3d6f95" stroke-width="2" stroke-dasharray="14 8"/>
+            <line x1="0" y1="392" x2="1000" y2="400" stroke="#3d6f95" stroke-width="2" stroke-dasharray="14 8"/>
+          </g>
+          <g opacity="0.16" stroke="#7fb4d8" stroke-width="1">
+            <line x1="0" y1="205" x2="1000" y2="212"/><line x1="0" y1="300" x2="1000" y2="307"/>
+          </g>
+          <!-- ripples texture -->
+          <g opacity="0.08" stroke="#bfe0f5" fill="none" stroke-width="1">
+            <path d="M60 250 q40 -10 80 0 t80 0 t80 0"/><path d="M520 330 q40 -10 80 0 t80 0 t80 0"/>
+          </g>
+          <!-- swimmer silhouette (side view, breaststroke kick setup) -->
+          <g fill="#0a1520" opacity="0.92">
+            <path d="M300 268 q-16 -4 -22 8 q-3 12 12 16 q10 2 18 -4 z"/> <!-- head -->
+            <path d="M318 276 q120 -20 250 8 q34 6 60 26 l-12 20 q-30 -16 -66 -20 q-140 -18 -236 -12 z"/> <!-- torso -->
+            <path d="M568 310 q40 12 64 46 l-20 16 q-24 -30 -58 -40 z"/> <!-- thigh -->
+            <path d="M612 372 q-4 30 -34 52 l-16 -12 q26 -22 28 -46 z"/> <!-- shin/foot -->
+            <path d="M330 286 q-40 20 -78 16 l4 -18 q34 2 70 -14 z" opacity="0.8"/> <!-- arm -->
+          </g>
+          <!-- ANALYTICAL OVERLAY: body-alignment line, joints, knee angle, hand path -->
+          <!-- alignment line head→hip (dashed reference) -->
+          <line x1="300" y1="286" x2="566" y2="312" stroke="#e0a33a" stroke-width="1.5" stroke-dasharray="6 5" opacity="0.9"/>
+          <!-- thigh + shin segments -->
+          <line x1="566" y1="312" x2="628" y2="360" stroke="#eef3f8" stroke-width="2"/>
+          <line x1="628" y1="360" x2="588" y2="420" stroke="#eef3f8" stroke-width="2"/>
+          <!-- knee angle arc + reading -->
+          <path d="M604 340 A 30 30 0 0 1 620 388" fill="none" stroke="#3fb37a" stroke-width="2"/>
+          <text x="648" y="372" fill="#7fe0b0" font-size="15" font-family="ui-monospace,Menlo,monospace" font-weight="700">112°</text>
+          <!-- joint markers (crosshair squares, not decorative circles) -->
+          <g stroke="#eef3f8" stroke-width="1.5" fill="none">
+            <g><line x1="352" y1="288" x2="368" y2="288"/><line x1="360" y1="280" x2="360" y2="296"/></g>
+            <g><line x1="558" y1="312" x2="574" y2="312"/><line x1="566" y1="304" x2="566" y2="320"/></g>
+            <g><line x1="620" y1="360" x2="636" y2="360"/><line x1="628" y1="352" x2="628" y2="368"/></g>
+            <g><line x1="580" y1="420" x2="596" y2="420"/><line x1="588" y1="412" x2="588" y2="428"/></g>
+          </g>
+          <!-- hand path trace (dotted) -->
+          <path d="M250 300 q40 -34 96 -18 q46 12 70 -2" fill="none" stroke="#8fbaf5" stroke-width="1.5" stroke-dasharray="2 5" opacity="0.85"/>
+          <!-- rule-of-thirds guides (very faint) -->
+          <g stroke="rgba(255,255,255,.05)" stroke-width="1">
+            <line x1="333" y1="0" x2="333" y2="520"/><line x1="666" y1="0" x2="666" y2="520"/>
+            <line x1="0" y1="173" x2="1000" y2="173"/><line x1="0" y1="346" x2="1000" y2="346"/>
+          </g>
+          <rect width="1000" height="520" fill="url(#vig)"/>
+        </svg>
+
+        <div class="hud tl">
+          <span class="chip lane">Lane 4</span>
+          <span class="chip">Breaststroke</span>
+          <span class="chip">Side view</span>
+        </div>
+        <div class="hud tr"><span class="chip mono">1128 frames · 240 fps</span></div>
+        <div class="frameread mono">Frame 128 &nbsp;·&nbsp; 0.54 s &nbsp;·&nbsp; kick setup</div>
+        <div class="measure"><span>knee <b>112°</b></span><span>hip-line <b>+3°</b></span></div>
+      </div>
+
+      <div class="transport">
+        <div class="tbtn">⏮</div><div class="tbtn">◀</div>
+        <div class="tbtn play">▶</div>
+        <div class="tbtn">▶</div><div class="tbtn">⏭</div>
+        <div class="tcode mono"><b>0:00.54</b> / 0:04.70</div>
+        <div class="speed">Speed <span class="v">0.25×</span></div>
+      </div>
+
+      <!-- Integrated timeline: frame filmstrip + phase track -->
+      <div class="timeline">
+        <div class="ruler mono"><span class="t">0.0s</span><span class="t">1.0</span><span class="t">2.0</span><span class="t">3.0</span><span class="t">4.0</span><span class="t">4.7</span></div>
+        <div class="filmstrip">
+          <div class="fcell"><div class="ph"></div></div><div class="fcell"><div class="ph" style="left:34%"></div></div>
+          <div class="fcell"><div class="ph" style="left:26%"></div></div><div class="fcell"><div class="ph" style="left:40%"></div></div>
+          <div class="fcell"><div class="ph" style="left:30%"></div></div><div class="fcell"><div class="ph" style="left:44%"></div></div>
+          <div class="fcell"><div class="ph" style="left:22%"></div></div><div class="fcell"><div class="ph" style="left:38%"></div></div>
+        </div>
+        <div class="track">
+          <div class="mk" style="left:11%;background:var(--amber)"><span class="lab">Catch</span></div>
+          <div class="mk" style="left:17%;background:#7fb4d8"></div>
+          <div class="mk" style="left:30%;background:var(--emerald)"><span class="lab">Kick</span></div>
+          <div class="mk" style="left:40%;background:#c98bd6"></div>
+          <div class="mk" style="left:49%;background:#e08a5a"></div>
+          <div class="phead" style="left:11%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside>
+      <div class="sh"><span class="t">Stroke phases</span><span class="c">5 marked</span></div>
+      <div class="phases">
+        <div class="ph-row sel"><span class="ph-bar" style="background:var(--amber)"></span><span class="ph-t mono">0.54s</span><span class="ph-n">Catch</span><span class="ph-meta"><span class="a">✓</span> 112°</span></div>
+        <div class="ph-row"><span class="ph-bar" style="background:#7fb4d8"></span><span class="ph-t mono">0.81s</span><span class="ph-n">Pull</span></div>
+        <div class="ph-row"><span class="ph-bar" style="background:var(--emerald)"></span><span class="ph-t mono">1.42s</span><span class="ph-n">Kick setup</span><span class="ph-meta">drawn</span></div>
+        <div class="ph-row"><span class="ph-bar" style="background:#c98bd6"></span><span class="ph-t mono">1.90s</span><span class="ph-n">Recovery</span></div>
+        <div class="ph-row"><span class="ph-bar" style="background:#e08a5a"></span><span class="ph-t mono">2.31s</span><span class="ph-n">Line reset</span></div>
+      </div>
+
+      <div class="finding">
+        <div class="f-head">
+          <div class="f-eyebrow">Finding 01 · Catch phase · 0.54s</div>
+          <div class="f-title">Knees widen early <span class="sev">Focus</span></div>
+        </div>
+        <div class="f-obs"><span class="k">OBSERVATION</span>Knees move wider than the hips before the feet turn out — measured knee angle 112°, ~14° wider than target.</div>
+        <div class="cue">
+          <div class="q">“Heels up first — keep the knees inside the hips, then turn the feet late.”</div>
+          <div class="by">Coach cue · you</div>
+        </div>
+        <div class="chain">
+          <span class="cstep done"><span class="b"></span>Suggested</span><span class="carrow">›</span>
+          <span class="cstep done"><span class="b"></span>Coach edited</span><span class="carrow">›</span>
+          <span class="cstep now"><span class="b"></span>Approved</span>
+        </div>
+        <div class="f-meta">
+          <div class="mrow"><span>Video frame</span><b class="mono">128</b></div>
+          <div class="mrow"><span>Knee angle</span><b>112°</b></div>
+          <div class="mrow"><span>Drill</span><b>Narrow-knee kick</b></div>
+          <div class="mrow"><span>In report</span><b>Yes</b></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

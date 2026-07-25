@@ -42,7 +42,6 @@ import ReviewSetupPanel from '@/components/analysis/ReviewSetupPanel';
 import AnalysisFocusChecklist from '@/components/analysis/AnalysisFocusChecklist';
 import AIReportOutputSelector from '@/components/analysis/AIReportOutputSelector';
 import AICreditIndicator from '@/components/credits/AICreditIndicator';
-import PilotReadinessWarning from '@/components/status/PilotReadinessWarning';
 import { AI_CREDIT_COPY, getFeatureGateState, getPlanKey } from '@/lib/plans/featureGates';
 import { getConsentActionState } from '@/lib/consentReadiness';
 import { buildAthleteProfileReadiness, buildReportOutputPlan } from '@/lib/aiReportOutputs';
@@ -1075,7 +1074,6 @@ export default function Analyse() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <SafeAnalyseSection name="Pilot readiness">
-        <PilotReadinessWarning className="mb-4" />
       </SafeAnalyseSection>
       <StepBar current={step} />
 
