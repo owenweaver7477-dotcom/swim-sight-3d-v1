@@ -28,7 +28,7 @@ great core surface."* Six of the seven systemic issues are **discipline, not des
 
 ## P0 — the hardening pass (days of work, "very high" impact)
 
-- [x] **P0-1 · Remove all instability signalling from the app** — 🔴 S1 · impact Very high · effort Low — **DONE 2026-07-25 · `fff5cb4`**
+- [x] **P0-1 · Remove all instability signalling from the app** — 🔴 S1 · impact Very high · effort Low — **DONE 2026-07-25 · `b5aeaea`**
   "Pilot recovery mode" banner removed from all three coach workflow screens (Analyse, AI review, reviews list); now renders only on the internal `PilotLaunchPage` (not in the coach nav) — the audit's "keep status behind an admin page" fix. "AI evidence was weak, filtered, or unavailable" → positive routing copy. Guard `test:pilot-recovery` repointed from banner-presence to the recovery **behaviour** (every failure path still hands the coach a manual-review route). Verified: 18/18 guards, lint + build clean; grep confirms zero instability strings reachable in the coach workflow.
 - [ ] **P0-2 · Ship a believable seeded club; block junk names** — 🔴 S2 · Very high · Med
   8–12 realistic swimmers, mixed strokes, varied drill doses/types. Validate names on entry (min length, no single characters). Kill the swimmer named "o".
@@ -99,4 +99,4 @@ Some audit items were fixed after their 25 July captures and are already stale i
 
 | Date | Item | Commit | Verification |
 |---|---|---|---|
-| 2026-07-25 | **P0-1** instability signalling removed from the coach workflow (+ part of P0-3, P0-4) | `fff5cb4` | 18/18 guards · lint + build clean · grep sweep clean |
+| 2026-07-25 | **P0-1** instability signalling removed from the coach workflow (+ part of P0-3, P0-4) | `b5aeaea` | 18/18 guards · lint + build clean · grep sweep clean |
