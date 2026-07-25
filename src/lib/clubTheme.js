@@ -61,6 +61,39 @@ export function hexToHslTriplet(hex) {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+// Inverse of hexToHslTriplet — needed by the contrast guard, which adjusts a
+// colour's lightness while preserving its hue/saturation.
+function hslTripletToHex(triplet) {
+  const [hRaw, sRaw, lRaw] = String(triplet).split(' ');
+  const h = (Number(hRaw) % 360) / 360;
+  const s = Number(String(sRaw).replace('%', '')) / 100;
+  const l = Number(String(lRaw).replace('%', '')) / 100;
+  if ([h, s, l].some(Number.isNaN)) return null;
+
+  const hue = (p, q, t0) => {
+    let t = t0;
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  let r; let g; let b;
+  if (s === 0) {
+    r = l; g = l; b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue(p, q, h + 1 / 3);
+    g = hue(p, q, h);
+    b = hue(p, q, h - 1 / 3);
+  }
+  const toHex = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 // Relative luminance 0..1 (sRGB) for WCAG contrast.
 function luminance(hex) {
   const { r, g, b } = toRgb(hex);
@@ -82,6 +115,62 @@ function bestInk(hex) {
   return contrastWhite >= contrastDark ? WHITE_INK : DARK_INK;
 }
 
+// ── Contrast guard ───────────────────────────────────────────────────────────
+// A club colour is used BOTH as a fill (white text on it) and as text/icons on the
+// page surface (`text-primary`). The second role is the dangerous one: a design
+// audit flagged that vivid presets (Lime, Amber, Coral) as text on white fall well
+// below the WCAG AA 4.5:1 minimum, "baking a contrast failure into a user setting".
+// Rather than delete those presets, we honour the club's colour but nudge its
+// lightness until it is legible on the current surface. The hue/saturation — the
+// part that reads as "our club colour" — is preserved.
+const AA_TEXT = 4.5;
+
+function contrastVsLuminance(hex, otherLum) {
+  const L = luminance(hex);
+  const [hi, lo] = L > otherLum ? [L, otherLum] : [otherLum, L];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+function withLightness(hex, lightnessPct) {
+  const triplet = hexToHslTriplet(hex);
+  if (!triplet) return hex;
+  const [h, s] = triplet.split(' ');
+  return hslTripletToHex(`${h} ${s} ${Math.max(0, Math.min(100, Math.round(lightnessPct)))}%`);
+}
+
+/**
+ * Return a variant of `hex` that meets AA text contrast against the given surface.
+ * Darkens on light surfaces, lightens on dark ones. Returns the original when it
+ * already passes, so most clubs see no change at all.
+ */
+export function ensureTextContrast(hex, surfaceIsDark = false, target = AA_TEXT) {
+  const norm = normalizeHex(hex);
+  if (!norm) return hex;
+  // Surface luminance: the app's light card (#ffffff) or dark card (#131e29).
+  const surfaceLum = surfaceIsDark ? luminance('#131e29') : 1.0;
+  if (contrastVsLuminance(norm, surfaceLum) >= target) return norm;
+
+  const triplet = hexToHslTriplet(norm);
+  if (!triplet) return norm;
+  let l = Number(triplet.split(' ')[2].replace('%', ''));
+  const step = surfaceIsDark ? 2 : -2; // lighten on dark, darken on light
+  for (let i = 0; i < 50; i += 1) {
+    l += step;
+    if (l <= 0 || l >= 100) break;
+    const candidate = withLightness(norm, l);
+    if (contrastVsLuminance(candidate, surfaceLum) >= target) return candidate;
+  }
+  // Fell through: use the highest-contrast endpoint rather than an illegible colour.
+  return surfaceIsDark ? '#ffffff' : '#0b1b2b';
+}
+
+/** True when the chosen colour had to be adjusted to stay legible (for UI hints). */
+export function isContrastAdjusted(hex, surfaceIsDark = false) {
+  const norm = normalizeHex(hex);
+  if (!norm) return false;
+  return ensureTextContrast(norm, surfaceIsDark) !== norm;
+}
+
 export function clearClubTheme() {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
@@ -100,22 +189,31 @@ export function applyClubTheme(primaryHex, accentHex) {
   }
 
   const root = document.documentElement;
-  const primaryHsl = hexToHslTriplet(primary);
-  const accentHsl = hexToHslTriplet(accent);
+  // --primary / --accent are used as TEXT and icons (`text-primary`) as well as
+  // fills, so they must clear AA against the current surface. Anything that only
+  // ever sits behind white ink (rings, sidebar accents) keeps the vivid original.
+  const surfaceIsDark = root.classList.contains('dark');
+  const primarySafe = ensureTextContrast(primary, surfaceIsDark);
+  const accentSafe = ensureTextContrast(accent, surfaceIsDark);
+
+  const primaryHsl = hexToHslTriplet(primarySafe);
+  const accentHsl = hexToHslTriplet(accentSafe);
+  const primaryVividHsl = hexToHslTriplet(primary);
+  const accentVividHsl = hexToHslTriplet(accent);
   if (!primaryHsl || !accentHsl) { clearClubTheme(); return; }
 
   // Contrast-safe on-colour ink (whichever of white / deep-navy reads better).
-  const primaryInk = bestInk(primary);
-  const accentInk = bestInk(accent);
+  const primaryInk = bestInk(primarySafe);
+  const accentInk = bestInk(accentSafe);
 
   root.style.setProperty('--primary', primaryHsl);
   root.style.setProperty('--primary-foreground', primaryInk);
-  root.style.setProperty('--ring', primaryHsl);
+  root.style.setProperty('--ring', primaryVividHsl || primaryHsl);
   root.style.setProperty('--accent', accentHsl);
   root.style.setProperty('--accent-foreground', accentInk);
-  root.style.setProperty('--sidebar-primary', accentHsl);
-  root.style.setProperty('--sidebar-primary-foreground', accentInk);
-  root.style.setProperty('--sidebar-ring', accentHsl);
+  root.style.setProperty('--sidebar-primary', accentVividHsl || accentHsl);
+  root.style.setProperty('--sidebar-primary-foreground', bestInk(accent));
+  root.style.setProperty('--sidebar-ring', accentVividHsl || accentHsl);
 }
 
 // Curated quick styles for the "change the club style" option. Each is a
