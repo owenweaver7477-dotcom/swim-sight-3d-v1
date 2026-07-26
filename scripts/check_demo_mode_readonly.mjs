@@ -1,7 +1,7 @@
 // Demo ("Example data") mode must never write to the database.
 //
 // This guard EXERCISES that promise instead of asserting it. It imports the real
-// data layer and actually calls every write method, then checks how each one fails.
+// data layer and actually calls every mutating method, then checks how each fails.
 //
 // The proof is two-sided, and that is the point:
 //
@@ -13,6 +13,13 @@
 //     error, proving the call genuinely does reach Supabase when not refused.
 //
 // One-sided checks cannot tell "refused" apart from "never ran". This can.
+//
+// COVERAGE IS DERIVED, NOT LISTED. The set of methods under test comes from the
+// adapter itself: anything that is not on the small READ_ONLY_METHODS allowlist is
+// treated as a write and must be refused. A newly added write method is therefore
+// caught by default rather than by somebody remembering to update a list — which is
+// exactly how bulkCreate went unguarded into production. Unknown methods fail the
+// guard loudly instead of being skipped: unhandled means broken, not fine.
 //
 // Run: node --import ./scripts/_src_loader.mjs scripts/check_demo_mode_readonly.mjs
 
@@ -32,29 +39,67 @@ globalThis.localStorage = {
 const { entities } = await import('../src/lib/data/entities.js');
 const { enableDemoMode, exitDemoMode } = await import('../src/lib/demoMode.js');
 
-// Every mutating method on the adapter, with a minimal call for each.
-const WRITE_METHODS = [
-  ['create', (adapter) => adapter.create({ observation: 'guard probe' })],
-  ['update', (adapter) => adapter.update('00000000-0000-0000-0000-000000000000', { observation: 'guard probe' })],
-  ['delete', (adapter) => adapter.delete('00000000-0000-0000-0000-000000000000')],
-  ['softDelete', (adapter) => adapter.softDelete('00000000-0000-0000-0000-000000000000')],
-  ['bulkCreate', (adapter) => adapter.bulkCreate([{ observation: 'guard probe' }])],
-];
+// The ONLY methods allowed to not refuse in demo mode. Everything else on the
+// adapter is assumed to be a write until someone consciously adds it here.
+const READ_ONLY_METHODS = new Set(['list', 'filter', 'query', 'get']);
 
-// The entities a coach can write to from the review room / composer, plus the
-// club-scoped records the demo squad is built from.
+const PROBE_ID = '00000000-0000-0000-0000-000000000000';
+const PROBE_ROW = { observation: 'guard probe' };
+
+// How to invoke each write method. A write method missing from here fails the
+// guard — see the "not covered" check below.
+const WRITE_CALL_ARGS = {
+  create: [PROBE_ROW],
+  update: [PROBE_ID, PROBE_ROW],
+  delete: [PROBE_ID],
+  softDelete: [PROBE_ID],
+  bulkCreate: [[PROBE_ROW]],
+};
+
 const ENTITIES = ['Finding', 'Report', 'KeyFrame', 'VideoAnnotation', 'Swimmer', 'Drill'];
+
+function methodsOf(adapter) {
+  return Object.keys(adapter).filter((key) => typeof adapter[key] === 'function');
+}
 
 async function failureOf(fn) {
   try {
     await fn();
-    return null; // resolved — nothing threw
+    return null;
   } catch (error) {
     return error;
   }
 }
 
 const problems = [];
+
+// ── 0. Derive coverage from the adapter, and refuse to run half-blind ─────────
+const reference = entities.Finding;
+assert.ok(reference, 'entities.Finding must exist');
+
+const allMethods = methodsOf(reference);
+const writeMethods = allMethods.filter((name) => !READ_ONLY_METHODS.has(name));
+
+for (const name of READ_ONLY_METHODS) {
+  if (!allMethods.includes(name)) {
+    problems.push(
+      `READ_ONLY_METHODS lists "${name}" but the adapter has no such method. `
+      + 'If it was renamed, the rename silently shrank this guard\'s coverage.'
+    );
+  }
+}
+
+const uncovered = writeMethods.filter((name) => !WRITE_CALL_ARGS[name]);
+if (uncovered.length) {
+  problems.push(
+    `Adapter method(s) not covered by this guard: ${uncovered.join(', ')}. `
+    + 'Add call arguments to WRITE_CALL_ARGS so the refusal is exercised, or add the '
+    + 'name to READ_ONLY_METHODS if it genuinely does not write. Not deciding is not an option: '
+    + 'an unexercised method is how bulkCreate reached production unguarded.'
+  );
+}
+
+const testable = writeMethods.filter((name) => WRITE_CALL_ARGS[name]);
 
 // ── 1. Demo mode ON: every write must be refused before Supabase is touched ────
 enableDemoMode();
@@ -63,8 +108,8 @@ for (const entityName of ENTITIES) {
   const adapter = entities[entityName];
   assert.ok(adapter, `entities.${entityName} must exist`);
 
-  for (const [methodName, call] of WRITE_METHODS) {
-    const error = await failureOf(() => call(adapter));
+  for (const methodName of testable) {
+    const error = await failureOf(() => adapter[methodName](...WRITE_CALL_ARGS[methodName]));
 
     if (!error) {
       problems.push(
@@ -84,14 +129,26 @@ for (const entityName of ENTITIES) {
       );
     }
   }
+
+  // Readers must NOT be refused — otherwise demo mode would just be broken, and
+  // part 1 would pass for the wrong reason.
+  for (const methodName of READ_ONLY_METHODS) {
+    if (typeof adapter[methodName] !== 'function') continue;
+    const error = await failureOf(() => (
+      methodName === 'get' ? adapter.get(PROBE_ID) : adapter[methodName]({})
+    ));
+    if (error?.isDemoModeWrite) {
+      problems.push(`${entityName}.${methodName}() was refused as a write, but it is on the read-only allowlist.`);
+    }
+  }
 }
 
 // ── 2. Demo mode OFF: the same calls must actually reach Supabase ──────────────
 // Without this half, a method that silently did nothing at all would pass part 1.
 exitDemoMode();
 
-for (const [methodName, call] of WRITE_METHODS) {
-  const error = await failureOf(() => call(entities.Finding));
+for (const methodName of testable) {
+  const error = await failureOf(() => entities.Finding[methodName](...WRITE_CALL_ARGS[methodName]));
 
   if (!error) {
     problems.push(
@@ -120,8 +177,9 @@ if (problems.length) {
   process.exit(1);
 }
 
-const checked = ENTITIES.length * WRITE_METHODS.length;
 console.log(
-  `Demo mode read-only: ${checked} write calls refused with DemoModeWriteError before reaching Supabase, `
-  + `and all ${WRITE_METHODS.length} methods confirmed to reach Supabase when demo mode is off.`
+  `Demo mode read-only: ${testable.length} write methods derived from the adapter `
+  + `(${testable.join(', ')}), ${ENTITIES.length * testable.length} calls refused with `
+  + `DemoModeWriteError before reaching Supabase, all confirmed to reach Supabase when demo mode is off, `
+  + `and ${READ_ONLY_METHODS.size} readers confirmed not refused.`
 );

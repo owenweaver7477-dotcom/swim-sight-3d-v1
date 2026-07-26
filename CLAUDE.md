@@ -222,8 +222,15 @@ data layer via `scripts/_src_loader.mjs` (Node hooks that map Vite's `@/` alias 
 two-sided: with demo mode **on** each write must fail with `DemoModeWriteError`; with it
 **off** the same call must fail with the Supabase config error instead — which is what
 proves the write really does reach Supabase when it is not refused. A one-sided check
-cannot tell "refused" apart from "never ran". Add any new adapter write method to
-`WRITE_METHODS` in that script, or it goes unchecked.
+cannot tell "refused" apart from "never ran".
+
+**Coverage is derived from the adapter, not listed.** Any method that is not on the small
+`READ_ONLY_METHODS` allowlist (`list`/`filter`/`query`/`get`) is treated as a write and
+must be refused, so a newly added write is caught **by default** rather than by someone
+remembering to update a list. Add a new write method and the guard fails until you either
+give it call arguments in `WRITE_CALL_ARGS` or consciously declare it a reader — unhandled
+is treated as broken, not fine. (A hand-maintained list is exactly how `bulkCreate` reached
+production unguarded.)
 
 ⚠️ **Guard scripts pin literal strings.** If a check fails because you renamed or
 removed a pinned literal, do **not** delete the assertion to go green — restore the
