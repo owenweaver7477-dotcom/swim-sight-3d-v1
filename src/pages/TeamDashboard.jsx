@@ -15,6 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { subDays } from 'date-fns';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
+import { enableDemoMode } from '@/lib/demoMode';
 
 // ── Status badge ─────────────────────────────────────────────────────────────────
 const BADGE_TONES = {
@@ -117,6 +118,18 @@ function SetupDashboard({ club }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <PageHeader eyebrow={club.name} title="Coach Setup" subtitle="Get the workspace ready for the first swimmer review." />
+      {/* A brand-new coach otherwise faces a wall of zeros with no way to see what
+          "good" looks like (audit S6). One click into a populated example squad. */}
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.04] px-4 py-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-foreground">Want to see a finished club first?</div>
+          <div className="text-xs text-muted-foreground">Explore a demo squad with real reports and drills. Nothing is saved, and your club stays untouched.</div>
+        </div>
+        <Button size="sm" variant="outline" className="h-9 flex-shrink-0 text-xs" onClick={enableDemoMode}>
+          Explore a demo squad
+        </Button>
+      </div>
+
       <div className="bg-card rounded-lg border border-border divide-y divide-border">
         {steps.map((s, i) => (
           <div key={i} className="flex items-center gap-4 px-5 py-4">

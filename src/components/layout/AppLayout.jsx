@@ -5,6 +5,7 @@ import { useClubContext } from '@/lib/useClubContext';
 import { Loader2 } from 'lucide-react';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { applyClubTheme, clearClubTheme } from '@/lib/clubTheme';
+import DemoModeBanner from '@/components/demo/DemoModeBanner';
 import { useTheme } from '@/lib/ThemeContext';
 
 export default function AppLayout() {
@@ -56,6 +57,7 @@ export default function AppLayout() {
           <NotificationPanel />
         </div>
         <div className="min-h-screen">
+          <DemoModeBanner />
           <Outlet />
         </div>
       </main>
