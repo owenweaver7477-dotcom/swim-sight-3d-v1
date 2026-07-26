@@ -5,6 +5,7 @@ import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginUnusedImports from "eslint-plugin-unused-imports";
 
 export default [
+  { ignores: ["dist/**", ".codex-probe/**", "base44/**"] },
   {
     files: [
       "src/components/**/*.{js,mjs,cjs,jsx}",
@@ -72,6 +73,22 @@ export default [
         { ignore: ["cmdk-input-wrapper", "toast-close"] },
       ],
       "react-hooks/rules-of-hooks": "error",
+    },
+  },
+  {
+    // Previously unlinted: src/lib (the data layer, auth, sanitizer, theme), api/ (the
+    // worker callback and the share endpoint) and scripts/ (the guard battery) matched no
+    // config, so they were processed with ZERO rules and passed trivially. An undefined
+    // reference in any of them was invisible.
+    files: ["src/lib/**/*.{js,jsx,mjs}", "api/**/*.js", "scripts/**/*.mjs", "tests/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: { ecmaVersion: 2022, sourceType: "module", ecmaFeatures: { jsx: true } },
+    },
+    rules: {
+      ...pluginJs.configs.recommended.rules,
+      "no-unused-vars": "off",
+      "no-use-before-define": ["error", { variables: true, functions: false, classes: true }],
     },
   },
   {
