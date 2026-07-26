@@ -214,7 +214,17 @@ npm run test:storage-adapter-readiness
 npm run test:phase3-coach-polish         # coach studio / drill library surface
 npm run test:production-surface          # route guards, admin gating, no private routes in public nav
 npm run test:demo-mode-readonly          # demo mode never writes — exercised, not asserted
+npm run test:coach-approval-moat         # AI never reaches a report unapproved (Section 3)
 ```
+
+ℹ️ **`test:coach-approval-moat` protects Section 3**, which is enforced only by app code —
+RLS lets any coach-role member write `approval_status`. It **fails closed on new authoring
+surfaces**: every `entities.Finding.create` call site in `src/` must be declared in
+`CREATE_SITES` with what it is, so a newly added composer/editor fails the guard until
+someone states deliberately what it creates. Two invariants are genuinely *exercised*
+against the data layer (the layer never invents `approval_status`/`source`; a coach create
+keeps `source: 'coach'` and all five content fields); the AI-insert and edit-path checks are
+source scans, and the guard's own output says so rather than implying execution.
 
 ℹ️ **`test:demo-mode-readonly` runs real code, not a source scan.** It imports the live
 data layer via `scripts/_src_loader.mjs` (Node hooks that map Vite's `@/` alias and
