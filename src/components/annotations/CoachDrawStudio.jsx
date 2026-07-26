@@ -590,6 +590,7 @@ export default function CoachDrawStudio({
   // `selectedDrills` above is declared without a setter and is only read when starting a
   // finding from a moment — it is not the attachment path and must not be repurposed.
   const [seededDrills, setSeededDrills] = useState([]);
+  const [composerDrillQuery, setComposerDrillQuery] = useState('');
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -956,6 +957,29 @@ export default function CoachDrawStudio({
     const primary = primaryTitle ? [{ title: primaryTitle, summary: finding.linked_drill_summary || null, id: finding.linked_drill_id || null }] : [];
     return [...primary, ...extras.filter((d) => d && d.title).map((d) => ({ title: d.title, summary: d.summary || null, cue: d.cue || null, id: null }))];
   };
+  // ── Inline drill picker for the composer ────────────────────────────────────
+  // Ranked against what the coach is WRITING, not against step 1's marker label, so the
+  // suggestions track the finding as it takes shape. Step 3 keeps its own picker; this
+  // one exists so attaching a drill does not require leaving the composer mid-sentence.
+  const composerDrills = useMemo(() => searchAndRankDrills(drillPool, {
+    query: composerDrillQuery,
+    finding: {
+      observation: editObservation,
+      coach_sees: editObservation,
+      stroke_phase: editPhase,
+      phase: editPhase,
+      fault_tag: editTitle,
+    },
+    strokeType: video?.stroke_type,
+    limit: 6,
+  }), [drillPool, composerDrillQuery, editObservation, editPhase, editTitle, video?.stroke_type]);
+
+  // What is attached right now: a saved finding reads from the row, an unsaved one from
+  // the seeded list that will be passed into create.
+  const attachedDrillTitle = editorFinding
+    ? (editorFinding.linked_drill_title || editorFinding.drill || '')
+    : (seededDrills[0]?.title || '');
+
   const writeFindingDrills = async (finding, list) => {
     if (!finding || !onUpdateFinding || readOnly) return;
     const primary = list[0] || null;
@@ -972,6 +996,23 @@ export default function CoachDrawStudio({
     } catch (error) {
       setActionFeedback({ type: 'error', msg: error?.message || 'Drills could not be saved. Try again.' });
     }
+  };
+
+  // Attach (or clear) the composer's drill. A saved finding writes through the same
+  // writeFindingDrills path step 3 uses — so it reaches Supabase via createEntityAdapter
+  // and is refused in demo mode like any other write. An unsaved finding has no row yet,
+  // so the choice is held in seededDrills and passed into the create call.
+  const attachComposerDrill = (drill) => {
+    if (readOnly) return;
+    const entry = drill && {
+      title: drill.title,
+      summary: drillSummary(drill) || drill.report_summary || drill.purpose || null,
+      cue: drill.coaching_cue || null,
+      id: drill.id || null,
+    };
+    if (editorFinding) writeFindingDrills(editorFinding, entry ? [entry] : []);
+    else setSeededDrills(entry ? [entry] : []);
+    setComposerDrillQuery('');
   };
 
   const handleSaveComments = async () => {
@@ -2002,6 +2043,51 @@ export default function CoachDrawStudio({
                         onPhrase={insertPhrase}
                       />
                       <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Recommended drill <span className="text-slate-500">(optional)</span></div>
+                        {attachedDrillTitle ? (
+                          <div className="flex items-center gap-2 rounded-lg border border-sky-400/40 bg-sky-400/10 px-2.5 py-1.5">
+                            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-sky-100">{attachedDrillTitle}</span>
+                            {!readOnly && (
+                              <button
+                                type="button"
+                                onClick={() => attachComposerDrill(null)}
+                                className="flex-shrink-0 text-[10px] font-semibold text-sky-200/80 hover:text-white"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <Input
+                              value={composerDrillQuery}
+                              onChange={(e) => setComposerDrillQuery(e.target.value)}
+                              className="h-9 border-white/15 bg-slate-900/70 text-xs text-white placeholder:text-slate-500"
+                              placeholder="Search the drill library…"
+                            />
+                            <div className="space-y-1">
+                              {composerDrills.map((drill) => (
+                                <button
+                                  key={drill.id}
+                                  type="button"
+                                  onClick={() => attachComposerDrill(drill)}
+                                  className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-left transition-colors hover:border-sky-300/40 hover:bg-white/10"
+                                >
+                                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-100">{drill.title}</span>
+                                  {drill.stroke && <span className="flex-shrink-0 text-[10px] text-slate-400">{drill.stroke}</span>}
+                                  {drill.difficulty && <span className="flex-shrink-0 rounded-full border border-white/10 px-1.5 text-[9px] text-slate-400">{drill.difficulty}</span>}
+                                </button>
+                              ))}
+                              {!composerDrills.length && (
+                                <p className="text-[10px] leading-4 text-slate-500">
+                                  No drill matches that. Attach one in the Drills step, or write your own there.
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Severity</div>
                         <div className={`grid gap-1.5 ${editSeverity === 'critical' ? 'grid-cols-4' : 'grid-cols-3'}`}>
                           {[...SEVERITY_OPTIONS, ...(editSeverity === 'critical' ? ['critical'] : [])].map((option) => (
@@ -2211,6 +2297,51 @@ export default function CoachDrawStudio({
                         phrases={phrases}
                         onPhrase={insertPhrase}
                       />
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Recommended drill <span className="text-slate-500">(optional)</span></div>
+                        {attachedDrillTitle ? (
+                          <div className="flex items-center gap-2 rounded-lg border border-sky-400/40 bg-sky-400/10 px-2.5 py-1.5">
+                            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-sky-100">{attachedDrillTitle}</span>
+                            {!readOnly && (
+                              <button
+                                type="button"
+                                onClick={() => attachComposerDrill(null)}
+                                className="flex-shrink-0 text-[10px] font-semibold text-sky-200/80 hover:text-white"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <Input
+                              value={composerDrillQuery}
+                              onChange={(e) => setComposerDrillQuery(e.target.value)}
+                              className="h-9 border-white/15 bg-slate-900/70 text-xs text-white placeholder:text-slate-500"
+                              placeholder="Search the drill library…"
+                            />
+                            <div className="space-y-1">
+                              {composerDrills.map((drill) => (
+                                <button
+                                  key={drill.id}
+                                  type="button"
+                                  onClick={() => attachComposerDrill(drill)}
+                                  className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-left transition-colors hover:border-sky-300/40 hover:bg-white/10"
+                                >
+                                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-100">{drill.title}</span>
+                                  {drill.stroke && <span className="flex-shrink-0 text-[10px] text-slate-400">{drill.stroke}</span>}
+                                  {drill.difficulty && <span className="flex-shrink-0 rounded-full border border-white/10 px-1.5 text-[9px] text-slate-400">{drill.difficulty}</span>}
+                                </button>
+                              ))}
+                              {!composerDrills.length && (
+                                <p className="text-[10px] leading-4 text-slate-500">
+                                  No drill matches that. Attach one in the Drills step, or write your own there.
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                       <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Severity</div>
                         <div className="grid grid-cols-3 gap-1.5">
