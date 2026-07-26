@@ -16,6 +16,14 @@ const SRC = path.join(ROOT, 'src');
 const EXTENSIONS = ['', '.js', '.jsx', '.mjs', '.json', '/index.js', '/index.jsx'];
 
 export function resolve(specifier, context, nextResolve) {
+  // Opt-in only (SS_SUPABASE_STUB=1), set by guards that need to inspect the exact
+  // row the data layer would write. Never active in a normal run.
+  if (specifier === '@supabase/supabase-js' && process.env.SS_SUPABASE_STUB === '1') {
+    return {
+      url: pathToFileURL(path.join(ROOT, 'scripts', '_supabase_stub.mjs')).href,
+      shortCircuit: true,
+    };
+  }
   if (specifier.startsWith('@/')) {
     const base = path.join(SRC, specifier.slice(2));
     for (const ext of EXTENSIONS) {

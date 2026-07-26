@@ -113,6 +113,12 @@ function mapFindingToDb(data) {
   } = data;
   return {
     ...remaining,
+    // The coach-facing heading has its own column as of migration 026. Before that,
+    // `finding_name` was destructured away here and used ONLY as a fallback into
+    // `observation` — so a coach who filled both the (required) heading and "what we
+    // saw" silently lost the heading before the insert. Mapping it here means every
+    // surface writes the heading identically and none of them can drift.
+    title: remaining.title || finding_name || undefined,
     observation: remaining.observation || coach_sees || finding_name,
     stroke_phase: remaining.stroke_phase || phase,
     correction_cue: remaining.correction_cue || cue,
@@ -129,7 +135,9 @@ function mapFindingFromDb(row) {
   const rawTimestamp = rawPayload.timestamp_seconds ?? rawPayload.timestamp_start;
   return withBase44DateAliases({
     ...row,
-    finding_name: row.finding_name || row.observation,
+    // Prefer the stored heading; rows written before migration 026 have no `title`
+    // and keep reading their heading from `observation`, exactly as they did before.
+    finding_name: row.title || row.finding_name || row.observation,
     phase: row.phase || row.stroke_phase,
     coach_sees: row.coach_sees || row.observation,
     cue: row.cue || row.correction_cue,
