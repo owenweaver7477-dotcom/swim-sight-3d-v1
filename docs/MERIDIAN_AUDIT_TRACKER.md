@@ -103,4 +103,4 @@ Some audit items were fixed after their 25 July captures and are already stale i
 |---|---|---|---|
 | 2026-07-25 | **P0-1** instability signalling removed from the coach workflow (+ part of P0-3, P0-4) | `b5aeaea` | 18/18 guards · lint + build clean · grep sweep clean |
 | 2026-07-26 | **Launch-hardening batch merged to `main`** — AI purge, demo squad, drill-default fix, per-tier attribution, consent/upload fix, a11y + trust work (16 commits, PR #9) | `448d1d0` | Vercel production **READY** on the merge commit · swimsight3d.com HTTP 200 |
-| 2026-07-26 | **Hotfix — support address reverted to a live inbox** (partial revert of P0-5; the branded default bounced in production) | `PENDING` | lint + build · 18/18 guards · confirmed against the deployed bundle: prod served `support@swimsight3d.com`, `VITE_SUPPORT_EMAIL` proven unset |
+| 2026-07-26 | **Hotfix — support address reverted to a live inbox** (partial revert of P0-5; the branded default bounced in production) | `bd20a12` | lint + build · 18/18 guards · confirmed against the deployed bundle: prod served `support@swimsight3d.com`, `VITE_SUPPORT_EMAIL` proven unset |
