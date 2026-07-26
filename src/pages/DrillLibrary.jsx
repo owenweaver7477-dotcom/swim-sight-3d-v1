@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
 import { useClubContext } from '@/lib/useClubContext';
 import { getDefaultDrills } from '@/lib/defaultDrills';
+import { drillSearchBlob } from '@/lib/drillMatching';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -238,16 +239,6 @@ export default function DrillLibrary() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Same field set searchAndRankDrills matches on (src/lib/drillMatching.js). The page
-  // previously searched only 5 of these — it missed phase, report_summary, instructions,
-  // and `coaching_cue` SINGULAR, which is a real column distinct from `coaching_cues`.
-  // Two search implementations over the same data disagreeing about which fields count is
-  // how a coach gets different results from the picker and the page for the same words.
-  const drillBlob = (d) => [
-    d.title, d.stroke, d.phase, d.fault_tags, d.report_summary,
-    d.purpose, d.coaching_cue, d.coaching_cues, d.instructions,
-  ].filter(Boolean).join(' ').toLowerCase();
-
   const { filtered, searchWasWidened } = useMemo(() => {
     const q = search.trim().toLowerCase();
     const structural = drills.filter((d) => (
@@ -257,7 +248,7 @@ export default function DrillLibrary() {
     ));
     if (!q) return { filtered: structural, searchWasWidened: false };
 
-    const matched = structural.filter((d) => drillBlob(d).includes(q));
+    const matched = structural.filter((d) => drillSearchBlob(d).includes(q));
     // Page-level fallback, mirroring the weak-match fallback searchAndRankDrills already
     // has (`if (!filtered.length) filtered = pool`). The coach's drill PICKER degrades to
     // "show the pool" when a query matches nothing; this page did not, so a finding whose

@@ -6,6 +6,30 @@ function words(value) {
     .filter(Boolean);
 }
 
+/**
+ * THE searchable text of a drill. One definition, imported by everything that searches
+ * drills — the ranked picker here and the library page's free-text filter.
+ *
+ * It is exported rather than inlined because the two used to keep separate lists and they
+ * drifted: the page matched 5 fields where this matched 9, missing phase, report_summary,
+ * instructions, and `coaching_cue` SINGULAR (a real column, distinct from the plural
+ * `coaching_cues`). A coach searching the same word in the picker and on the page got
+ * different results. Add a field here and both gain it; there is no second list to forget.
+ */
+export function drillSearchBlob(drill = {}) {
+  return textBlob([
+    drill.title,
+    drill.stroke,
+    drill.phase,
+    drill.fault_tags,
+    drill.report_summary,
+    drill.purpose,
+    drill.coaching_cue,
+    drill.coaching_cues,
+    drill.instructions,
+  ]);
+}
+
 function textBlob(values) {
   return values
     .flatMap((value) => Array.isArray(value) ? value : [value])
@@ -210,17 +234,7 @@ export function searchAndRankDrills(drills, { query = '', finding = {}, strokeTy
   const q = String(query || '').trim().toLowerCase();
   let filtered = pool;
   if (q) {
-    filtered = pool.filter((drill) => textBlob([
-      drill.title,
-      drill.stroke,
-      drill.phase,
-      drill.fault_tags,
-      drill.report_summary,
-      drill.purpose,
-      drill.coaching_cue,
-      drill.coaching_cues,
-      drill.instructions,
-    ]).includes(q));
+    filtered = pool.filter((drill) => drillSearchBlob(drill).includes(q));
     if (!filtered.length) filtered = pool;
   }
   return filtered
