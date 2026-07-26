@@ -67,12 +67,22 @@ const DIFFICULTY_CHIP = {
   Elite:        'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
 };
 
-/** Badge text: the drill's difficulty when known, else its category. */
+/**
+ * Badge text, in order of how much it tells the coach:
+ *   difficulty (74/107 drills) → stroke phase (92/107, 21 distinct) → category.
+ * Every branch returns a non-empty label, so a drill can never render a blank or
+ * "undefined" chip regardless of how sparse its record is.
+ */
 function drillBadge(drill) {
-  if (drill.difficulty && DIFFICULTY_CHIP[drill.difficulty]) {
-    return { label: drill.difficulty, className: DIFFICULTY_CHIP[drill.difficulty] };
+  const difficulty = typeof drill.difficulty === 'string' ? drill.difficulty.trim() : '';
+  if (difficulty && DIFFICULTY_CHIP[difficulty]) {
+    return { label: difficulty, className: DIFFICULTY_CHIP[difficulty] };
   }
-  const stroke = drill.stroke;
+  const phase = typeof drill.phase === 'string' ? drill.phase.trim() : '';
+  if (phase) {
+    return { label: phase, className: strokeStyle(drill.stroke).chip };
+  }
+  const stroke = typeof drill.stroke === 'string' ? drill.stroke.trim() : '';
   const label = stroke === 'Underwater' ? 'Underwaters' : (stroke || 'Drill');
   return { label, className: strokeStyle(stroke).chip };
 }
@@ -84,11 +94,23 @@ function CategoryIcon({ stroke, className }) {
   return <Icon className={className} />;
 }
 
-// Merge bundled default drills with database drills (db wins on id).
+// Merge bundled default drills with database drills.
+//
+// A club's OWN drill always wins (it is the club's data). A `shared_default` row,
+// however, must not clobber the bundled default with the same id: the bundle is the
+// maintained source of truth, and several stale shared rows carry placeholder
+// metadata (a uniform "4 x 25m easy technique" dose and none of the purpose /
+// coaching cue / execution steps the bundled drill has). Those rows previously
+// overwrote 9 rich defaults, which is what made the library read as seed data.
+// This filters them out in code — no database write, fully reversible.
 function mergeDrills(defaults, databaseDrills) {
   const byId = new Map();
   defaults.forEach((d) => byId.set(d.id, d));
-  databaseDrills.forEach((d) => byId.set(d.id, d));
+  databaseDrills.forEach((d) => {
+    const isClubDrill = Boolean(d.club_id);
+    if (!isClubDrill && byId.has(d.id)) return; // keep the richer bundled default
+    byId.set(d.id, d);
+  });
   return [...byId.values()];
 }
 
