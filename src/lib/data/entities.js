@@ -474,6 +474,10 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async bulkCreate(rows = []) {
+      // This was the one mutating method without a refusal, so in demo mode it
+      // reached Supabase like any real write. Caught by check_demo_mode_readonly,
+      // which calls every write method rather than trusting that they all guard.
+      refuseDemoWrite('add these');
       const { data, error } = await supabase
         .from(tableName)
         .insert(rows.map((row) => applyEntityDefaults(entityName, toDb(row))))

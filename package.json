@@ -27,6 +27,7 @@
     "test:storage-adapter-readiness": "node scripts/check_storage_adapter_readiness.mjs",
     "test:phase3-coach-polish": "node scripts/check_phase3_coach_polish.mjs",
     "test:production-surface": "node scripts/check_production_surface.mjs",
+    "test:demo-mode-readonly": "node --import ./scripts/_src_loader.mjs scripts/check_demo_mode_readonly.mjs",
     "preview": "vite preview",
     "dev:local": "vite --config vite.local.config.js --host 127.0.0.1 --port 5173 --strictPort --force --clearScreen false"
   },

@@ -213,7 +213,17 @@ npm run test:storage-hardening           # storage/signed-URL hardening
 npm run test:storage-adapter-readiness
 npm run test:phase3-coach-polish         # coach studio / drill library surface
 npm run test:production-surface          # route guards, admin gating, no private routes in public nav
+npm run test:demo-mode-readonly          # demo mode never writes — exercised, not asserted
 ```
+
+ℹ️ **`test:demo-mode-readonly` runs real code, not a source scan.** It imports the live
+data layer via `scripts/_src_loader.mjs` (Node hooks that map Vite's `@/` alias and
+`import.meta.env`) and actually calls every mutating adapter method. The check is
+two-sided: with demo mode **on** each write must fail with `DemoModeWriteError`; with it
+**off** the same call must fail with the Supabase config error instead — which is what
+proves the write really does reach Supabase when it is not refused. A one-sided check
+cannot tell "refused" apart from "never ran". Add any new adapter write method to
+`WRITE_METHODS` in that script, or it goes unchecked.
 
 ⚠️ **Guard scripts pin literal strings.** If a check fails because you renamed or
 removed a pinned literal, do **not** delete the assertion to go green — restore the
