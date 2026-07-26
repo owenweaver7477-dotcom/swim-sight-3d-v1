@@ -238,16 +238,35 @@ export default function DrillLibrary() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return drills.filter((d) => {
-      const matchCat = category === 'All' || d.stroke === category;
-      const matchPhase = phaseFilter === 'All' || d.phase === phaseFilter;
-      const matchDiff = diffFilter === 'All' || d.difficulty === diffFilter;
-      const matchSearch = !q || d.title?.toLowerCase().includes(q) || d.purpose?.toLowerCase().includes(q)
-        || d.coaching_cues?.toLowerCase().includes(q) || d.fault_tags?.toLowerCase().includes(q) || d.stroke?.toLowerCase().includes(q);
-      return matchCat && matchPhase && matchDiff && matchSearch;
-    });
+  // Same field set searchAndRankDrills matches on (src/lib/drillMatching.js). The page
+  // previously searched only 5 of these — it missed phase, report_summary, instructions,
+  // and `coaching_cue` SINGULAR, which is a real column distinct from `coaching_cues`.
+  // Two search implementations over the same data disagreeing about which fields count is
+  // how a coach gets different results from the picker and the page for the same words.
+  const drillBlob = (d) => [
+    d.title, d.stroke, d.phase, d.fault_tags, d.report_summary,
+    d.purpose, d.coaching_cue, d.coaching_cues, d.instructions,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const { filtered, searchWasWidened } = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const structural = drills.filter((d) => (
+      (category === 'All' || d.stroke === category)
+      && (phaseFilter === 'All' || d.phase === phaseFilter)
+      && (diffFilter === 'All' || d.difficulty === diffFilter)
+    ));
+    if (!q) return { filtered: structural, searchWasWidened: false };
+
+    const matched = structural.filter((d) => drillBlob(d).includes(q));
+    // Page-level fallback, mirroring the weak-match fallback searchAndRankDrills already
+    // has (`if (!filtered.length) filtered = pool`). The coach's drill PICKER degrades to
+    // "show the pool" when a query matches nothing; this page did not, so a finding whose
+    // fault wording happens not to appear in any drill's text dead-ended on "No drills
+    // here yet" — the exact DE-3 failure, for the slice of findings my six cases missed.
+    // Keep the structural filters (stroke/phase/difficulty) and drop only the free text,
+    // and say so rather than silently returning something else than what was asked for.
+    if (matched.length) return { filtered: matched, searchWasWidened: false };
+    return { filtered: structural, searchWasWidened: structural.length > 0 };
   }, [drills, category, phaseFilter, diffFilter, search]);
 
   const hasActiveFilters = phaseFilter !== 'All' || diffFilter !== 'All';
@@ -330,6 +349,17 @@ export default function DrillLibrary() {
           </div>
           {hasActiveFilters && <button onClick={() => { setPhaseFilter('All'); setDiffFilter('All'); }} className="text-[11px] text-primary underline">Clear filters</button>}
         </div>
+      )}
+
+      {/* Widening the search must be visible. Quietly showing results for something other
+          than what the coach typed is its own version of the DE-3 problem — the screen
+          looks right and is answering a different question. */}
+      {searchWasWidened && (
+        <p role="status" className="mt-3 rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+          No drill mentions <span className="font-semibold text-foreground">“{search.trim()}”</span>, so
+          every matching drill is shown instead.{' '}
+          <button onClick={() => setSearch('')} className="font-semibold text-primary underline">Clear search</button>
+        </p>
       )}
 
       {/* Drill list */}
