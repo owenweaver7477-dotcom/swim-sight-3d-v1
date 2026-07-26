@@ -6,6 +6,8 @@ import AnnotationCanvas from './AnnotationCanvas';
 import { formatTimestamp } from '@/lib/annotationRender';
 import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 import { DEFAULT_DRILLS } from '@/lib/defaultDrills';
+import { entities } from '@/lib/data/entities';
+import { PHRASE_FIELDS, mergePhrases, applyPhrase } from '@/lib/findings/phraseLibrary';
 import { searchAndRankDrills, drillSummary } from '@/lib/drillMatching';
 import { createPortal } from 'react-dom';
 import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
@@ -117,10 +119,36 @@ function FindingContentFields({
   observationPlaceholder,
   observationClassName = 'min-h-[64px]',
   cueOptional = false,
+  phrases = {},
+  onPhrase,
 }) {
   const label = 'text-xs font-semibold text-slate-300';
   const field = 'border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500';
   const optional = <span className="text-slate-500">(optional)</span>;
+
+  // One tap drops a phrase into the field. Appends rather than replaces, so a stray
+  // click can never wipe what the coach has already written.
+  const Phrases = ({ name }) => {
+    const list = phrases[name] || [];
+    if (!list.length || !onPhrase) return null;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {list.slice(0, 8).map((phrase) => (
+          <button
+            key={`${name}-${phrase.id || phrase.body}`}
+            type="button"
+            onClick={() => onPhrase(name, phrase.body)}
+            title={phrase.saved ? 'Saved by your club' : 'Suggested phrase'}
+            className={`min-h-7 rounded-full border px-2 py-0.5 text-[10px] leading-4 transition-colors ${phrase.saved
+              ? 'border-sky-400/50 bg-sky-400/10 text-sky-200 hover:bg-sky-400/20'
+              : 'border-white/10 bg-white/5 text-slate-300 hover:border-sky-300/40 hover:text-white'}`}
+          >
+            {phrase.body}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -133,6 +161,7 @@ function FindingContentFields({
           className={`h-10 ${field}`}
           placeholder="e.g. Knees widen during heel recovery"
         />
+        <Phrases name="title" />
         <p className="text-[10px] leading-4 text-slate-500">
           The scannable line above the finding. Left blank, the report uses what you saw.
         </p>
@@ -146,6 +175,7 @@ function FindingContentFields({
           className={`${observationClassName} ${field}`}
           placeholder={observationPlaceholder}
         />
+        <Phrases name="observation" />
       </div>
       <div className="space-y-1.5">
         <div className={label}>Why it matters {optional}</div>
@@ -156,6 +186,7 @@ function FindingContentFields({
           className={`min-h-[56px] ${field}`}
           placeholder="What this costs the swimmer — drag, timing, rhythm…"
         />
+        <Phrases name="why_it_matters" />
       </div>
       <div className="space-y-1.5">
         <div className={label}>What to feel in the water {cueOptional ? optional : null}</div>
@@ -166,6 +197,7 @@ function FindingContentFields({
           className={`h-10 ${field}`}
           placeholder="What should the swimmer feel or do?"
         />
+        <Phrases name="cue" />
       </div>
       <div className="space-y-1.5">
         <div className={label}>Next focus {optional}</div>
@@ -176,6 +208,7 @@ function FindingContentFields({
           className={`h-10 ${field}`}
           placeholder="What to work on before the next review"
         />
+        <Phrases name="next_focus" />
       </div>
     </>
   );
@@ -545,6 +578,48 @@ export default function CoachDrawStudio({
   const autosaveTimer = useRef(null);
   const lastAutosaved = useRef('');
   const [autosaveState, setAutosaveState] = useState(null); // null | 'saving' | 'saved' | {error}
+
+  // ── Phrase library ──────────────────────────────────────────────────────────
+  // Club-saved phrases layered over the bundled set. Deliberately best-effort: if the
+  // table is missing (migration 028 not run), unreadable, or the coach is offline, the
+  // catch leaves savedPhrases empty and the composer falls back to the bundled phrases.
+  // The feature is never coupled to the migration having run.
+  const [savedPhrases, setSavedPhrases] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await entities.CoachCueSnippet.filter({ is_active: true }, '-created_date', 200);
+        if (!cancelled) setSavedPhrases(Array.isArray(rows) ? rows : []);
+      } catch {
+        if (!cancelled) setSavedPhrases([]); // bundled phrases only — not an error state
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const phrases = useMemo(() => Object.fromEntries(
+    PHRASE_FIELDS.map((f) => [f, mergePhrases(f, savedPhrases)]),
+  ), [savedPhrases]);
+
+  const insertPhrase = (fieldName, body) => {
+    const setters = {
+      title: setEditTitle,
+      observation: setEditObservation,
+      why_it_matters: setEditWhy,
+      cue: setEditCue,
+      next_focus: setEditNextFocus,
+    };
+    const currents = {
+      title: editTitle,
+      observation: editObservation,
+      why_it_matters: editWhy,
+      cue: editCue,
+      next_focus: editNextFocus,
+    };
+    const setter = setters[fieldName];
+    if (setter) setter(applyPhrase(currents[fieldName], body));
+  };
 
   // ── 3-step helpers ───────────────────────────────────────────────────────────
   const stepIndex = STUDIO_STEPS.findIndex((s) => s.key === currentStep);
@@ -1885,6 +1960,8 @@ export default function CoachDrawStudio({
                         cue={editCue} onCue={setEditCue}
                         nextFocus={editNextFocus} onNextFocus={setEditNextFocus}
                         observationPlaceholder="What did you notice?"
+                        phrases={phrases}
+                        onPhrase={insertPhrase}
                       />
                       <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Severity</div>
@@ -2065,6 +2142,8 @@ export default function CoachDrawStudio({
                         observationPlaceholder="What did you notice at this moment?"
                         observationClassName="min-h-[72px]"
                         cueOptional
+                        phrases={phrases}
+                        onPhrase={insertPhrase}
                       />
                       <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Severity</div>

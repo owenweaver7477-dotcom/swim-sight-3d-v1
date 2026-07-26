@@ -28,6 +28,7 @@ const entityTables = {
   ReferenceAsset: 'reference_assets',
   NotificationLog: 'notification_logs',
   AIFindingFeedback: 'ai_finding_feedback',
+  CoachCueSnippet: 'coach_cue_snippets',
 };
 
 function normaliseOrder(order) {

@@ -56,7 +56,7 @@ const WRITE_CALL_ARGS = {
   bulkCreate: [[PROBE_ROW]],
 };
 
-const ENTITIES = ['Finding', 'Report', 'KeyFrame', 'VideoAnnotation', 'Swimmer', 'Drill'];
+const ENTITIES = ['Finding', 'Report', 'KeyFrame', 'VideoAnnotation', 'Swimmer', 'Drill', 'CoachCueSnippet'];
 
 function methodsOf(adapter) {
   return Object.keys(adapter).filter((key) => typeof adapter[key] === 'function');
