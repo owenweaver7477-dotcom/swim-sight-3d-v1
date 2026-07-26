@@ -586,6 +586,10 @@ export default function CoachDrawStudio({
   // catch leaves savedPhrases empty and the composer falls back to the bundled phrases.
   // The feature is never coupled to the migration having run.
   const [savedPhrases, setSavedPhrases] = useState([]);
+  // Drill carried over by "duplicate last", applied at create time. Note the existing
+  // `selectedDrills` above is declared without a setter and is only read when starting a
+  // finding from a moment — it is not the attachment path and must not be repurposed.
+  const [seededDrills, setSeededDrills] = useState([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -646,6 +650,11 @@ export default function CoachDrawStudio({
     setEditCue(fields.cue || '');
     setEditNextFocus(fields.nextFocus || '');
     if (fields.phase) setEditPhase(fields.phase);
+    // Duplicating carries the drill across — it is a content field, not a moment-anchor.
+    // Held here and passed into the create call, because drills otherwise attach in step 3
+    // via writeFindingDrills, which needs a finding that already exists. Templates carry
+    // none, and an absent list must not clear a drill already chosen.
+    if (Array.isArray(fields.drills) && fields.drills.length) setSeededDrills(fields.drills);
   };
 
   // ── 3-step helpers ───────────────────────────────────────────────────────────
@@ -784,6 +793,7 @@ export default function CoachDrawStudio({
     setLinkedFindingId('');
     setEditObservation(''); setEditCue(''); setEditSeverity('medium'); setEditPhase(''); setEditTags([]); setEditNotes('');
     setEditTitle(''); setEditWhy(''); setEditNextFocus('');
+    setSeededDrills([]);
   };
 
   // Select an Analysis Moment card: with a finding → edit it; without → open the
@@ -798,6 +808,7 @@ export default function CoachDrawStudio({
     setLinkChoice(moment.id);
     setEditObservation(''); setEditCue(''); setEditSeverity('medium'); setEditTags([]); setEditNotes('');
     setEditTitle(''); setEditWhy(''); setEditNextFocus('');
+    setSeededDrills([]);
     // Phase moments preselect their technique area; custom moments leave it open.
     const matchedLabel = quickLabels.find((label) => label.toLowerCase() === String(moment.phase || '').toLowerCase());
     setEditPhase(matchedLabel ? matchedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : '');
@@ -866,7 +877,7 @@ export default function CoachDrawStudio({
         title: editTitle.trim() || null,
         why: editWhy.trim() || null,
         nextFocus: editNextFocus.trim() || null,
-        drills: [],
+        drills: seededDrills,
         keyStampLinkId: selectedMomentId || effectiveLinkId || null,
       });
       // Tags ride on raw_ai_payload.fault_tags — the create path doesn't take them,

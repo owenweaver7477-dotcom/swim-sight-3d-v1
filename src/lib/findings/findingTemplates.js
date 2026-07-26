@@ -100,12 +100,22 @@ export function templateToFields(template) {
 
 /**
  * Fields copied from an existing finding, for "duplicate last".
- * The timestamp, evidence link and drills are deliberately NOT copied — a duplicate is a
- * starting point for a DIFFERENT moment, and silently inheriting the original's frame
- * would attach the wrong screenshot to the new finding.
+ *
+ * The timestamp and the evidence/frame link are deliberately NOT copied: a duplicate is a
+ * starting point for a DIFFERENT moment, and inheriting the original's frame would attach
+ * the wrong screenshot to the new finding — a mismatch that surfaces first in the parent's
+ * report.
+ *
+ * The recommended drill IS copied. It is one of the five content fields, not a
+ * moment-anchor: a drill attachment is a reference to a library drill
+ * (linked_drill_id/title/summary) and carries no per-swimmer or per-report state. The
+ * commonest reason to duplicate is "same fault, different rep or swimmer", where the coach
+ * wants the same drill — dropping it would force a re-pick in the exact case duplicate
+ * exists for.
  */
 export function findingToFields(finding) {
   if (!finding) return null;
+  const drillTitle = finding.linked_drill_title || finding.drill || '';
   return {
     title: finding.title || '',
     observation: finding.observation || finding.coach_sees || '',
@@ -113,5 +123,15 @@ export function findingToFields(finding) {
     cue: finding.correction_cue || finding.cue || '',
     nextFocus: finding.next_focus || '',
     phase: finding.stroke_phase || finding.phase || '',
+    drills: drillTitle
+      ? [{
+        id: finding.linked_drill_id || null,
+        title: drillTitle,
+        summary: finding.linked_drill_summary || null,
+        cue: null,
+        // No library id means the coach wrote this drill by hand on the original.
+        custom: !finding.linked_drill_id,
+      }]
+      : [],
   };
 }
