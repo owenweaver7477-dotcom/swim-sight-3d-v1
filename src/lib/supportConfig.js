@@ -1,7 +1,12 @@
-// ⚠️ MERGE PREREQUISITE: the support@swimsight3d.com mailbox (or a forward to the
-// existing inbox) must exist before this branch is merged, or support mail bounces.
-// Until then it can be overridden without a code change by setting VITE_SUPPORT_EMAIL.
-export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'support@swimsight3d.com';
+// Every support route in the app resolves through this one constant.
+//
+// ⚠️ The default MUST be an inbox that actually exists. This briefly defaulted to the
+// branded support@swimsight3d.com, which has no mailbox yet — so on a live product every
+// coach who clicked "contact support" emailed a black hole, silently. Reverted 2026-07-26.
+// Switch the default to the branded address only once that mailbox (or a forward to this
+// inbox) is real; until then it can be pointed anywhere via VITE_SUPPORT_EMAIL in Vercel,
+// with no code change and no deploy of this file.
+export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'swimsight3d.support@gmail.com';
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 // Public-site pilot booking CTA — a plain email for now (no form/booking tool yet).
 export const PILOT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Swim Sight 3D pilot enquiry')}`;

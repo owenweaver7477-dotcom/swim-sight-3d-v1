@@ -77,12 +77,23 @@ npm run lint && npm run build && for t in safeguarding public-report-safety publ
 
 → **lint clean · build green · 18/18 guards.**
 
-### The one human prerequisite (blocks merge)
+### The one human prerequisite — ⚠️ RESOLVED BY REVERT, 2026-07-26
 
-- [ ] **Create `support@swimsight3d.com`** — a real mailbox or a forward to your Gmail.
-      `SUPPORT_EMAIL` now defaults to it, so **until it exists, support mail bounces**.
-      *Alternative if you'd rather defer:* set `VITE_SUPPORT_EMAIL` to the old gmail address,
-      or revert that one line in `src/lib/supportConfig.js`.
+This branch changed `SUPPORT_EMAIL` to default to the branded `support@swimsight3d.com`
+and flagged "create that mailbox before merging" as the prerequisite. **The branch was
+merged and deployed to production before the mailbox existed**, so for a window on the
+live site every support link routed coaches to an address that bounces — silently, with
+no error shown to them.
+
+**Reverted on `main`:** the default is `swimsight3d.support@gmail.com` again — a real,
+monitored inbox. Nothing else about support routing changed.
+
+- [ ] **To go branded later:** create `support@swimsight3d.com` (mailbox or forward), then
+      set `VITE_SUPPORT_EMAIL` in Vercel (Production + Preview). **No code change, no deploy
+      of `supportConfig.js`.** Only flip the hardcoded default once the mailbox is live.
+
+*Lesson recorded in the file itself: the default must always be an inbox that exists. A
+"prerequisite" written in a doc does not stop a merge — a safe default does.*
 
 ### Other blockers
 
@@ -101,12 +112,12 @@ revertible. No migrations were run; no database rows were written or deleted.
 | Item | Why it's blocked |
 |---|---|
 | **AI backend deletion** | Protected system — needs `APPROVE:` (see above) |
-| **`support@swimsight3d.com` mailbox** | Domain/DNS + mail provider |
+| **`support@swimsight3d.com` mailbox** | Domain/DNS + mail provider. **No longer urgent** — the code default was reverted to the working gmail inbox on 2026-07-26, so support mail lands. Set `VITE_SUPPORT_EMAIL` when the branded mailbox is real. |
 | **The "3D" name** | ⚠️ **Corrected — the audit was wrong here.** The name is not an empty claim: a real 3D viewer (`ModelViewer3D`, `Technical3DViewer`, telemetry HUD) existed and was **parked post-pilot**. **Keep the name if you plan to revive it; rename only if it is gone for good.** ⚠️ **Note:** I deleted that cluster in the dead-code sweep (`ead8384`, on `main`) along with the `three` / `@react-three/fiber` deps — disclosed in that commit as "parked post-pilot", but you should know it is now **history-only**. Fully recoverable: `git checkout ead8384^ -- src/components/viewer src/components/hud` then `npm i three @react-three/fiber`. |
 | **Seeded demo club (P0-2)** | Needs your call: real Supabase rows (a DB write requiring approval) vs. a front-end "Explore with a demo squad" mode. I recommend demo-mode — no write, no risk of polluting a real club's analytics. |
 | **Compliance content** | Hosting region, encryption, retention, sub-processors — needs real answers, not invented ones |
 | **Shared-link attribution** | `api/shared-reports/[token].js` exposes only `club:{name}` by design. Gating the "Powered by" line there needs that **protected** endpoint to return a *computed boolean* (never `plan_key` — a share link must not disclose a club's commercial tier). Needs approval. |
-| **9 uniform `shared_default` drill rows in the DB** | All carry the identical "4 x 25m easy technique" the audit screenshotted. They are *added* to the good defaults, not merged over them. Cleaning them is a DB change — owner approval. |
+| **9 uniform `shared_default` drill rows in the DB** | All carry the identical "4 x 25m easy technique" the audit screenshotted. ⚠️ **Correction to an earlier claim in this file:** they were *not* merely "added alongside" the good defaults — all 9 ids collide exactly with bundled defaults, and `mergeDrills` let the DB row win, so 9 rich drills were being *replaced* by the uniform ones. That is fixed in code (bundled defaults now win for non-club drills), so the library reads correctly today. Deleting the rows is still a DB change needing owner approval, but it is now cosmetic cleanup, not a user-visible bug. |
 | **Test infrastructure** | Playwright + axe + Lighthouse CI don't exist; building them is its own workstream |
 | **Phases 5–9** | The review room, finding composer, analytics consolidation, component library, motion system — ranked and ready in `docs/MERIDIAN_AUDIT_TRACKER.md` |
 
