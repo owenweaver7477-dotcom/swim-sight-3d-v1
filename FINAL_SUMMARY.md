@@ -1,7 +1,7 @@
 # Launch Hardening — Final Summary
 
 **Branch:** `feat/launch-hardening` (not merged — ready for your review)
-**Base:** `main` @ `f08de0b` · **Commits:** 6 · **Date:** 2026-07-25
+**Base:** `main` @ `f08de0b` · **Commits:** 14 · **Date:** 2026-07-25 (session 3)
 
 ---
 
@@ -58,20 +58,42 @@ clean, dedicated task with the worker repo and migrations handled deliberately.
 
 | `1eab89c` | **Drill library differentiation (audit A8, CRITICAL).** *Diagnosis first:* the audit blamed the drill **data**, but the bundled defaults are already rich — **107 drills, 8 categories, 34 distinct doses**. The real defect was **rendering**: all four strokes collapsed to one "Technique" badge, one sky accent and one `Waves` icon. Now a distinct icon/accent/chip per category (**8 distinct icons, was 4**) and the badge carries **difficulty** instead of a constant. |
 | `ece8477` | **Report attribution is now per-tier (audit S5).** Derived from the existing `clubs.plan_key` — **no migration**. Paid club tiers get a report headed by their own logo/name instead of "Powered by Swim Sight 3D". Applied to the PDF; the shared-link half is **escalated** (see below). |
+| `b4ff9da` | **Drill library — stale rows no longer clobber the bundled defaults.** ⚠️ *Corrects my own earlier analysis:* all 9 `shared_default` DB ids **collide exactly** with bundled ids, and `mergeDrills` let the DB row win — so 9 rich drills were being **replaced** by placeholder rows. Fixed in code (no DB write): a `shared_default` row may not overwrite a bundled default; a club's own drill still always wins. Badge fallback chain **difficulty → phase → category** so the 33 drills without a difficulty never render a blank chip. *Verified over the real data: 0 junk rows survive, 0 blank badges, 23 distinct labels.* |
+| `ca6f53e` | **Shared-report attribution via computed boolean (approved).** Endpoint fetches `plan_key` **server-side only** and emits **only** `club.show_attribution`. Imported the helper from `featureGates.js` rather than duplicating the tier list (the endpoint already cross-imports `src/lib/`), so there is one source of truth and no drift. Found the sanitizer uses an **allowlist** (so `plan_key` could never leak anyway — defence in depth) and that `compactObject` keeps `false` (so the boolean survives; had it been stripped, attribution would have silently switched back on for paid clubs). **Guard extended** to assert no tier field ever reaches a public payload — and **verified the guard bites** by injecting `plan_key` and watching it fail. |
+| `fa81813` | **Example "demo squad" mode — front-end only (approved).** 10 swimmers, 2 squads, 2 finalised reports + 3 findings in the full content model. Intercepts at `createEntityAdapter`, the single choke point for all reads/writes, so every screen populates from one change. Always-visible banner + one-click exit; entry on the zero-data setup screen. **Provably read-only:** all 3 write paths refuse, all 3 read paths short-circuit before Supabase, everything scoped to `DEMO_CLUB_ID`. |
 
 Plus, on `main` before this branch: **P0-1** (removing the "Pilot recovery mode" banner and
 instability copy from all coach workflow screens) — `b5aeaea`.
 
 ---
 
-## Merge checklist
+## Merge readiness
 
-- [ ] **Create `support@swimsight3d.com`** (or a forward). Until it exists, support mail bounces —
-      or set `VITE_SUPPORT_EMAIL` to the old address to defer.
-- [ ] Review the branch diff (6 commits, each atomic and independently revertible).
-- [ ] Confirm the AI-backend decision above.
-- [ ] Sanity-check the club theme in the app (light **and** dark) — the contrast guard slightly
-      deepens Sky and Sunset; every other preset is pixel-identical.
+**Branch HEAD is green.** Single `&&`-gated command on `feat/launch-hardening` HEAD:
+
+```bash
+npm run lint && npm run build && for t in safeguarding public-report-safety public-copy-safety pilot-readiness pilot-recovery ai-processing-reliability ai-output-selection biomechanics-contracts video-probe ai-metadata-callback pose-2d-callback pose-3d-callback analyse-route-runtime-safety analysis-jobs storage-hardening storage-adapter-readiness phase3-coach-polish production-surface; do npm run --silent test:$t || exit 1; done
+```
+
+→ **lint clean · build green · 18/18 guards.**
+
+### The one human prerequisite (blocks merge)
+
+- [ ] **Create `support@swimsight3d.com`** — a real mailbox or a forward to your Gmail.
+      `SUPPORT_EMAIL` now defaults to it, so **until it exists, support mail bounces**.
+      *Alternative if you'd rather defer:* set `VITE_SUPPORT_EMAIL` to the old gmail address,
+      or revert that one line in `src/lib/supportConfig.js`.
+
+### Other blockers
+
+**None.** Everything else on this branch is self-contained, verified, and independently
+revertible. No migrations were run; no database rows were written or deleted.
+
+### Before you merge
+
+- [ ] Review the diff (14 atomic commits).
+- [ ] Confirm the AI-backend decision (see above — still awaiting `APPROVE: delete AI backend`, or leave as is).
+- [ ] Sanity-check in-app: club theme in **light and dark**, and click **"Explore a demo squad"** → banner shows, data populates, **"Exit demo squad"** returns you to your real club.
 - [ ] Merge `feat/launch-hardening` → `main`.
 
 ## Deferred / needs Owen
