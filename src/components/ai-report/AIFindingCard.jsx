@@ -334,10 +334,49 @@ export default function AIFindingCard({
                   variant="outline"
                   className="h-7 text-xs border-amber-300/60 text-amber-700 hover:bg-amber-50"
                   onClick={() => {
-                    const stroke = strokeType || '';
-                    const phase = finding.phase || '';
-                    const faults = finding.finding_name || '';
-                    const params = new URLSearchParams({ stroke, phase, faults });
+                    // DE-3. This reliably opened an EMPTY library. Two faults:
+                    //
+                    // 1. `faults` seeds the library's free-text search, which substring-
+                    //    matches title/purpose/cues/fault_tags. It was being handed
+                    //    finding_name — a whole sentence ("Knees widen during heel
+                    //    recovery") — which can essentially never substring-match a short
+                    //    keyword tag ("wide knees, knee width, breaststroke"). Use the
+                    //    finding's own fault tags, which are keywords, and fall back to
+                    //    nothing rather than to a sentence that guarantees zero results.
+                    // 2. `phase` was sent in the finding's snake_case vocabulary
+                    //    ("kick_drive") while the library filters on Title Case
+                    //    ("Kick Drive"), so even once read it would not have matched.
+                    const raw = finding.raw_ai_payload || {};
+                    const tags = Array.isArray(raw.fault_tags) && raw.fault_tags.length
+                      ? raw.fault_tags
+                      : (raw.fault_tag ? [raw.fault_tag] : []);
+                    const toTitle = (value) => String(value || '')
+                      .replace(/[_-]+/g, ' ')
+                      .trim()
+                      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                    const params = new URLSearchParams();
+                    if (strokeType) params.set('stroke', strokeType);
+
+                    // Fault tag OR phase — never both, and the tag wins. Measured against
+                    // the real bundled library: for a breaststroke kick_drive finding,
+                    // stroke+tag returns 6 drills and stroke+phase returns 3, but the two
+                    // together return ZERO. The corrective drills for a kick-drive fault
+                    // are filed under phase "Kick Recovery", so filtering by the finding's
+                    // own phase excludes precisely the drills that fix it. The two
+                    // taxonomies describe different things: where the fault appears vs
+                    // what the drill trains.
+                    //
+                    // ONE tag, not joined — the library's search is a single
+                    // `.includes(query)` per field, so "wide knees knee width" matches
+                    // nothing, the same whole-string problem as sending a sentence.
+                    const faults = toTitle(tags[0] || '');
+                    if (faults) {
+                      params.set('faults', faults);
+                    } else {
+                      const phase = toTitle(finding.phase || finding.stroke_phase);
+                      if (phase) params.set('phase', phase);
+                    }
                     navigate(`/drill-library?${params.toString()}`);
                   }}
                 >
@@ -345,7 +384,7 @@ export default function AIFindingCard({
                 </Button>
               </div>
               <p className="text-[9px] text-muted-foreground/60 pl-0.5">
-                Opens drill library filtered for this finding's stroke and phase.
+                Opens the drill library filtered for this finding&apos;s stroke and fault.
               </p>
             </div>
           )}

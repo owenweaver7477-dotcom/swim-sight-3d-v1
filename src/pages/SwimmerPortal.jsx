@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2, Target, FileText, ArrowLeft, Check, Clock, ImageUp, ShieldCheck, User } from 'lucide-react';
+import { SIGN_IN_HELP_MAILTO, SUPPORT_EMAIL } from '@/lib/supportConfig';
 
 const PHOTO_BUCKET = 'swimmer-photos';
 const isFinalised = (r) => ['finalised', 'finalized', 'complete', 'completed', 'shared'].includes(String(r?.status || '').toLowerCase()) || !!r?.finalised_at || !!r?.shared_at;
@@ -155,7 +156,23 @@ export default function SwimmerPortal() {
         <div className="rounded-xl border border-border bg-card p-6 text-center">
           <User className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
           <div className="text-sm font-semibold">Portal not linked yet</div>
-          <p className="mt-1 text-xs text-muted-foreground">Your account isn&apos;t linked to a swimmer yet. Your coach can connect it from their swimmer list.</p>
+          {/* DE-2a (copy stopgap). This used to say "Your coach can connect it from their
+              swimmer list" — a control that does not exist anywhere in the product.
+              linked_swimmer_id is written in exactly one place, at the moment an invite is
+              redeemed, and nothing can set it afterwards. Sending someone to look for a
+              button that is not there wastes their time and the coach's. Say what is
+              actually true and give a route to a human. The real fix — a connect-account
+              control for coaches — is tracked as DE-2. */}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your account isn&apos;t linked to a swimmer yet, so there are no reports to show.
+            Please contact your coach to get set up.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Not sure who to ask?{' '}
+            <a href={SIGN_IN_HELP_MAILTO} className="font-medium text-primary hover:underline">
+              {SUPPORT_EMAIL}
+            </a>
+          </p>
         </div>
       </PortalLayout>
     );

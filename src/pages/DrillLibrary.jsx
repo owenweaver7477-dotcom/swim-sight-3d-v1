@@ -209,7 +209,15 @@ export default function DrillLibrary() {
   const [category, setCategory] = useState(mapTab(urlParams.get('stroke')));
   const [search, setSearch] = useState(urlParams.get('faults') || '');
   const [showFilters, setShowFilters] = useState(false);
-  const [phaseFilter, setPhaseFilter] = useState('All');
+  // DE-3. `phase` was documented as a supported param at the top of this file and passed
+  // by "Find Matching Drills", but was never read — phaseFilter was hard-initialised to
+  // 'All', so the advertised phase filter silently did not happen. Only accept a value
+  // that is actually one of the filter options, so an unrecognised phase falls back to
+  // 'All' rather than filtering every drill out and showing an empty library.
+  const [phaseFilter, setPhaseFilter] = useState(() => {
+    const requested = urlParams.get('phase');
+    return PHASES.find((p) => p.toLowerCase() === String(requested || '').toLowerCase()) || 'All';
+  });
   const [diffFilter, setDiffFilter] = useState('All');
   const [selectedDrill, setSelectedDrill] = useState(null);
   const [addOpen, setAddOpen] = useState(false);

@@ -269,6 +269,16 @@ export default function AIReportPage() {
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // DE-4. "Back to review" was a permanent no-op: the button renders only in the
+  // 'finalise' step, while its target (#section-ai-findings) renders only in the
+  // 'findings' step — so at the moment the button was on screen its target was never in
+  // the DOM, and the optional chaining in scrollTo swallowed the miss silently. Switch
+  // the step first, then scroll once the target has actually mounted.
+  const goToFindings = () => {
+    setCoachStudioStep('findings');
+    requestAnimationFrame(() => scrollTo('section-ai-findings'));
+  };
+
   // Determine coach role
   const canEdit = isCoachAppRole(memberRole) || user?.role === 'admin';
 
@@ -1638,8 +1648,9 @@ export default function AIReportPage() {
             report={report}
             swimmer={swimmer}
             video={video}
-            onScrollToFindings={() => scrollTo('section-ai-findings')}
+            onScrollToFindings={goToFindings}
             onScrollToFinalReport={() => scrollTo('section-final-report')}
+            onViewSourceVideo={() => scrollTo('section-coach-studio')}
             onScrollToShare={() => scrollTo('section-share')}
             onDownloadPDF={() => window.print()}
           />
@@ -2037,8 +2048,9 @@ export default function AIReportPage() {
                 report={report}
                 swimmer={swimmer}
                 video={video}
-                onScrollToFindings={() => scrollTo('section-ai-findings')}
+                onScrollToFindings={goToFindings}
                 onScrollToFinalReport={() => scrollTo('section-final-report')}
+                onViewSourceVideo={() => scrollTo('section-coach-studio')}
                 onScrollToShare={() => scrollTo('section-share')}
                 onDownloadPDF={() => window.print()}
               />
@@ -2103,7 +2115,7 @@ export default function AIReportPage() {
             report={report}
             findings={findings}
             sharedLinks={sharedLinks}
-            onScrollToFindings={() => scrollTo('section-ai-findings')}
+            onScrollToFindings={goToFindings}
             onScrollToSummary={() => scrollTo('section-summary')}
             onScrollToShare={() => scrollTo('section-share')}
           />
