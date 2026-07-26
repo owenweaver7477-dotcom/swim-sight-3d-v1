@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoMsg, setPhotoMsg] = useState('');
   const canUseCoachApp = ['owner', 'admin', 'coach', 'assistant_coach'].includes(memberRole) || user?.role === 'admin';
@@ -39,10 +40,19 @@ export default function SettingsPage() {
   const handleUpdateName = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await updateProfile({ full_name: name });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setNameError('');
+    try {
+      // Without this catch a rejected write skipped setSaving(false) entirely, so the
+      // button sat disabled on "Saving..." forever and the only trace was an unhandled
+      // rejection in the console. Matches the try/catch/finally the photo handlers use.
+      await updateProfile({ full_name: name });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setNameError(err?.message || 'Could not save your display name.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePhotoUpload = async (e) => {
@@ -137,6 +147,9 @@ export default function SettingsPage() {
                     {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save'}
                   </Button>
                 </div>
+                {nameError && (
+                  <p role="alert" className="text-xs text-destructive">{nameError}</p>
+                )}
               </form>
             </div>
           ) : (
