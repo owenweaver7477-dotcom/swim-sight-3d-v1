@@ -372,9 +372,11 @@ export default function CoachDrawStudio({
   // observation/cue/severity, so a coach working in the review room could not write
   // the heading, why it matters, or the next focus at all — the report could render
   // the full five-part model but nothing here could produce it.
-  const [editTitle, setEditTitle] = useState('');
-  const [editWhy, setEditWhy] = useState('');
-  const [editNextFocus, setEditNextFocus] = useState('');
+  // Restored from the local draft so a refresh mid-sentence does not lose unsaved words
+  // on a finding that does not exist in the database yet.
+  const [editTitle, setEditTitle] = useState(() => savedDraft.composer?.title || '');
+  const [editWhy, setEditWhy] = useState(() => savedDraft.composer?.why || '');
+  const [editNextFocus, setEditNextFocus] = useState(() => savedDraft.composer?.nextFocus || '');
   const [editPhase, setEditPhase] = useState('');
   const [editTags, setEditTags] = useState([]);
   const [editNotes, setEditNotes] = useState('');
@@ -529,8 +531,20 @@ export default function CoachDrawStudio({
       selectedDrills,
       imSegment,
       step: currentStep,
+      // Composer fields. Only meaningful for a finding that does not exist yet — an
+      // existing one autosaves to the database below. Keeping unsaved new-finding text
+      // here means a refresh mid-sentence does not lose the coach's words.
+      composer: selectedFindingId ? null : {
+        title: editTitle, observation: editObservation, why: editWhy,
+        cue: editCue, nextFocus: editNextFocus, severity: editSeverity,
+      },
     });
-  }, [storageKey, fullscreenOpen, markerNote, markerLabel, drillMode, selectedDrills, imSegment, currentStep]);
+  }, [storageKey, fullscreenOpen, markerNote, markerLabel, drillMode, selectedDrills, imSegment, currentStep,
+    selectedFindingId, editTitle, editObservation, editWhy, editCue, editNextFocus, editSeverity]);
+
+  const autosaveTimer = useRef(null);
+  const lastAutosaved = useRef('');
+  const [autosaveState, setAutosaveState] = useState(null); // null | 'saving' | 'saved' | {error}
 
   // ── 3-step helpers ───────────────────────────────────────────────────────────
   const stepIndex = STUDIO_STEPS.findIndex((s) => s.key === currentStep);
@@ -557,6 +571,60 @@ export default function CoachDrawStudio({
     [findings],
   );
   const editorFinding = selectedFindingId ? sortedFindings.find((f) => f.id === selectedFindingId) || null : null;
+
+  // ── Autosave an EXISTING finding ────────────────────────────────────────────
+  // Must live below `editorFinding`: the dependency array is evaluated during render,
+  // so referencing it above its own declaration is a temporal-dead-zone ReferenceError
+  // that neither lint nor the build would catch — only the browser, at runtime.
+  //
+  // Debounced, and deliberately routed through the same onUpdateFinding path as the
+  // Save button, which reaches Supabase via createEntityAdapter. That matters beyond
+  // tidiness: the adapter is where demo mode refuses writes, so an autosave while
+  // exploring example data is refused exactly like any other write instead of quietly
+  // persisting. Verified by exercising this payload, not by assertion.
+  useEffect(() => {
+    if (!editorFinding || readOnly || !onUpdateFinding) return undefined;
+    const snapshot = JSON.stringify({
+      title: editTitle, observation: editObservation, why: editWhy,
+      cue: editCue, nextFocus: editNextFocus, severity: editSeverity,
+      phase: editPhase, notes: editNotes, tags: editTags,
+    });
+    // Seed on first load so merely OPENING a finding never triggers a write.
+    if (!lastAutosaved.current) { lastAutosaved.current = snapshot; return undefined; }
+    if (snapshot === lastAutosaved.current) return undefined;
+    if (!editObservation.trim()) return undefined; // observation is required
+
+    clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      setAutosaveState('saving');
+      try {
+        await onUpdateFinding(editorFinding, {
+          observation: editObservation,
+          cue: editCue,
+          severity: editSeverity,
+          phase: editPhase || null,
+          coachNotes: editNotes || null,
+          faultTags: editTags,
+          title: editTitle.trim() || null,
+          why: editWhy.trim() || null,
+          nextFocus: editNextFocus.trim() || null,
+        });
+        lastAutosaved.current = snapshot;
+        setAutosaveState('saved');
+      } catch (error) {
+        // A demo-mode refusal lands here. Deliberately no retry: the snapshot is left
+        // unrecorded so the coach's text stays on screen, and the message says plainly
+        // that nothing was saved rather than showing a false "Saved".
+        setAutosaveState({ error: error?.message || 'Autosave failed — use Save Changes.' });
+      }
+    }, 1200);
+
+    return () => clearTimeout(autosaveTimer.current);
+  }, [editorFinding, readOnly, onUpdateFinding, editTitle, editObservation, editWhy,
+    editCue, editNextFocus, editSeverity, editPhase, editNotes, editTags]);
+
+  // Reset the baseline whenever a different finding is opened.
+  useEffect(() => { lastAutosaved.current = ''; setAutosaveState(null); }, [editorFinding?.id]);
 
   // Moments are the source of the findings step: each Analysis Moment card either
   // opens its existing finding (Edit) or a Create editor pre-linked to that moment.
@@ -719,6 +787,24 @@ export default function CoachDrawStudio({
       setSavingFinding(false);
     }
   };
+
+  // Cmd/Ctrl+Enter saves from anywhere in the composer, so a coach writing at speed
+  // never has to reach for the mouse. Placed after its handlers deliberately: the
+  // dependency array is evaluated during render, so referencing them earlier would be
+  // a temporal-dead-zone error that only shows up in the browser.
+  useEffect(() => {
+    if (!fullscreenOpen || readOnly) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || !(e.metaKey || e.ctrlKey)) return;
+      if (currentStep !== 'findings') return;
+      e.preventDefault();
+      if (editorFinding) handleSaveFindingDetails();
+      else if (editObservation.trim()) handleCreateFinding();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreenOpen, readOnly, currentStep, editorFinding, editObservation,
+    handleSaveFindingDetails, handleCreateFinding]);
 
   // Custom moment (step 1): a named key moment at the current video time.
   // Uses the exact same save path as phase moments — title is free text.
@@ -1868,6 +1954,18 @@ export default function CoachDrawStudio({
                         </div>
                       </details>
                       <div className="space-y-2 border-t border-white/10 pt-3">
+                        {autosaveState && (
+                          <p
+                            role="status"
+                            className={`text-[11px] leading-4 ${autosaveState.error ? 'text-amber-300' : 'text-slate-400'}`}
+                          >
+                            {autosaveState === 'saving' && 'Saving…'}
+                            {autosaveState === 'saved' && '✓ Changes saved automatically'}
+                            {/* A refusal (demo mode, or any failed write) must never read as
+                                success — the coach is told plainly that nothing was stored. */}
+                            {autosaveState.error && `Not saved — ${autosaveState.error}`}
+                          </p>
+                        )}
                         <Button
                           className="h-11 w-full bg-sky-400 text-sm font-semibold text-slate-950 hover:bg-sky-300 disabled:opacity-50"
                           onClick={handleSaveFindingDetails}
