@@ -102,7 +102,7 @@ revertible. No migrations were run; no database rows were written or deleted.
 |---|---|
 | **AI backend deletion** | Protected system — needs `APPROVE:` (see above) |
 | **`support@swimsight3d.com` mailbox** | Domain/DNS + mail provider |
-| **The "3D" name** | Strategic. There is no 3D; the audit says either earn it (angle/pose overlay) or evolve the name. I did **not** unilaterally rename. |
+| **The "3D" name** | ⚠️ **Corrected — the audit was wrong here.** The name is not an empty claim: a real 3D viewer (`ModelViewer3D`, `Technical3DViewer`, telemetry HUD) existed and was **parked post-pilot**. **Keep the name if you plan to revive it; rename only if it is gone for good.** ⚠️ **Note:** I deleted that cluster in the dead-code sweep (`ead8384`, on `main`) along with the `three` / `@react-three/fiber` deps — disclosed in that commit as "parked post-pilot", but you should know it is now **history-only**. Fully recoverable: `git checkout ead8384^ -- src/components/viewer src/components/hud` then `npm i three @react-three/fiber`. |
 | **Seeded demo club (P0-2)** | Needs your call: real Supabase rows (a DB write requiring approval) vs. a front-end "Explore with a demo squad" mode. I recommend demo-mode — no write, no risk of polluting a real club's analytics. |
 | **Compliance content** | Hosting region, encryption, retention, sub-processors — needs real answers, not invented ones |
 | **Shared-link attribution** | `api/shared-reports/[token].js` exposes only `club:{name}` by design. Gating the "Powered by" line there needs that **protected** endpoint to return a *computed boolean* (never `plan_key` — a share link must not disclose a club's commercial tier). Needs approval. |

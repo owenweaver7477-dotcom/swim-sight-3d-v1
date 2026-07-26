@@ -73,7 +73,7 @@ great core surface."* Six of the seven systemic issues are **discipline, not des
 
 | # | Decision | Why it's blocked on you |
 |---|---|---|
-| D1 | **The "3D" name** — make it true (pose/skeleton overlay, multi-angle) or evolve it toward "Coach-Led Video Review" | Strategic/brand, not code |
+| D1 | **The "3D" name** — ⚠️ *the audit's premise was wrong and Owen has corrected it.* The name is **not** a phantom claim: a real 3D viewer existed (`ModelViewer3D`, `Technical3DViewer` + telemetry HUD) and was **deliberately parked post-pilot**. So: **keep the name if you intend to revive the viewer; rename only if it is gone for good.** Note the code was removed in the dead-code sweep (`ead8384`) and now lives only in git history — recoverable, see FINAL_SUMMARY. | Strategic/brand, not code |
 | D2 | **Themes** — audit says cut 16 → 4–6; you asked for the wider range | Recommended resolution: **keep 16 + auto-contrast guard + safe roles only** |
 | D3 | **AI concepts vs the manual-first lock** | Adopt "fail silently and usefully" now; build Concept 1 dormant behind the lock |
 | D4 | **Domain email + provider** (P0-5) | Needs DNS + account creation |
