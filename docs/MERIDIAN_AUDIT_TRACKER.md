@@ -71,6 +71,29 @@ great core surface."* Six of the seven systemic issues are **discipline, not des
 
 ---
 
+## Dead-end sweep — 2026-07-26
+
+Read-only audit of every outbound contact/support path, run after the support-address
+hotfix. Four independent lenses (mailto/addresses · links & routes · env-gated silent
+no-ops · promises made in copy), each candidate adversarially refuted before counting.
+9 confirmed → **6 distinct defects** after dedup. A "dead end" = *the user takes a visible
+action that appears to work, nothing reaches a human, and they are never told.*
+
+- [x] **DE-1 · Password reset reported success even when nothing was sent** — 🔴 High — **DONE 2026-07-26 · `PENDING`**
+  `ForgotPassword.jsx` caught every error, surfaced only ones containing `VITE_SUPABASE_`, and ran `setSent(true)` anyway under the comment *"Always show success regardless"*. The anti-enumeration defence does not hold: `resetPasswordForEmail` resolves for unknown emails, so that catch never fired for the case it appeared to protect — it only ever fired on real failures. Compounded by all four auth screens having **zero** support/contact/help strings, so a locked-out coach had no route in and no route to a human. Fixed: surface every error, `console.error` for operator visibility, `setSent(true)` only on genuine success, enumeration-safe wording unchanged, and `AuthLayout` now renders a support address on all four screens. **Demonstrated, not asserted** — forced a non-config error and confirmed the false success is gone; forced a success and confirmed the enumeration-safe wording is intact.
+- [ ] **DE-2 · Swimmer/parent portal "connect account" dead end** — 🟠 Med — **scheduled: own build, straight after the finding composer**
+  `club_members.linked_swimmer_id` is written in exactly one place — `api/clubs/join-invite.js:76`, at the instant of joining. The portal tells the user *"your coach can connect it from their swimmer list"*; **no such control exists**. Recovery is closed too: re-inviting returns `already_member` before the insert, and member removal is "not yet available". Permanent state, fixable only by a direct DB edit. Needs a real "connect account" control — a feature, not a patch. **Do not let this drift.**
+- [ ] **DE-3 · "Find Matching Drills" opens an empty library** — 🟡 Med — *fold into the composer branch*
+  Passes `phase`; `DrillLibrary` reads only `stroke` and `faults`, so the advertised phase filter silently does not happen. `faults` seeds a substring search with a full sentence, which can never match short keyword tags → reliable "No drills here yet".
+- [ ] **DE-4 · "Back to review" is a permanent no-op** — 🟢 Low — *fold into the composer branch*
+  Renders only in the `finalise` step; its scroll target renders only in the `findings` step, so the target is never in the DOM while the button is visible. `?.` swallows the miss.
+- [ ] **DE-5 · "View Source Video" ignores `video_id`** — 🟢 Low — *fold into the composer branch*
+  `Analyse.jsx` never reads that param; the coach lands on step 0 of the upload wizard instead of their clip.
+- [ ] **DE-6 · "Update Display Name" hangs on "Saving…" forever** — 🟢 Low — *bundle anywhere*
+  No try/catch, unlike every other save in the app; a failed write leaves the button disabled permanently.
+
+---
+
 ## Decisions required from Owen
 
 | # | Decision | Why it's blocked on you |

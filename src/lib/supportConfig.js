@@ -10,6 +10,10 @@ export const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'swimsight3d.
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 // Public-site pilot booking CTA — a plain email for now (no form/booking tool yet).
 export const PILOT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Swim Sight 3D pilot enquiry')}`;
+// Auth screens are the one place a user cannot reach any in-app help: if they cannot
+// sign in, every other support route is behind the login wall. AuthLayout renders this
+// on all four (log in, register, forgot password, reset password) so it can never drift.
+export const SIGN_IN_HELP_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Swim Sight 3D sign-in help')}`;
 
 export const SUPPORT_COPY = {
   pilot: 'Feedback opens an email to Swim Sight 3D support so nothing is lost during the pilot.',

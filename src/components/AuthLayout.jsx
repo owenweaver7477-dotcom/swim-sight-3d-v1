@@ -1,4 +1,5 @@
 import React from "react";
+import { SIGN_IN_HELP_MAILTO, SUPPORT_EMAIL } from "@/lib/supportConfig";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
@@ -17,6 +18,15 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         {footer && (
           <p className="text-center text-sm text-muted-foreground mt-6">{footer}</p>
         )}
+        {/* A route to a human, on every auth screen. Someone who cannot sign in cannot
+            reach any in-app help — without this they are locked out with nowhere to go.
+            Uses the single SUPPORT_EMAIL constant so it can never point at a dead inbox. */}
+        <p className="text-center text-xs text-muted-foreground mt-4">
+          Trouble signing in?{" "}
+          <a href={SIGN_IN_HELP_MAILTO} className="font-medium text-primary hover:underline">
+            {SUPPORT_EMAIL}
+          </a>
+        </p>
       </div>
     </div>
   );

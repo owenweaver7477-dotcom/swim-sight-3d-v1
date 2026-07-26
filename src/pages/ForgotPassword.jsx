@@ -19,18 +19,22 @@ export default function ForgotPassword() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    let shouldShowSent = true;
     try {
       await resetPasswordRequest(email);
+      // Only on a genuine success. This stays enumeration-safe without hiding failures:
+      // resetPasswordForEmail resolves for unknown emails too, so getting here says
+      // nothing about whether the account exists — which is exactly why the confirmation
+      // wording below can stay vague while still being true.
+      setSent(true);
     } catch (err) {
-      if (err.message?.includes('VITE_SUPABASE_')) {
-        setError(err.message);
-        shouldShowSent = false;
-      }
-      // Always show success regardless
+      // A real send failure: mailer rate limit, SMTP outage, network. This used to be
+      // swallowed and the success screen shown anyway, so a locked-out coach would wait
+      // for a link that was never sent. Show it, and log it so the failure is visible to
+      // us and not only to them.
+      console.error('Password reset request failed:', err);
+      setError(err.message || 'We could not send the reset link. Please try again.');
     } finally {
       setLoading(false);
-      if (shouldShowSent) setSent(true);
     }
   };
 
