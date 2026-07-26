@@ -222,6 +222,31 @@ export default function CoachDrawStudio({
     () => (typeof savedDraft.open === 'boolean' ? savedDraft.open : autoOpenFullscreen),
   );
   const [timestamp, setTimestamp] = useState(0);
+
+  // Declared here, above every effect and handler that uses them. These were defined
+  // ~500 lines further down, which no-use-before-define flags: a value referenced above
+  // its own `const` is a temporal-dead-zone ReferenceError the moment it is reached
+  // during render (as a dependency array is). They were safe only because each caller
+  // happened to run after mount — a property no one was maintaining deliberately.
+  const activeVideo = () => (fullscreenOpen ? fullscreenVideoRef.current : inlineVideoRef.current);
+
+  const syncTimestamp = (node) => {
+    const current = node || activeVideo();
+    if (!current) return;
+    setTimestamp(current.currentTime || 0);
+  };
+
+  const closeFullscreen = () => {
+    const current = fullscreenVideoRef.current;
+    if (current) {
+      current.pause();
+      setTimestamp(current.currentTime || timestamp || 0);
+      if (inlineVideoRef.current) {
+        inlineVideoRef.current.currentTime = current.currentTime || timestamp || 0;
+      }
+    }
+    setFullscreenOpen(false);
+  };
   const [playbackRate, setPlaybackRate] = useState(1);
   // Custom playback UI (fullscreen uses its own controls, not the native bar).
   const [duration, setDuration] = useState(0);
@@ -707,14 +732,6 @@ export default function CoachDrawStudio({
     setDrawing(true);
   }, [drawRequest?.nonce]);
 
-  const activeVideo = () => (fullscreenOpen ? fullscreenVideoRef.current : inlineVideoRef.current);
-
-  const syncTimestamp = (node) => {
-    const current = node || activeVideo();
-    if (!current) return;
-    setTimestamp(current.currentTime || 0);
-  };
-
   const seekBy = (seconds) => {
     const current = activeVideo();
     if (!current) return;
@@ -887,18 +904,6 @@ export default function CoachDrawStudio({
       console.warn('Re-share did not complete.', error?.message || error);
       setActionFeedback({ type: 'error', msg: `Could not re-share: ${readableError(error)}.` });
     }
-  };
-
-  const closeFullscreen = () => {
-    const current = fullscreenVideoRef.current;
-    if (current) {
-      current.pause();
-      setTimestamp(current.currentTime || timestamp || 0);
-      if (inlineVideoRef.current) {
-        inlineVideoRef.current.currentTime = current.currentTime || timestamp || 0;
-      }
-    }
-    setFullscreenOpen(false);
   };
 
   const renderVideoSurface = (ref, isFullscreen = false) => (
