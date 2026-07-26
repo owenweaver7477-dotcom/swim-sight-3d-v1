@@ -56,7 +56,12 @@ const WRITE_CALL_ARGS = {
   bulkCreate: [[PROBE_ROW]],
 };
 
-const ENTITIES = ['Finding', 'Report', 'KeyFrame', 'VideoAnnotation', 'Swimmer', 'Drill', 'CoachCueSnippet'];
+// DERIVED, like the method set above. A hand-maintained entity list is the same
+// "someone has to remember" mechanism that put bulkCreate into production: a newly
+// registered entity would be structurally covered but never actually exercised. Every
+// entity the adapter serves is exercised, so adding one to entityTables cannot outrun
+// this guard.
+const ENTITIES = Object.keys(entities);
 
 function methodsOf(adapter) {
   return Object.keys(adapter).filter((key) => typeof adapter[key] === 'function');

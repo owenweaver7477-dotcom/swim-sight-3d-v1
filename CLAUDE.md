@@ -234,7 +234,9 @@ two-sided: with demo mode **on** each write must fail with `DemoModeWriteError`;
 proves the write really does reach Supabase when it is not refused. A one-sided check
 cannot tell "refused" apart from "never ran".
 
-**Coverage is derived from the adapter, not listed.** Any method that is not on the small
+**Coverage is derived on both axes — entities and methods — never listed.** Every entity in
+`entityTables` is exercised (`Object.keys(entities)`), so registering a new entity cannot
+outrun the guard. Any method that is not on the small
 `READ_ONLY_METHODS` allowlist (`list`/`filter`/`query`/`get`) is treated as a write and
 must be refused, so a newly added write is caught **by default** rather than by someone
 remembering to update a list. Add a new write method and the guard fails until you either
