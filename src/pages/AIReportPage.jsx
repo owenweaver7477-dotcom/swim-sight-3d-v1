@@ -970,7 +970,12 @@ export default function AIReportPage() {
       for (const link of activeSharedLinks) {
         try { await functions.disableSharedReportLink(link.id); } catch (error) { console.warn('Could not pause a share link.', error?.message || error); }
       }
-      return entities.Report.update(reportId, { status: 'draft' });
+      // finalised_at must be cleared too, not just the status. The swimmer/parent portal
+      // decides visibility with `!!finalised_at` (SwimmerPortal.jsx:15), so leaving the
+      // timestamp behind kept a reopened report live on the swimmer's screen while the
+      // coach edited it — the coach pauses the share link, reasonably believes the report
+      // is unpublished, and a second channel stays open. Re-finalising sets it again.
+      return entities.Report.update(reportId, { status: 'draft', finalised_at: null });
     },
     onSuccess: async () => {
       try { await logFeedback(null, 'reopened', { coach_edit_summary: 'Report reopened for editing; shared link paused.' }); } catch { /* audit is best-effort */ }
@@ -1853,7 +1858,13 @@ export default function AIReportPage() {
                   <AIFindingCard
                     key={f.id}
                     finding={f}
-                    canEdit={canEdit}
+                    // Must include !isReportFinalised, like every other edit surface on this
+                    // page (the stamps, draw, annotation and add-finding blocks all do).
+                    // Without it the card renders Approve/Re-approve on a finalised, SHARED
+                    // report — and the share endpoint re-evaluates approval on every
+                    // anonymous request, so flipping a finding here publishes it instantly
+                    // to a link a parent already holds, with no re-finalise and no re-share.
+                    canEdit={canEdit && !isReportFinalised}
                     strokeType={video?.stroke_type}
                     onApprove={(finding) => approveFinding.mutate(finding)}
                     onReject={(finding, rejection = {}) => rejectFinding.mutate({ finding, ...rejection })}
