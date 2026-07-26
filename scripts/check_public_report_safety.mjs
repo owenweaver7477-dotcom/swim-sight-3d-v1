@@ -48,5 +48,40 @@ assert.match(base44Route, /shareableStatuses\.includes\(report\.status\)/);
 assert.match(base44Route, /drag_items: \[\]/);
 assert.doesNotMatch(base44Route, /coach_notes: d\.coach_notes/);
 
+// ── Commercial tier must never reach a public share link ─────────────────────
+// The "Powered by" line is decided server-side from the club's plan, but a share
+// URL is viewable by anyone, so the plan/tier itself must never be emitted — only
+// the resulting boolean. Feed a payload carrying every tier-ish field and assert
+// none survive sanitization, while the boolean does.
+const TIER_FIELDS = ['plan_key', 'plan', 'tier', 'subscription', 'billing_plan', 'plan_name'];
+const tierProbe = sanitizePublicReportPayload({
+  ...safeFixture,
+  club: {
+    ...(safeFixture.club || {}),
+    name: 'Probe Club',
+    show_attribution: false,
+    ...Object.fromEntries(TIER_FIELDS.map((f) => [f, 'club_pro'])),
+  },
+});
+const tierProbeJson = JSON.stringify(tierProbe);
+for (const field of TIER_FIELDS) {
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(tierProbe.club || {}, field), false,
+    `Public payload must not expose the club's commercial tier ("${field}")`,
+  );
+}
+assert.equal(tierProbeJson.includes('club_pro'), false, 'No tier value may appear anywhere in the public payload');
+assert.equal(tierProbe.club.show_attribution, false, 'The attribution boolean must survive sanitization (false must not be dropped)');
+assert.equal(
+  sanitizePublicReportPayload({ ...safeFixture, club: { name: 'Free Club' } }).club.show_attribution, true,
+  'Attribution defaults to shown when the server sends no boolean',
+);
+
+// The API's server-side decision and the app's must not drift apart.
+const featureGates = await readFile(path.join(root, 'src', 'lib', 'plans', 'featureGates.js'), 'utf8');
+assert.match(featureGates, /export function showsReportAttribution/, 'showsReportAttribution must remain exported for the share endpoint');
+assert.match(supabaseRoute, /showsReportAttribution\(club\.plan_key\)/, 'Share endpoint must derive attribution server-side');
+assert.doesNotMatch(supabaseRoute, /club: club \? \{ name: club\.name, plan_key/, 'Share endpoint must never emit plan_key');
+
 console.log('Public report safety check passed.');
 console.log(`Safe findings: ${safeOutput.findings.length}; cleaned unsafe findings: ${cleanedUnsafeOutput.findings.length}.`);
