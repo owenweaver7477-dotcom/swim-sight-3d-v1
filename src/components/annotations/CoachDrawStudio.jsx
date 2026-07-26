@@ -8,6 +8,7 @@ import { AI_PILOT_LOCKED } from '@/lib/aiPilotLock';
 import { DEFAULT_DRILLS } from '@/lib/defaultDrills';
 import { entities } from '@/lib/data/entities';
 import { PHRASE_FIELDS, mergePhrases, applyPhrase } from '@/lib/findings/phraseLibrary';
+import { templatesForStroke, templateToFields, findingToFields } from '@/lib/findings/findingTemplates';
 import { searchAndRankDrills, drillSummary } from '@/lib/drillMatching';
 import { createPortal } from 'react-dom';
 import FeatureStatusBadge from '@/components/status/FeatureStatusBadge';
@@ -619,6 +620,32 @@ export default function CoachDrawStudio({
     };
     const setter = setters[fieldName];
     if (setter) setter(applyPhrase(currents[fieldName], body));
+  };
+
+  // ── Start from a template, or from the last finding ─────────────────────────
+  // Only offered while CREATING. Applying one to a finding that already exists would
+  // overwrite the coach's saved words, and autosave would then persist the overwrite
+  // before they noticed.
+  const seedTemplates = useMemo(() => templatesForStroke(video?.stroke_type), [video?.stroke_type]);
+  const lastFinding = useMemo(() => {
+    const byNewest = [...(findings || [])].sort(
+      (a, b) => new Date(b.created_date || b.created_at || 0) - new Date(a.created_date || a.created_at || 0),
+    );
+    return byNewest[0] || null;
+  }, [findings]);
+
+  const applySeedFields = (fields) => {
+    if (!fields) return;
+    // Never silently replace typed text — the same rule as applyPhrase.
+    const hasText = editTitle.trim() || editObservation.trim() || editWhy.trim()
+      || editCue.trim() || editNextFocus.trim();
+    if (hasText && !window.confirm('Replace what you have written with this starting point?')) return;
+    setEditTitle(fields.title || '');
+    setEditObservation(fields.observation || '');
+    setEditWhy(fields.why || '');
+    setEditCue(fields.cue || '');
+    setEditNextFocus(fields.nextFocus || '');
+    if (fields.phase) setEditPhase(fields.phase);
   };
 
   // ── 3-step helpers ───────────────────────────────────────────────────────────
@@ -2133,6 +2160,34 @@ export default function CoachDrawStudio({
                           Review AI-suggested findings (coach approval required)
                         </Button>
                       )}
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-semibold text-slate-300">Start from <span className="text-slate-500">(optional)</span></div>
+                        <div className="flex flex-wrap gap-1">
+                          {lastFinding && (
+                            <button
+                              type="button"
+                              onClick={() => applySeedFields(findingToFields(lastFinding))}
+                              className="min-h-7 rounded-full border border-sky-400/50 bg-sky-400/10 px-2 py-0.5 text-[10px] leading-4 text-sky-200 transition-colors hover:bg-sky-400/20"
+                            >
+                              Duplicate last finding
+                            </button>
+                          )}
+                          {seedTemplates.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => applySeedFields(templateToFields(t))}
+                              title={`${t.stroke} · ${t.title}`}
+                              className="min-h-7 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] leading-4 text-slate-300 transition-colors hover:border-sky-300/40 hover:text-white"
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] leading-4 text-slate-500">
+                          Fills the shape of a finding. Always edit it to describe this swimmer.
+                        </p>
+                      </div>
                       <FindingContentFields
                         title={editTitle} onTitle={setEditTitle}
                         observation={editObservation} onObservation={setEditObservation}
