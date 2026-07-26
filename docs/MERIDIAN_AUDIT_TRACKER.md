@@ -94,6 +94,23 @@ action that appears to work, nothing reaches a human, and they are never told.*
 
 ---
 
+## Security cluster — 2026-07-26
+
+Found by adversarially attacking one assumption ("approval_status alone never publishes"),
+not by reading code. All four attack lenses refuted it. Verified independently by Owen from
+the live policy catalog.
+
+- [x] **Cross-family child-image leak (RLS)** — 🔴 Critical — **CLOSED · migration 027 · `6a4822a`**
+  `video_annotations` and four other tables used the **role-blind** `is_club_member(club_id)` predicate, which returns true for any membership regardless of role. **Demonstrated against the live database:** a parent linked to a swimmer owning none of the rows read **3 annotations and 3 frame images of a different child** (`thumbnail_data_url` holds base64 frames from private swim video). Also surfaced: soft-deleted and unfinalised reports were readable. Never exposed in practice — zero swimmer/parent accounts existed — but it would have opened on first onboarding. Fixed role-**aware** (coaches keep full read incl. 10 drafts), proven two-sided against the committed policies, confirmed independently by Owen.
+- [x] **Re-approve republishes on a shared report** — 🟠 High — **PARTIALLY CLOSED · `e3241f5`**
+  The findings list omitted `!isReportFinalised` that every sibling edit surface has, so "Re-approve" rendered on a finalised, shared report; the share endpoint re-evaluates approval per request, so one click republished instantly. **The only non-dormant defect of the set.** Button removed and reopen now clears `finalised_at` (it previously left the report live in the swimmer portal after the coach thought they had unpublished it).
+- [ ] **SEC-1 · Server-enforce the publish gate** — 🟡 Med — *follow-up, deliberately not blocking*
+  The fix above is **UI enforcement over a live-view endpoint**. A direct API call, or a future component that forgets the guard, can still flip `approval_status` on a finalised report and republish — RLS `findings_manage_coaches` has no report-status condition. Proper fix: reject an `approval_status` change while the report is finalised, **or** snapshot approved content at finalise time so the share view stops being live. Lower severity (a coach acting on their own club's data, not cross-family), but until this lands the boundary is a UI promise. Marked in-code at the `canEdit` site so it cannot be mistaken for closed.
+- [ ] **SEC-2 · Pre-review private video for families** — 🟢 Low — *product call, not a leak*
+  `api/video-uploads/[id]/signed-url.js` admits swimmer/parent but is correctly scoped to their **own** linked swimmer (verified by two independent reads — an earlier "cross-family" claim was wrong). It has no report-status check, so a family can pull their own raw footage before the coach has reviewed it. Own data, consent captured. Decide whether "the coach controls what the family sees" should extend to raw video.
+
+---
+
 ## Decisions required from Owen
 
 | # | Decision | Why it's blocked on you |

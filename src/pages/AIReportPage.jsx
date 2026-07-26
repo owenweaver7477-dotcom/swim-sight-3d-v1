@@ -1864,6 +1864,16 @@ export default function AIReportPage() {
                     // report — and the share endpoint re-evaluates approval on every
                     // anonymous request, so flipping a finding here publishes it instantly
                     // to a link a parent already holds, with no re-finalise and no re-share.
+                    //
+                    // ⚠️ THIS IS UI ENFORCEMENT OVER A LIVE-VIEW ENDPOINT — NOT A CLOSED
+                    // BOUNDARY. It removes the path a coach actually walks, but a direct
+                    // API call or a future component that forgets this guard can still
+                    // flip approval on a finalised report and republish. The server-side
+                    // fix (reject an approval_status change while the report is finalised,
+                    // or snapshot approved content at finalise time so the share view stops
+                    // being live) is tracked in docs/MERIDIAN_AUDIT_TRACKER.md as SEC-1.
+                    // Lower severity than the RLS work — a coach acting on their own club's
+                    // data, not cross-family — but do not read this line as "closed".
                     canEdit={canEdit && !isReportFinalised}
                     strokeType={video?.stroke_type}
                     onApprove={(finding) => approveFinding.mutate(finding)}
