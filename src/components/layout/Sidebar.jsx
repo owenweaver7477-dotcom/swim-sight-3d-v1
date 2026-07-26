@@ -5,9 +5,9 @@ import { useClubContext } from '@/lib/useClubContext';
 import { resetClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
 import {
-  LayoutDashboard, Users, FlaskConical,
+  LayoutDashboard, Users, Video,
   Settings, ChevronDown, ChevronRight, Dumbbell,
-  Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Brain,
+  Map, LogOut, Plus, Menu, X, ChevronsUpDown, Check, Clapperboard,
   ShieldAlert, Activity, TrendingUp, BarChart3, Server
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,8 @@ import {
 // ── Grouped navigation structure ──────────────────────────────────────────────
 const NAV_MAIN = [
   { to: '/dashboard',       label: 'Dashboard',       icon: LayoutDashboard },
-  { to: '/analyse',         label: 'Analyse Video',   icon: FlaskConical },
-  { to: '/ai-reviews',      label: 'Coach Studio',    icon: Brain },
+  { to: '/analyse',         label: 'New Review',      icon: Video },
+  { to: '/ai-reviews',      label: 'Coach Studio',    icon: Clapperboard },
   { to: '/swimmers',        label: 'Swimmers',        icon: Users },
   { to: '/drill-library',   label: 'Drill Library',   icon: Dumbbell },
 ];
@@ -74,14 +74,18 @@ export default function Sidebar() {
 
   const NavItem = ({ item }) => {
     const active = isActive(item.to);
+    // The desktop rail collapses to icons only, so the label is not always
+    // visible: `title` gives sighted users a hover tooltip and `aria-label`
+    // gives assistive tech a name even while the text is clipped, plus
+    // aria-current marks the active page.
     return (
-      <Link to={item.to}>
+      <Link to={item.to} title={item.label} aria-label={item.label} aria-current={active ? 'page' : undefined}>
         <div className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer ${
           active
             ? 'bg-primary/10 text-primary font-semibold ring-1 ring-primary/10 shadow-sm shadow-primary/5'
             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 motion-reduce:hover:translate-x-0'
         }`}>
-          <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'}`} />
+          <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'}`} aria-hidden="true" />
           <span className="sb-label">{item.label}</span>
         </div>
       </Link>

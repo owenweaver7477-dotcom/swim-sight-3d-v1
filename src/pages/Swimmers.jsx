@@ -1,6 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import entities from '@/lib/data/entities';
+import { isValidPersonName, personNameError } from '@/lib/validation';
 import { setReviewSession } from '@/lib/swimState';
 import { useClubContext } from '@/lib/useClubContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -72,7 +73,17 @@ function SwimmerFormFields({ form, setForm, squads, squadExtra = null }) {
     <>
       <div>
         <Label className="text-xs text-muted-foreground">Name</Label>
-        <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" className="bg-secondary border-border mt-1" />
+        <Input
+          value={form.name}
+          onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+          placeholder="Full name"
+          className="bg-secondary border-border mt-1"
+          aria-invalid={Boolean(personNameError(form.name))}
+          aria-describedby={personNameError(form.name) ? 'swimmer-name-error' : undefined}
+        />
+        {personNameError(form.name) && (
+          <p id="swimmer-name-error" className="mt-1 text-[11px] text-destructive">{personNameError(form.name)}</p>
+        )}
       </div>
       <div>
         <Label className="text-xs text-muted-foreground">Squad</Label>
@@ -339,7 +350,7 @@ export default function Swimmers() {
                     className="space-y-3"
                   >
                     <SwimmerFormFields form={editForm} setForm={setEditForm} squads={squads} />
-                    <Button type="submit" className="w-full" disabled={!editForm.name.trim() || updateSwimmer.isPending}>
+                    <Button type="submit" className="w-full" disabled={!isValidPersonName(editForm.name) || updateSwimmer.isPending}>
                       {updateSwimmer.isPending ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </form>
@@ -479,7 +490,7 @@ export default function Swimmers() {
                       </div>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={!form.name.trim() || addSwimmer.isPending}>
+                  <Button type="submit" className="w-full" disabled={!isValidPersonName(form.name) || addSwimmer.isPending}>
                     {addSwimmer.isPending ? 'Adding...' : 'Add Swimmer'}
                   </Button>
                 </form>

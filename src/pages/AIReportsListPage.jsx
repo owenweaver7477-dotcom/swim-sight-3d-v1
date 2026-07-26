@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/shared/PageHeader';
 import {
-  Brain, ArrowRight,
+  Clapperboard, ArrowRight,
   Loader2, Upload, Trash2, X, Search, PlayCircle
 } from 'lucide-react';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
@@ -309,7 +309,7 @@ export default function AIReportsListPage() {
         </div>
       ) : reports.length === 0 ? (
         <div className="p-10 rounded-xl border border-dashed border-slate-300 bg-white text-center">
-          <Brain className="w-9 h-9 text-slate-300 mx-auto mb-3" />
+          <Clapperboard className="w-9 h-9 text-slate-300 mx-auto mb-3" />
           <div className="text-sm font-semibold text-slate-700 mb-1">No coach reviews yet</div>
           <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto mb-4">
             Upload a video in Analyse, then open Coach Studio to review it.

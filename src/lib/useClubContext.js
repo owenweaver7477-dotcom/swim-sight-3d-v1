@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getActiveClub, setActiveClub, setActiveRole, signOut as clearSwimState } from '@/lib/swimState';
 import { useAuth } from '@/lib/AuthContext';
+import { isDemoMode, onDemoModeChange, DEMO_CLUB } from '@/lib/demoMode';
 import { supabase, hasSupabaseBrowserEnv } from '@/lib/supabaseClient';
 import { normalizeRole } from '@/lib/permissions';
 
@@ -110,6 +111,10 @@ export async function loadUserClubs(userId) {
 }
 
 export function useClubContext() {
+  // Re-render when the coach enters/exits the example squad.
+  const [demoActive, setDemoActive] = useState(isDemoMode());
+  useEffect(() => onDemoModeChange(setDemoActive), []);
+
   const { user, isAuthenticated, authChecked } = useAuth();
   const [club, setClub] = useState(_globalClub || getActiveClub());
   const [clubs, setClubs] = useState(_globalClubs);
@@ -199,6 +204,25 @@ export function useClubContext() {
 
   const memberRole = club?._memberRole || currentMember?.role || null;
 
+  // While exploring the example squad, the whole app runs against the in-memory
+  // demo club. Reads are served from demoData; writes are refused in the entities
+  // layer, so nothing here can reach the database or a real club's data.
+  if (demoActive) {
+    return {
+      club: DEMO_CLUB,
+      currentClub: DEMO_CLUB,
+      clubs: [DEMO_CLUB],
+      activeClubId: DEMO_CLUB.id,
+      currentMember: { role: 'owner', club_id: DEMO_CLUB.id },
+      memberRole: 'owner',
+      loading: false,
+      isDemo: true,
+      switchClub: () => {},
+      setActiveClub: () => {},
+      refreshClubs: async () => {},
+    };
+  }
+
   return {
     club,
     currentClub: club,
@@ -207,6 +231,7 @@ export function useClubContext() {
     currentMember,
     memberRole,
     loading,
+    isDemo: false,
     switchClub,
     setActiveClub: setActiveClubSelection,
     refreshClubs,

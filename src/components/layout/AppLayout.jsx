@@ -5,17 +5,23 @@ import { useClubContext } from '@/lib/useClubContext';
 import { Loader2 } from 'lucide-react';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { applyClubTheme, clearClubTheme } from '@/lib/clubTheme';
+import DemoModeBanner from '@/components/demo/DemoModeBanner';
+import { useTheme } from '@/lib/ThemeContext';
 
 export default function AppLayout() {
   const { club, clubs, loading, memberRole } = useClubContext();
+  const { theme } = useTheme();
 
   // Club style option: recolour the workspace accent from the active club's
   // colours (every member sees it). Applies on colour/club change without a
   // flash; cleared only when the app unmounts (logout / leaving the workspace)
   // so one club's style never bleeds into another or the public site.
+  // `theme` is a dependency because the contrast guard resolves the club colour
+  // against the CURRENT surface — a colour darkened to stay legible on white
+  // would be needlessly dark on the dark surface, so it is recomputed on toggle.
   useEffect(() => {
     applyClubTheme(club?.primary_color, club?.accent_color);
-  }, [club?.primary_color, club?.accent_color]);
+  }, [club?.primary_color, club?.accent_color, theme]);
   useEffect(() => () => clearClubTheme(), []);
 
   // Still loading memberships — show a spinner rather than flashing onboarding
@@ -51,6 +57,7 @@ export default function AppLayout() {
           <NotificationPanel />
         </div>
         <div className="min-h-screen">
+          <DemoModeBanner />
           <Outlet />
         </div>
       </main>

@@ -225,3 +225,16 @@ export function getFeatureGateState(featureKey, planKey) {
 export function isFeatureAllowed(featureKey, planKey) {
   return getFeatureGateState(featureKey, planKey).isAllowed;
 }
+
+// ── Report attribution ───────────────────────────────────────────────────────
+// "Powered by Swim Sight 3D" is fair on free/pilot tiers, but a design audit
+// flagged it as a liability once a club or national body hands the report to a
+// parent under their own branding. Paid club tiers therefore carry the club's
+// identity alone. Derived from the existing `clubs.plan_key` — no schema change.
+const ATTRIBUTION_FREE_PLANS = [PLAN_KEYS.FREE_DEMO, PLAN_KEYS.COACH_STUDIO];
+
+/** True when reports for this club should show the "Powered by" line. */
+export function showsReportAttribution(planKey) {
+  if (!planKey) return true;                       // unknown plan: attribute (safe default)
+  return ATTRIBUTION_FREE_PLANS.includes(planKey);
+}

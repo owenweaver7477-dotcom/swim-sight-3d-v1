@@ -228,6 +228,12 @@ export function sanitizePublicReportPayload(payload = {}) {
       report_sign_off: safeText(payload.club.report_sign_off, 300),
       report_intro: safeText(payload.club.report_intro, 600),
       report_outro: safeText(payload.club.report_outro, 600),
+      // Whether to show the "Powered by" line. The SERVER derives this from the
+      // club's plan; only this boolean is ever public — the plan/tier itself is not
+      // in this allowlist, so it can never reach a share link even if a caller adds
+      // it to the payload. `false` survives compactObject (which strips only
+      // null/undefined/'').
+      show_attribution: payload.club.show_attribution !== false,
     }) : null,
     findings: sanitizePublicFindings(payload.findings),
     annotations: sanitizePublicAnnotations(payload.annotations),

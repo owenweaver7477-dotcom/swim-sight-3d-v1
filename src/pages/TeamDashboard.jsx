@@ -9,12 +9,13 @@ import PageHeader from '@/components/shared/PageHeader';
 import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist';
 import {
   Users, Waves, Video, Plus, ChevronRight,
-  AlertCircle, Loader2, Brain, Upload, CheckCircle2, ArrowRight, Share2,
+  AlertCircle, Loader2, Clapperboard, Upload, CheckCircle2, ArrowRight, Share2,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { subDays } from 'date-fns';
 import FeedbackButton from '@/components/coach-testing/FeedbackButton';
+import { enableDemoMode } from '@/lib/demoMode';
 
 // ── Status badge ─────────────────────────────────────────────────────────────────
 const BADGE_TONES = {
@@ -117,6 +118,18 @@ function SetupDashboard({ club }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <PageHeader eyebrow={club.name} title="Coach Setup" subtitle="Get the workspace ready for the first swimmer review." />
+      {/* A brand-new coach otherwise faces a wall of zeros with no way to see what
+          "good" looks like (audit S6). One click into a populated example squad. */}
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.04] px-4 py-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-foreground">Want to see a finished club first?</div>
+          <div className="text-xs text-muted-foreground">Explore a demo squad with real reports and drills. Nothing is saved, and your club stays untouched.</div>
+        </div>
+        <Button size="sm" variant="outline" className="h-9 flex-shrink-0 text-xs" onClick={enableDemoMode}>
+          Explore a demo squad
+        </Button>
+      </div>
+
       <div className="bg-card rounded-lg border border-border divide-y divide-border">
         {steps.map((s, i) => (
           <div key={i} className="flex items-center gap-4 px-5 py-4">
@@ -215,7 +228,7 @@ export default function TeamDashboard() {
 
   const priorityItems = [
     awaitingReview.length > 0 && {
-      icon: Brain, iconColor: 'text-amber-500', urgent: true, badge: 'Review needed', badgeTone: 'amber',
+      icon: Clapperboard, iconColor: 'text-amber-500', urgent: true, badge: 'Review needed', badgeTone: 'amber',
       label: `${awaitingReview.length} report${awaitingReview.length > 1 ? 's' : ''} awaiting coach review`,
       // Only mention findings when some are actually pending — otherwise this read
       // "1 report awaiting coach review / 0 findings need approval", a contradiction
@@ -283,7 +296,7 @@ export default function TeamDashboard() {
             <Upload className="mr-1.5 h-3.5 w-3.5" /> Start a new review
           </Button>
           <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => navigate('/ai-reviews')}>
-            <Brain className="mr-1.5 h-3.5 w-3.5" /> Coach Studio
+            <Clapperboard className="mr-1.5 h-3.5 w-3.5" /> Coach Studio
             {awaitingReview.length > 0 && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">{awaitingReview.length}</span>}
           </Button>
         </div>
@@ -328,7 +341,7 @@ export default function TeamDashboard() {
                 onClick={() => navigate(`/ai-review?report_id=${lastUnfinished.id}`)}
                 className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/[0.04] px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[0.07]"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary text-white"><Brain className="h-4 w-4" /></span>
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary text-white"><Clapperboard className="h-4 w-4" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Continue last review</div>
                   <div className="truncate text-xs font-semibold text-foreground">{swimmerNameFor(lastUnfinished.swimmer_id)}</div>
@@ -337,7 +350,7 @@ export default function TeamDashboard() {
               </button>
             ) : (
               <div className="flex items-center gap-3 rounded-lg border border-border bg-muted px-4 py-4">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><Brain className="h-4 w-4" /></span>
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><Clapperboard className="h-4 w-4" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In progress</div>
                   <div className="text-xs font-medium text-muted-foreground">No review in progress</div>

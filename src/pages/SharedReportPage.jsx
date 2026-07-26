@@ -611,7 +611,11 @@ export default function SharedReportPage() {
             )}
             <div>
               <div className="text-sm font-bold text-slate-950">{club?.name || 'Swim Club'}</div>
-              <div className="text-[10px] text-slate-500">Powered by <span className="text-sky-700 font-semibold">Swim Sight 3D</span></div>
+              {/* The server decides this from the club's plan and sends only the
+                  boolean — the tier itself never reaches this public page. */}
+              {club?.show_attribution !== false && (
+                <div className="text-[10px] text-slate-500">Powered by <span className="text-sky-700 font-semibold">Swim Sight 3D</span></div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">

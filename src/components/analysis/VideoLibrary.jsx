@@ -7,7 +7,7 @@ import functions from '@/lib/data/functions';
 import { Button } from '@/components/ui/button';
 import {
   Film, Trash2, Play, Calendar, Camera, Loader2,
-  AlertCircle, Tag, Brain, RotateCw, Clock, FileText, ArrowRight,
+  AlertCircle, Tag, Clapperboard, Video, RotateCw, Clock, FileText, ArrowRight,
   RefreshCw, AlertTriangle, Info
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
@@ -322,7 +322,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
             <span>{upload.upload_error || upload.ai_error_message || 'Upload failed before the private video was ready. Retry from the upload form or delete this failed row.'}</span>
           </div>
           <Button size="sm" variant="outline" className="w-full h-8 text-xs" disabled>
-            <Brain className="w-3 h-3 mr-1.5" /> {AI_PILOT_LOCKED ? 'Coach Studio available once upload completes' : 'AI Review unavailable until upload completes'}
+            <Clapperboard className="w-3 h-3 mr-1.5" /> {AI_PILOT_LOCKED ? 'Coach Studio available once upload completes' : 'AI Review unavailable until upload completes'}
           </Button>
         </div>
       );
@@ -481,7 +481,7 @@ function VideoCard({ upload, swimmer, job, onStartReview, onDelete, canDelete, c
       return (
         <Button size="sm" className="w-full h-8 text-xs bg-primary text-primary-foreground font-semibold"
           onClick={() => onStartReview(upload)}>
-          <Brain className="w-3 h-3 mr-1.5" /> Configure AI Review
+          <Video className="w-3 h-3 mr-1.5" /> Start review
         </Button>
       );
     }

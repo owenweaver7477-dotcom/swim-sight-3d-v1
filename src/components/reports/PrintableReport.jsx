@@ -4,6 +4,7 @@ import { CheckCircle2, Star, Target, Dumbbell, Download, Pencil, Camera, Activit
 import { Button } from '@/components/ui/button';
 import { formatTimestamp } from '@/lib/annotationRender';
 import { sanitizePublicAnnotations, sanitizePublicFindings } from '@/lib/sanitizeAIReport';
+import { showsReportAttribution } from '@/lib/plans/featureGates';
 
 const LOGO_SRC = '/brand/swim-sight-logo.png';
 
@@ -232,6 +233,8 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
     ? club.accent_color.trim()
     : ((isHexColor(club?.primary_color) && club.primary_color.trim().toLowerCase() !== DEFAULT_PRIMARY_COLOR) ? club.primary_color.trim() : null);
   const clubLogo = typeof club?.logo_url === 'string' && /^https:\/\//i.test(club.logo_url.trim()) ? club.logo_url.trim() : null;
+  // Free/pilot tiers carry the "Powered by" line; paid club tiers do not.
+  const attributionVisible = showsReportAttribution(club?.plan_key);
   const preparedBy = (coachName || '').trim() || club?.head_coach_name || club?.name || 'Coach';
   const reportIntro = (club?.report_intro || '').trim();
   const reportOutro = (club?.report_outro || '').trim();
@@ -277,13 +280,25 @@ export default function PrintableReport({ report, swimmer, club, video_meta, fin
         {/* Header */}
         <div className="px-8 py-6 border-b-2 border-slate-900" style={brandColor ? { borderColor: brandColor } : undefined}>
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <img src={LOGO_SRC} alt="Swim Sight 3D" className="h-11 w-11 object-contain flex-shrink-0" />
-              <div>
-                <div className="text-sm font-black tracking-wide text-slate-900">Swim Sight 3D</div>
-                <div className="text-[10px] font-semibold text-blue-600">Powered by Swim Sight 3D</div>
+            {/* On paid club tiers the report carries the club's identity alone —
+                a "Powered by" line under someone else's brand is a liability once
+                a club or national body hands the report to a parent. */}
+            {attributionVisible ? (
+              <div className="flex items-center gap-2.5">
+                <img src={LOGO_SRC} alt="Swim Sight 3D" className="h-11 w-11 object-contain flex-shrink-0" />
+                <div>
+                  <div className="text-sm font-black tracking-wide text-slate-900">Swim Sight 3D</div>
+                  <div className="text-[10px] font-semibold text-blue-600">Powered by Swim Sight 3D</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                {clubLogo
+                  ? <img src={clubLogo} alt={club?.name || 'Club logo'} className="h-11 w-11 rounded-lg object-contain flex-shrink-0 bg-white border border-slate-200" />
+                  : null}
+                <div className="text-sm font-black tracking-wide text-slate-900">{club?.name || 'Swimmer report'}</div>
+              </div>
+            )}
 
             <div className="flex-1 text-center">
               <h1 className="text-2xl font-black text-slate-900 leading-tight">{reportType}</h1>

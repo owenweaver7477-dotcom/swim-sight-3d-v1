@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import { getActiveClub } from '@/lib/swimState';
+import { isDemoMode, isDemoScope, getDemoRows, DemoModeWriteError } from '@/lib/demoMode';
 import {
   buildPrivateVideoUri,
   normaliseVideoStorageRecord,
@@ -363,8 +364,22 @@ function applyDefaultActiveScope(query, entityName, filters = {}, options = {}) 
 function createEntityAdapter(entityName, tableName) {
   const { toDb, fromDb } = getMappers(entityName);
 
+  // ── Example ("demo squad") mode ────────────────────────────────────────────
+  // Every read and write for every entity funnels through this adapter, so it is
+  // the one place demo mode needs to intervene. While the coach is exploring the
+  // demo club, reads are served from the in-memory dataset and Supabase is never
+  // called; writes are refused outright. That is what makes "no database write"
+  // a property of the code rather than a promise.
+  const demoActive = (filters = {}) => isDemoMode() && (
+    isDemoScope(filters) || isDemoScope(getActiveClub()?.id) || filters.club_id === undefined
+  );
+  const refuseDemoWrite = (action) => {
+    if (isDemoMode()) throw new DemoModeWriteError(action);
+  };
+
   return {
     async list(order = '-created_at', limit = 100, options = {}) {
+      if (demoActive()) return getDemoRows(entityName, {}, order, limit);
       const { column, ascending } = normaliseOrder(order);
       let query = supabase.from(tableName).select('*').order(column, { ascending });
       query = applyClubScope(query, entityName, {});
@@ -377,6 +392,12 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async filter(filters = {}, order = '-created_at', limit = 100, options = {}) {
+      if (demoActive(filters)) {
+        const demoFilters = stripUndefined(filters);
+        delete demoFilters.includeInactive;
+        delete demoFilters.includeDeleted;
+        return getDemoRows(entityName, demoFilters, order, limit);
+      }
       const { column, ascending } = normaliseOrder(order);
       let query = supabase.from(tableName).select('*');
       const cleanedFilters = stripUndefined(filters);
@@ -402,6 +423,10 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async get(id) {
+      if (demoActive()) {
+        const [row] = getDemoRows(entityName, { id });
+        if (row) return row;
+      }
       let query = supabase.from(tableName).select('*').eq('id', id);
       query = applyClubScope(query, entityName, {});
       const { data, error } = await query.single();
@@ -410,6 +435,7 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async create(data) {
+      refuseDemoWrite('add this');
       const { data: created, error } = await supabase
         .from(tableName)
         .insert(applyEntityDefaults(entityName, toDb(data)))
@@ -421,6 +447,7 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async update(id, data) {
+      refuseDemoWrite('edit this');
       let query = supabase
         .from(tableName)
         .update(stripUndefined(toDb(data)))
@@ -433,6 +460,7 @@ function createEntityAdapter(entityName, tableName) {
     },
 
     async delete(id) {
+      refuseDemoWrite('delete this');
       if (isSwimmerEntity(entityName)) {
         return this.update(id, { is_active: false });
       }

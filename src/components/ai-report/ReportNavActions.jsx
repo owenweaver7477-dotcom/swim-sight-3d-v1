@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ClipboardCheck, Brain, Film, User, Download, Share2 } from 'lucide-react';
+import { ClipboardCheck, Clapperboard, Film, User, Download, Share2 } from 'lucide-react';
 
 export default function ReportNavActions({ report, swimmer, video, onScrollToFindings, onScrollToFinalReport, onScrollToShare, onDownloadPDF }) {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function ReportNavActions({ report, swimmer, video, onScrollToFin
           <ClipboardCheck className="w-3.5 h-3.5 mr-1.5" /> View Final Coach Report
         </Button>
         <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={onScrollToFindings}>
-          <Brain className="w-3.5 h-3.5 mr-1.5" /> Back to AI Review
+          <Clapperboard className="w-3.5 h-3.5 mr-1.5" /> Back to review
         </Button>
         {video && (
           <Button

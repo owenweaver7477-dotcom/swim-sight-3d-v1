@@ -1078,11 +1078,10 @@ export default function Analyse() {
       <StepBar current={step} />
 
       <div className="mb-6 p-4 rounded-xl bg-card border border-border">
-        <div className="text-[10px] uppercase tracking-wider text-primary font-bold mb-2">V1 Coach Flow</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
           <div><span className="font-semibold text-foreground">1. Select swimmer</span><br />Every private video is linked to a club swimmer.</div>
-          <div><span className="font-semibold text-foreground">2. Upload 5-15s clip</span><br />Side angle and above-water footage give the best pose evidence.</div>
-          <div><span className="font-semibold text-foreground">3. Coach approves</span><br />AI output is draft evidence; weak pose becomes manual review.</div>
+          <div><span className="font-semibold text-foreground">2. Upload 5-15s clip</span><br />A steady side angle, above water, shows the stroke most clearly.</div>
+          <div><span className="font-semibold text-foreground">3. Review the clip</span><br />Mark the moments that matter and write your findings.</div>
         </div>
       </div>
 
@@ -1328,7 +1327,7 @@ export default function Analyse() {
           {uploadFailed && (
             <div className="space-y-2 text-xs text-red-700 mb-3 p-3 rounded-lg bg-red-50 border border-red-200">
               <span className="flex items-start gap-1"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadStatusMessage || 'Upload did not complete. The failed row remains in the Video Library so it is not hidden or lost.'}</span>
-              <p className="text-[10px] leading-relaxed">Retry while the selected file is still available, or delete the failed row and upload the clip again on stable Wi-Fi. AI Review is disabled until the private upload completes.</p>
+              <p className="text-[10px] leading-relaxed">Retry while the selected file is still available, or delete the failed row and upload the clip again on stable Wi-Fi. Review opens once the private upload completes.</p>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleUpload} disabled={!file}>
                   Retry upload
