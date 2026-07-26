@@ -98,6 +98,89 @@ function normStrokeKey(value) {
 
 // Draft persistence: keep the fullscreen workspace open-state and unsaved inputs in
 // sessionStorage so a tab switch, refetch, or iPad Safari tab-reload never loses coach work.
+/**
+ * The report's five-part content model, in report order, rendered identically wherever a
+ * finding is authored.
+ *
+ * It is one component on purpose. The create and edit editors previously duplicated these
+ * inputs, and duplicated authoring surfaces are exactly how the finding heading came to be
+ * written by one form and silently discarded by the data layer. A single component means a
+ * field added here appears in both editors, or in neither — it cannot appear in one and be
+ * quietly missing from the other.
+ */
+function FindingContentFields({
+  title, onTitle,
+  observation, onObservation,
+  why, onWhy,
+  cue, onCue,
+  nextFocus, onNextFocus,
+  observationPlaceholder,
+  observationClassName = 'min-h-[64px]',
+  cueOptional = false,
+}) {
+  const label = 'text-xs font-semibold text-slate-300';
+  const field = 'border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500';
+  const optional = <span className="text-slate-500">(optional)</span>;
+
+  return (
+    <>
+      <div className="space-y-1.5">
+        <div className={label}>Heading {optional}</div>
+        <Input
+          value={title}
+          onChange={(e) => onTitle(e.target.value)}
+          maxLength={120}
+          className={`h-10 ${field}`}
+          placeholder="e.g. Knees widen during heel recovery"
+        />
+        <p className="text-[10px] leading-4 text-slate-500">
+          The scannable line above the finding. Left blank, the report uses what you saw.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <div className={label}>What you saw</div>
+        <Textarea
+          value={observation}
+          onChange={(e) => onObservation(e.target.value)}
+          maxLength={200}
+          className={`${observationClassName} ${field}`}
+          placeholder={observationPlaceholder}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <div className={label}>Why it matters {optional}</div>
+        <Textarea
+          value={why}
+          onChange={(e) => onWhy(e.target.value)}
+          maxLength={300}
+          className={`min-h-[56px] ${field}`}
+          placeholder="What this costs the swimmer — drag, timing, rhythm…"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <div className={label}>What to feel in the water {cueOptional ? optional : null}</div>
+        <Input
+          value={cue}
+          onChange={(e) => onCue(e.target.value)}
+          maxLength={200}
+          className={`h-10 ${field}`}
+          placeholder="What should the swimmer feel or do?"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <div className={label}>Next focus {optional}</div>
+        <Input
+          value={nextFocus}
+          onChange={(e) => onNextFocus(e.target.value)}
+          maxLength={200}
+          className={`h-10 ${field}`}
+          placeholder="What to work on before the next review"
+        />
+      </div>
+    </>
+  );
+}
+
 function readStudioDraft(key) {
   if (!key) return null;
   try {
@@ -285,6 +368,13 @@ export default function CoachDrawStudio({
   const [editObservation, setEditObservation] = useState('');
   const [editCue, setEditCue] = useState('');
   const [editSeverity, setEditSeverity] = useState('medium');
+  // The rest of the report's content model. Until now the studio could only author
+  // observation/cue/severity, so a coach working in the review room could not write
+  // the heading, why it matters, or the next focus at all — the report could render
+  // the full five-part model but nothing here could produce it.
+  const [editTitle, setEditTitle] = useState('');
+  const [editWhy, setEditWhy] = useState('');
+  const [editNextFocus, setEditNextFocus] = useState('');
   const [editPhase, setEditPhase] = useState('');
   const [editTags, setEditTags] = useState([]);
   const [editNotes, setEditNotes] = useState('');
@@ -481,7 +571,8 @@ export default function CoachDrawStudio({
   // editor fields — confirm before discarding the coach's unsaved work.
   const confirmDiscardCreateText = () => {
     if (selectedFindingId || readOnly) return true;
-    if (!(editObservation.trim() || editCue.trim() || editNotes.trim())) return true;
+    if (!(editObservation.trim() || editCue.trim() || editNotes.trim()
+      || editTitle.trim() || editWhy.trim() || editNextFocus.trim())) return true;
     return window.confirm('Discard your unsaved new finding?');
   };
 
@@ -494,6 +585,12 @@ export default function CoachDrawStudio({
     setSelectedFindingId(finding.id);
     setEditObservation(finding.observation || finding.coach_sees || '');
     setEditCue(finding.correction_cue || finding.cue || '');
+    // `title` is the stored heading (migration 026). Older rows have none and read
+    // their heading from observation, so leave the field blank rather than seeding it
+    // with the observation text — otherwise saving would duplicate one into the other.
+    setEditTitle(finding.title || '');
+    setEditWhy(finding.why_it_matters || '');
+    setEditNextFocus(finding.next_focus || '');
     // Keep the stored severity verbatim (incl. 'critical') — saving an unrelated
     // edit must never silently downgrade it. The chips add 'critical' when present.
     setEditSeverity(finding.severity || 'medium');
@@ -516,6 +613,7 @@ export default function CoachDrawStudio({
     setSelectedMomentId(null);
     setLinkedFindingId('');
     setEditObservation(''); setEditCue(''); setEditSeverity('medium'); setEditPhase(''); setEditTags([]); setEditNotes('');
+    setEditTitle(''); setEditWhy(''); setEditNextFocus('');
   };
 
   // Select an Analysis Moment card: with a finding → edit it; without → open the
@@ -529,6 +627,7 @@ export default function CoachDrawStudio({
     setSelectedMomentId(moment.id);
     setLinkChoice(moment.id);
     setEditObservation(''); setEditCue(''); setEditSeverity('medium'); setEditTags([]); setEditNotes('');
+    setEditTitle(''); setEditWhy(''); setEditNextFocus('');
     // Phase moments preselect their technique area; custom moments leave it open.
     const matchedLabel = quickLabels.find((label) => label.toLowerCase() === String(moment.phase || '').toLowerCase());
     setEditPhase(matchedLabel ? matchedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : '');
@@ -552,6 +651,9 @@ export default function CoachDrawStudio({
         phase: editPhase || null,
         coachNotes: editNotes || null,
         faultTags: editTags,
+        title: editTitle.trim() || null,
+        why: editWhy.trim() || null,
+        nextFocus: editNextFocus.trim() || null,
       });
       setActionFeedback({ type: 'success', msg: 'Finding saved' });
     } catch (error) {
@@ -591,6 +693,9 @@ export default function CoachDrawStudio({
         cue: editCue.trim() || null,
         severity: editSeverity,
         coachNotes: editNotes.trim() || undefined,
+        title: editTitle.trim() || null,
+        why: editWhy.trim() || null,
+        nextFocus: editNextFocus.trim() || null,
         drills: [],
         keyStampLinkId: selectedMomentId || effectiveLinkId || null,
       });
@@ -1687,26 +1792,14 @@ export default function CoachDrawStudio({
                           <span className="text-slate-500">video is seeked to this moment</span>
                         )}
                       </div>
-                      <div className="space-y-1.5">
-                        <div className="text-xs font-semibold text-slate-300">Observation</div>
-                        <Textarea
-                          value={editObservation}
-                          onChange={(e) => setEditObservation(e.target.value)}
-                          maxLength={200}
-                          className="min-h-[64px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="What did you notice?"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="text-xs font-semibold text-slate-300">Coach Cue</div>
-                        <Input
-                          value={editCue}
-                          onChange={(e) => setEditCue(e.target.value)}
-                          maxLength={200}
-                          className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="What should the swimmer feel or do?"
-                        />
-                      </div>
+                      <FindingContentFields
+                        title={editTitle} onTitle={setEditTitle}
+                        observation={editObservation} onObservation={setEditObservation}
+                        why={editWhy} onWhy={setEditWhy}
+                        cue={editCue} onCue={setEditCue}
+                        nextFocus={editNextFocus} onNextFocus={setEditNextFocus}
+                        observationPlaceholder="What did you notice?"
+                      />
                       <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Severity</div>
                         <div className={`grid gap-1.5 ${editSeverity === 'critical' ? 'grid-cols-4' : 'grid-cols-3'}`}>
@@ -1865,26 +1958,16 @@ export default function CoachDrawStudio({
                           Review AI-suggested findings (coach approval required)
                         </Button>
                       )}
-                      <div className="space-y-1.5">
-                        <div className="text-xs font-semibold text-slate-300">Observation</div>
-                        <Textarea
-                          value={editObservation}
-                          onChange={(e) => setEditObservation(e.target.value)}
-                          maxLength={200}
-                          className="min-h-[72px] border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="What did you notice at this moment?"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="text-xs font-semibold text-slate-300">Coach Cue <span className="text-slate-500">(optional)</span></div>
-                        <Input
-                          value={editCue}
-                          onChange={(e) => setEditCue(e.target.value)}
-                          maxLength={200}
-                          className="h-10 border-white/15 bg-slate-900/70 text-sm text-white placeholder:text-slate-500"
-                          placeholder="What should the swimmer feel or do?"
-                        />
-                      </div>
+                      <FindingContentFields
+                        title={editTitle} onTitle={setEditTitle}
+                        observation={editObservation} onObservation={setEditObservation}
+                        why={editWhy} onWhy={setEditWhy}
+                        cue={editCue} onCue={setEditCue}
+                        nextFocus={editNextFocus} onNextFocus={setEditNextFocus}
+                        observationPlaceholder="What did you notice at this moment?"
+                        observationClassName="min-h-[72px]"
+                        cueOptional
+                      />
                       <div className="space-y-1.5">
                         <div className="text-xs font-semibold text-slate-300">Severity</div>
                         <div className="grid grid-cols-3 gap-1.5">

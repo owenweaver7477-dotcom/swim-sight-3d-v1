@@ -555,6 +555,10 @@ export default function AIReportPage() {
       };
       const updated = await entities.Finding.update(finding.id, {
         ...(details.observation !== undefined ? { observation: details.observation } : {}),
+        // The heading (migration 026) and "why it matters" had no update path at all,
+        // so the studio could not edit them even once they existed on a finding.
+        ...(details.title !== undefined ? { title: details.title } : {}),
+        ...(details.why !== undefined ? { why_it_matters: details.why } : {}),
         ...(details.cue !== undefined ? { cue: details.cue } : {}),
         ...(details.severity !== undefined ? { severity: details.severity } : {}),
         ...(details.phase !== undefined ? { phase: details.phase } : {}),
@@ -722,7 +726,13 @@ export default function AIReportPage() {
         swimmer_id: report.swimmer_id,
         video_upload_id: report.video_upload_id,
         source: 'coach',
+        // Coach-authored findings are approved by authorship — the coach wrote the
+        // words, so a separate approval step would be ceremony. This is NOT the AI
+        // path: AI findings are inserted 'pending' by the worker callback and reach a
+        // report only via the explicit approve action. Do not copy this line into an
+        // AI-sourced create path.
         approval_status: 'approved',
+        title: o.title ?? null,
         severity: o.severity ?? manualSeverity,
         stroke_phase: (o.phase !== undefined ? o.phase : manualPhase) || null,
         timestamp_seconds: timestampValue,
@@ -804,7 +814,7 @@ export default function AIReportPage() {
   // phase, note, and one or more selected drills — without leaving fullscreen. The first
   // drill is the Primary Drill (stored on linked_drill_*); the rest become Additional
   // Drills on raw_ai_payload.extra_drills (no schema change).
-  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, cue, drills = [], keyStampLinkId, severity, coachNotes }) => {
+  const handleCreateFindingFromFullscreen = ({ timestampSeconds, phaseLabel, note, cue, drills = [], keyStampLinkId, severity, coachNotes, title, why, nextFocus }) => {
     const phaseKey = mapPhaseLabelToKey(phaseLabel);
     const list = (Array.isArray(drills) ? drills : []).filter(drill => drill && drill.title);
     const primary = list[0] || null;
@@ -831,6 +841,11 @@ export default function AIReportPage() {
     if (primary?.why) override.nextFocus = primary.why;
     // The coach's explicit cue takes precedence over a drill's built-in cue.
     if (cue && cue.trim()) override.cue = cue.trim();
+    // Likewise the coach's own words beat anything inherited from a drill. These are
+    // set last so a drill's canned "why" can never overwrite what the coach typed.
+    if (title && title.trim()) override.title = title.trim();
+    if (why && why.trim()) override.why = why.trim();
+    if (nextFocus && nextFocus.trim()) override.nextFocus = nextFocus.trim();
     return createManualFinding.mutateAsync(override);
   };
 
