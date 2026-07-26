@@ -37,9 +37,20 @@ const CATEGORY_TABS = [
   { label: 'Underwaters', value: 'Underwater' },
 ];
 const CREATE_STROKES = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM', 'Starts', 'Turns', 'Underwater', 'General'];
-const PHASES = ['All', 'Body Line', 'Catch', 'Pull', 'Recovery', 'Breathing', 'Kick Drive', 'Glide', 'Timing', 'Rotation', 'Turn', 'Underwater', 'Breakout', 'Start', 'Finish', 'General',
-  // Starts / Turns / underwater phases (kept complete for the phase filter).
-  'Set position', 'Reaction and entry', 'Streamline', 'Underwater breakout', 'Approach', 'Wall contact', 'Push-off'];
+// Phase chips are DERIVED from the drills actually loaded — never hand-listed.
+//
+// The hand-written list had drifted badly against the data: 8 of its 23 options matched
+// zero drills (4 by casing alone — "Wall contact" vs the data's "Wall Contact"), and 7
+// real phases had no chip at all, including "Kick Recovery" which holds 7 drills. A coach
+// filtering by phase was shown buttons that could only ever return nothing, while the
+// drills they wanted were unreachable. Deriving guarantees both directions: every chip
+// matches at least one drill, and every drill is reachable by some chip.
+//
+// Same principle as drillSearchBlob and the demo-mode guard's derived method/entity sets:
+// a list someone has to remember to update is a list that drifts.
+function phaseOptionsFrom(drills) {
+  return ['All', ...[...new Set(drills.map((d) => d.phase).filter(Boolean))].sort()];
+}
 const DIFFICULTIES = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Elite'];
 
 // One visual identity per stroke/skill. Previously every stroke drill collapsed to
@@ -217,7 +228,9 @@ export default function DrillLibrary() {
   // 'All' rather than filtering every drill out and showing an empty library.
   const [phaseFilter, setPhaseFilter] = useState(() => {
     const requested = urlParams.get('phase');
-    return PHASES.find((p) => p.toLowerCase() === String(requested || '').toLowerCase()) || 'All';
+    // Stored verbatim; matching below is case-insensitive, so a caller sending
+    // "wall contact" or "Wall Contact" both work and neither empties the library.
+    return String(requested || '').trim() || 'All';
   });
   const [diffFilter, setDiffFilter] = useState('All');
   const [selectedDrill, setSelectedDrill] = useState(null);
@@ -239,25 +252,34 @@ export default function DrillLibrary() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { filtered, searchWasWidened } = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const structural = drills.filter((d) => (
-      (category === 'All' || d.stroke === category)
-      && (phaseFilter === 'All' || d.phase === phaseFilter)
-      && (diffFilter === 'All' || d.difficulty === diffFilter)
-    ));
-    if (!q) return { filtered: structural, searchWasWidened: false };
+  const phaseOptions = useMemo(() => phaseOptionsFrom(drills), [drills]);
 
-    const matched = structural.filter((d) => drillSearchBlob(d).includes(q));
-    // Page-level fallback, mirroring the weak-match fallback searchAndRankDrills already
-    // has (`if (!filtered.length) filtered = pool`). The coach's drill PICKER degrades to
-    // "show the pool" when a query matches nothing; this page did not, so a finding whose
-    // fault wording happens not to appear in any drill's text dead-ended on "No drills
-    // here yet" — the exact DE-3 failure, for the slice of findings my six cases missed.
-    // Keep the structural filters (stroke/phase/difficulty) and drop only the free text,
-    // and say so rather than silently returning something else than what was asked for.
-    if (matched.length) return { filtered: matched, searchWasWidened: false };
-    return { filtered: structural, searchWasWidened: structural.length > 0 };
+  const { filtered, widenedFrom } = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const eq = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
+    // Case-insensitive, so a phase arriving from a link ("Wall contact") matches the data
+    // ("Wall Contact") instead of silently emptying the library.
+    const byStroke = drills.filter((d) => category === 'All' || d.stroke === category);
+    const structural = byStroke.filter((d) => (
+      (phaseFilter === 'All' || eq(d.phase, phaseFilter))
+      && (diffFilter === 'All' || eq(d.difficulty, diffFilter))
+    ));
+    const applySearch = (pool) => (!q ? pool : pool.filter((d) => drillSearchBlob(d).includes(q)));
+
+    const matched = applySearch(structural);
+    if (matched.length) return { filtered: matched, widenedFrom: null };
+
+    // Widen in the order that discards the least. The previous version returned early
+    // when there was no search term, so a finding routed through the PHASE fallback into
+    // an empty (stroke, phase) set still dead-ended on "No drills here yet" — the DE-3
+    // failure surviving for the no-tag slice. Nothing may dead-end now, whichever branch
+    // of the link builder produced the filters.
+    if (q && structural.length) return { filtered: structural, widenedFrom: 'search' };
+    const strokeOnly = applySearch(byStroke);
+    if (strokeOnly.length) return { filtered: strokeOnly, widenedFrom: 'filters' };
+    if (byStroke.length) return { filtered: byStroke, widenedFrom: 'filters' };
+    if (drills.length) return { filtered: drills, widenedFrom: 'everything' };
+    return { filtered: [], widenedFrom: null };
   }, [drills, category, phaseFilter, diffFilter, search]);
 
   const hasActiveFilters = phaseFilter !== 'All' || diffFilter !== 'All';
@@ -328,7 +350,7 @@ export default function DrillLibrary() {
         <div className="mt-3 space-y-2 rounded-xl border border-border bg-secondary/40 p-3">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="w-12 text-[10px] font-semibold uppercase text-muted-foreground">Phase</span>
-            {PHASES.map((p) => (
+            {phaseOptions.map((p) => (
               <button key={p} onClick={() => setPhaseFilter(p)} className={`rounded-lg border px-2 py-0.5 text-[11px] font-medium transition-colors ${phaseFilter === p ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:border-primary/40'}`}>{p}</button>
             ))}
           </div>
@@ -345,11 +367,23 @@ export default function DrillLibrary() {
       {/* Widening the search must be visible. Quietly showing results for something other
           than what the coach typed is its own version of the DE-3 problem — the screen
           looks right and is answering a different question. */}
-      {searchWasWidened && (
+      {widenedFrom && (
         <p role="status" className="mt-3 rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
-          No drill mentions <span className="font-semibold text-foreground">“{search.trim()}”</span>, so
-          every matching drill is shown instead.{' '}
-          <button onClick={() => setSearch('')} className="font-semibold text-primary underline">Clear search</button>
+          {widenedFrom === 'search' && (
+            <>No drill mentions <span className="font-semibold text-foreground">“{search.trim()}”</span>, so every matching drill is shown instead.</>
+          )}
+          {widenedFrom === 'filters' && (
+            <>Nothing matched those filters, so the wider list is shown instead.</>
+          )}
+          {widenedFrom === 'everything' && (
+            <>Nothing matched, so the whole library is shown instead.</>
+          )}{' '}
+          <button
+            onClick={() => { setSearch(''); setPhaseFilter('All'); setDiffFilter('All'); }}
+            className="font-semibold text-primary underline"
+          >
+            Clear filters
+          </button>
         </p>
       )}
 

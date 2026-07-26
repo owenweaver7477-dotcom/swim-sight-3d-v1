@@ -63,9 +63,35 @@ for (const category of ['Freestyle', 'Breaststroke', 'Backstroke', 'Butterfly', 
   assert.match(drillLibrary, new RegExp(category), `drill library missing ${category}`);
 }
 
-for (const phase of ['Set position', 'Reaction and entry', 'Streamline', 'Underwater breakout', 'Approach', 'Rotation', 'Wall contact', 'Push-off']) {
-  assert.match(drillLibrary, new RegExp(phase), `drill library missing phase ${phase}`);
+// REPOINTED. This used to assert these phase strings appeared in DrillLibrary.jsx's
+// hardcoded PHASES array — and four of them ('Set position', 'Reaction and entry',
+// 'Underwater breakout', 'Wall contact') were MISCASED against the drill data, which
+// stores 'Set Position', 'Wall Contact' and so on. The filter compares exactly, so those
+// four chips matched zero drills. The guard was pinning the bug in place: it would have
+// failed anyone who corrected the casing, and passed the broken state forever.
+//
+// The intent was "the library covers the starts/turns/underwater phases", so it now
+// asserts that against the DATA, in the data's own casing, and separately requires the UI
+// to DERIVE its chips from that data rather than keep a second list that can drift again.
+for (const phase of ['Set Position', 'Reaction and Entry', 'Streamline', 'Underwater Breakout', 'Approach', 'Rotation', 'Wall Contact', 'Push-off']) {
+  assert.match(defaultDrills, new RegExp(`phase: '${phase}'`), `drill data missing phase ${phase}`);
 }
+// Two assertions, because one was not enough: a first attempt matched the mere substring
+// "phaseOptionsFrom", so renaming the helper to phaseOptionsFromUNUSED and hardcoding the
+// chips still passed. Require the derivation to EXIST and to be what the chips render from.
+assert.match(
+  drillLibrary,
+  /new Set\(drills\.map\(\(d\) => d\.phase\)/,
+  'DrillLibrary must derive its phase filter options from the loaded drills. A hardcoded '
+  + 'list drifted out of sync with the data once already: 8 of 23 options matched no drill '
+  + 'and 7 real phases (incl. "Kick Recovery", 7 drills) were unreachable by any chip.',
+);
+assert.match(
+  drillLibrary,
+  /\{phaseOptions\.map\(/,
+  'The phase chips must render from the derived phaseOptions. Deriving a list and then '
+  + 'rendering a different one would reintroduce exactly the drift this replaced.',
+);
 
 for (const detail of ['purpose', 'when_to_use', 'setup', 'execution_steps', 'common_mistakes', 'coaching_cue', 'duration_or_reps', 'difficulty', 'fault_tags', 'three_d_demo_status']) {
   assert.match(defaultDrills, new RegExp(detail), `drill data missing ${detail}`);
