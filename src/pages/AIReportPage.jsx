@@ -1167,13 +1167,22 @@ export default function AIReportPage() {
             consentState={consentState}
           />
 
-          <AICreditIndicator
-            selectedFocusCount={report?.review_context?.analysis_focus_areas?.length || 0}
-            selectedOutputCount={report?.review_context?.selected_report_outputs?.length || 0}
-            estimatedCredits={report?.review_context?.estimated_credit_cost}
-            mode={AI_PILOT_LOCKED || isManualReviewReport ? 'manual' : 'ai'}
-            compact
-          />
+          {/* Audit P0-3: hide AI credits until billing exists. Under the manual-first
+              pilot lock this could only ever render "Manual review: 0 AI credits" — a
+              billing concept the coach cannot act on, on every report, forever. Showing a
+              cost of zero for a thing that cannot be bought is noise that makes the
+              product look mid-migration. It returns automatically when AI unlocks.
+              The component and its Analyse usage are deliberately untouched: both are
+              pinned by check_pilot_recovery_foundation and check_analyse_route_runtime_safety. */}
+          {!AI_PILOT_LOCKED && (
+            <AICreditIndicator
+              selectedFocusCount={report?.review_context?.analysis_focus_areas?.length || 0}
+              selectedOutputCount={report?.review_context?.selected_report_outputs?.length || 0}
+              estimatedCredits={report?.review_context?.estimated_credit_cost}
+              mode={isManualReviewReport ? 'manual' : 'ai'}
+              compact
+            />
+          )}
 
           <CoachStudioSnapshot
             pendingCount={pendingCount}
